@@ -34,7 +34,8 @@
 
   .main { flex:1; display:flex; flex-direction:column; min-height:0; position: relative; }
 
-  .auth-panel{ padding:20px; border-bottom:1px solid #f0f0f0; background:#f9f9f9; }
+  /* Painel de Autenticação / Topo */
+  .auth-panel{ padding:15px; border-bottom:1px solid #f0f0f0; background:#f9f9f9; flex-shrink: 0; }
   .auth-inputs { display: flex; flex-direction: column; gap: 10px; }
   
   input[type="email"], input[type="password"], input[type="text"]{ 
@@ -44,23 +45,77 @@
   .password-container input { padding-right: 40px; }
   .toggle-eye { position: absolute; right: 12px; cursor: pointer; font-size: 18px; color: #888; }
   
-  .btn-group { display:flex; gap:10px; margin-top:5px; position: relative; }
-  .btn{ padding:10px 16px; border-radius:8px; border:none; cursor:pointer; font-weight: 600; flex: 1; }
-  .btn-primary{ background:var(--top); color:white; }
-  .btn-secondary{ background:#e0e0e0; color:#333; }
-  .btn-danger{ background:#dc3545; color:white; flex: 0; min-width: 80px;}
-
-  /* --- NOVO: CSS DA FOTO DE PERFIL (Settings) --- */
-  .profile-upload-area {
-    display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px;
+  /* --- BOTÕES TRANSPARENTES (MUDANÇA SOLICITADA) --- */
+  .btn-group { display:flex; gap:5px; margin-top:5px; position: relative; align-items: center; }
+  
+  .btn{ 
+    padding:8px 12px; 
+    border-radius:8px; 
+    border:none; 
+    cursor:pointer; 
+    font-weight: 900; /* Negrito Forte */
+    flex: 1; 
+    background: transparent !important; /* Fundo Transparente */
+    box-shadow: none !important;
+    text-transform: uppercase;
+    font-size: 12px;
   }
-  .avatar-preview {
-    width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
-    border: 3px solid var(--top); cursor: pointer; background: #ddd;
-  }
-  .avatar-label { font-size: 12px; color: #666; cursor: pointer; text-decoration: underline; }
+  
+  .btn-primary{ color: var(--top) !important; } /* Texto Verde */
+  .btn-secondary{ color: #555 !important; } /* Texto Cinza */
+  .btn-danger{ color: red !important; min-width: auto; flex: 0;} /* Texto Vermelho */
 
-  /* --- NOVO: CSS DA FOTO NO CHAT --- */
+  /* --- PAINEL DO USUÁRIO COMPACTO (MUDANÇA SOLICITADA) --- */
+  /* Transforma o painel vertical em uma linha horizontal */
+  #userPanel {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0; /* Remove excesso de espaço */
+  }
+
+  /* Esconde elementos desnecessários para economizar espaço */
+  #userPanel h2, #userPanel label, #userPanel .avatar-label {
+    display: none;
+  }
+
+  /* Foto menor e alinhada */
+  #userPanel .profile-upload-area {
+    margin: 0;
+    width: auto;
+  }
+  #userPanel .avatar-preview {
+    width: 45px; height: 45px; /* Foto menor */
+    border: 2px solid var(--top); 
+    cursor: pointer; background: #ddd;
+    border-radius: 50%; object-fit: cover;
+  }
+
+  /* Input de nome mais limpo */
+  #userPanel .auth-inputs {
+    flex: 1; /* Ocupa o espaço do meio */
+    gap: 0;
+  }
+  #userPanel input[type="text"] {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    border-radius: 0;
+    padding: 5px 0;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  /* Botões no modo compacto */
+  #userPanel .btn-group {
+    margin: 0;
+    gap: 0;
+    flex: 0;
+  }
+  /* ------------------------------------------------ */
+
+
   .msg-row { display: flex; gap: 8px; margin-bottom: 10px; width: 100%; }
   .msg-row.me { flex-direction: row-reverse; }
   
@@ -101,10 +156,10 @@
   @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
   .recording-status { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: var(--recording-color); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; display: none; }
 
-  .dropdown-wrapper { flex: 1; position: relative; }
-  .dropdown-content { display: none; position: absolute; top: 100%; left: 0; width: 100%; background: #fff; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 10; border-radius: 8px; margin-top: 5px; border: 1px solid #ddd; }
+  .dropdown-wrapper { flex: 0; position: relative; }
+  .dropdown-content { display: none; position: absolute; top: 100%; right: 0; min-width: 150px; background: #fff; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 100; border-radius: 8px; margin-top: 5px; border: 1px solid #ddd; }
   .dropdown-content.show { display: block; }
-  .dropdown-content button, .dropdown-content a { display: block; width: 100%; padding: 12px; text-align: left; border: none; background: none; border-bottom: 1px solid #eee; font-size: 14px; text-decoration: none; color: #333; }
+  .dropdown-content button, .dropdown-content a { display: block; width: 100%; padding: 12px; text-align: left; border: none; background: none; border-bottom: 1px solid #eee; font-size: 14px; text-decoration: none; color: #333; font-weight: normal; text-transform: none;}
 
   .hidden{ display:none !important; }
   .status-msg { margin-top: 10px; font-size: 13px; text-align: center; color: var(--muted); }
@@ -120,9 +175,9 @@
 
       <div class="main">
         <div id="authPanel" class="auth-panel">
-          <!-- LOGIN -->
+          <!-- LOGIN (Mantido normal) -->
           <div id="loginForm">
-            <h2>Acesse sua conta</h2>
+            <h2 style="font-size:16px;">Acesse sua conta</h2>
             <div class="auth-inputs">
               <input type="email" id="email" placeholder="E-mail">
               <div class="password-container">
@@ -132,8 +187,8 @@
               <span id="linkForgot" class="link-text" style="text-align:right; font-size:13px; color:#007bff; cursor:pointer;">Esqueci minha senha</span>
             </div>
             <div class="btn-group">
-              <button id="btnLogin" class="btn btn-primary">Entrar</button>
-              <button id="btnSignup" class="btn btn-secondary">Cadastrar</button>
+              <button id="btnLogin" class="btn btn-primary">ENTRAR</button>
+              <button id="btnSignup" class="btn btn-secondary">CADASTRAR</button>
             </div>
           </div>
 
@@ -143,7 +198,7 @@
             <div class="auth-inputs">
                 <input type="email" id="emailRecovery" placeholder="Seu e-mail">
             </div>
-            <div class="btn-group"><button id="btnSendRecovery" class="btn btn-primary">Enviar</button><button id="btnBackLogin" class="btn btn-secondary">Voltar</button></div>
+            <div class="btn-group"><button id="btnSendRecovery" class="btn btn-primary">ENVIAR</button><button id="btnBackLogin" class="btn btn-secondary">VOLTAR</button></div>
           </div>
 
           <!-- NOVA SENHA -->
@@ -152,28 +207,28 @@
             <div class="auth-inputs">
                 <div class="password-container"><input type="password" id="newPassword" placeholder="Nova Senha"><span id="btnTogglePassNew" class="toggle-eye">👁️</span></div>
             </div>
-            <div class="btn-group"><button id="btnSavePass" class="btn btn-primary">Salvar</button></div>
+            <div class="btn-group"><button id="btnSavePass" class="btn btn-primary">SALVAR</button></div>
           </div>
 
-          <!-- USUÁRIO LOGADO (COM FOTO) -->
+          <!-- USUÁRIO LOGADO (COMPACTO) -->
+          <!-- Note a mudança de estrutura para ser horizontal -->
           <div id="userPanel" class="hidden">
-            <h2>Perfil</h2>
             
-            <!-- ÁREA DE UPLOAD DE FOTO -->
+            <!-- Foto (Esquerda) -->
             <div class="profile-upload-area" onclick="document.getElementById('avatarInput').click()">
-                <img id="avatarPreview" class="avatar-preview" src="https://via.placeholder.com/80?text=Foto" title="Clique para alterar">
-                <span class="avatar-label">Clique na foto para alterar</span>
+                <img id="avatarPreview" class="avatar-preview" src="https://via.placeholder.com/80?text=Foto" title="Alterar">
                 <input type="file" id="avatarInput" hidden accept="image/*">
             </div>
 
+            <!-- Nome (Meio) -->
             <div class="auth-inputs">
-              <label style="font-size:12px; color:#666;">Seu nome público:</label>
               <input type="text" id="campoNome" placeholder="Seu Nome">
             </div>
             
+            <!-- Botões (Direita - Apenas Texto) -->
             <div class="btn-group">
               <div class="dropdown-wrapper">
-                <button onclick="toggleMenu()" class="btn btn-primary" style="width: 100%; display: flex; justify-content: center; gap: 8px;">☰ Opções</button>
+                <button onclick="toggleMenu()" class="btn btn-primary">OPÇÕES ☰</button>
                 <div id="myDropdown" class="dropdown-content">
                   <button id="btnSalvarPerfil" style="color: var(--top); font-weight: bold;">💾 Salvar Perfil</button>
                   <a href="/termos.html">📄 Termos</a>
@@ -181,7 +236,7 @@
                   <button onclick="shareApp()">🔗 Compartilhar</button>
                 </div>
               </div>
-              <button id="btnLogout" class="btn btn-danger">Sair</button>
+              <button id="btnLogout" class="btn btn-danger">SAIR</button>
             </div>
           </div>
           <div id="authStatus" class="status-msg"></div>
@@ -257,7 +312,6 @@
         let avatarUrl = currentUser.user_metadata.avatar_url;
 
         try {
-            // 1. Upload da Foto (se houver)
             if(file) {
                 const fileName = `avatars/${currentUser.id}_${Date.now()}.png`;
                 const { error: upErr } = await supabaseClient.storage.from('arquivos').upload(fileName, file);
@@ -265,19 +319,14 @@
                 const { data } = supabaseClient.storage.from('arquivos').getPublicUrl(fileName);
                 avatarUrl = data.publicUrl;
             }
-
-            // 2. Atualizar Auth User
             const { error: userErr } = await supabaseClient.auth.updateUser({
                 data: { full_name: nome, avatar_url: avatarUrl }
             });
             if(userErr) throw userErr;
-
-            // Atualiza localmente
             currentUser.user_metadata.full_name = nome;
             currentUser.user_metadata.avatar_url = avatarUrl;
             el.avatarPreview.src = avatarUrl || "https://via.placeholder.com/80?text=Foto";
             setStatus('Perfil atualizado!');
-
         } catch (err) {
             setStatus('Erro: ' + err.message, true);
         } finally {
@@ -299,7 +348,6 @@
       div.className = `msg-row ${isMe ? 'me' : ''}`;
       div.id = `msg-${msg.id}`;
 
-      // Conteúdo do balão
       let htmlContent = `<div class="bubble-autor">${msg.autor_nome || 'Anônimo'}</div>`;
       if(msg.texto) htmlContent += `<div class="bubble-text">${msg.texto.replace(/</g, "&lt;")}</div>`;
       if(msg.url_arquivo) {
@@ -341,7 +389,7 @@
         await supabaseClient.from('banco').insert([{
             texto: text, url_arquivo: fileUrl, user_id: currentUser.id,
             autor_nome: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
-            autor_avatar: currentUser.user_metadata.avatar_url // Envia a foto junto
+            autor_avatar: currentUser.user_metadata.avatar_url
         }]);
         el.texto.value=''; el.fileInput.value=''; el.btnUpload.innerHTML='📎';
       } catch(e){ alert(e.message); } finally { el.btnEnviar.disabled = false; }
@@ -355,17 +403,16 @@
     el.texto.onkeydown = e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }};
     window.deleteMessage = async (id) => { if(confirm('Ocultar?')) { let h=getHiddenMessages(); h.push(id); localStorage.setItem('hidden_msgs_'+(currentUser?currentUser.id:'anon'),JSON.stringify(h)); document.getElementById(`msg-${id}`).remove(); }};
 
-    // Auth & Recorder logic (Condensed for space - Same as before)
     el.btnMic.onclick=async()=>{if(!isRecording){try{const s=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(s);audioChunks=[];mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=async()=>{uploadAudioAndSend(new Blob(audioChunks,{type:'audio/webm'}))};mediaRecorder.start();isRecording=true;el.btnMic.classList.add('recording');el.recStatus.style.display='block';}catch(e){alert(e.message)}}else{mediaRecorder.stop();isRecording=false;el.btnMic.classList.remove('recording');el.recStatus.style.display='none'}};
     async function uploadAudioAndSend(b){el.btnMic.disabled=true;el.recStatus.textContent="Enviando...";try{const f=`${currentUser.id}/${Date.now()}_audio.webm`;await supabaseClient.storage.from('arquivos').upload(f,b);const u=supabaseClient.storage.from('arquivos').getPublicUrl(f).data.publicUrl;await supabaseClient.from('banco').insert([{texto:'',url_arquivo:u,user_id:currentUser.id,autor_nome:currentUser.user_metadata.full_name,autor_avatar:currentUser.user_metadata.avatar_url}]);}catch(e){alert(e.message)}finally{el.btnMic.disabled=false;el.recStatus.style.display='none';el.recStatus.textContent="Gravando..."}}
-    async function handleLogin(){const e=el.email.value,p=el.pass.value;if(!e||!p)return setStatus('Dados?',1);el.btnLogin.textContent='...';const{error}=await supabaseClient.auth.signInWithPassword({email:e,password:p});el.btnLogin.textContent='Entrar';if(error)setStatus(error.message,1)}
-    async function handleSignup(){const e=el.email.value,p=el.pass.value;if(!e||!p)return setStatus('Dados?',1);el.btnSignup.textContent='...';const{error}=await supabaseClient.auth.signUp({email:e,password:p});el.btnSignup.textContent='Cadastrar';if(error)setStatus(error.message,1);else setStatus('Sucesso!')}
+    async function handleLogin(){const e=el.email.value,p=el.pass.value;if(!e||!p)return setStatus('Dados?',1);el.btnLogin.textContent='...';const{error}=await supabaseClient.auth.signInWithPassword({email:e,password:p});el.btnLogin.textContent='ENTRAR';if(error)setStatus(error.message,1)}
+    async function handleSignup(){const e=el.email.value,p=el.pass.value;if(!e||!p)return setStatus('Dados?',1);el.btnSignup.textContent='...';const{error}=await supabaseClient.auth.signUp({email:e,password:p});el.btnSignup.textContent='CADASTRAR';if(error)setStatus(error.message,1);else setStatus('Sucesso!')}
     el.btnTogglePass.onclick=()=>toggleEye(el.pass,el.btnTogglePass); el.btnTogglePassNew.onclick=()=>toggleEye(el.newPassword,el.btnTogglePassNew);
     el.linkForgot.onclick=()=>{el.emailRecovery.value=el.email.value; el.loginForm.classList.add('hidden'); el.recoveryPanel.classList.remove('hidden');}; el.btnBackLogin.onclick=()=>{el.recoveryPanel.classList.add('hidden'); el.loginForm.classList.remove('hidden');};
-    el.btnSendRecovery.onclick=async()=>{if(!el.emailRecovery.value)return;el.btnSendRecovery.textContent='...';await supabaseClient.auth.resetPasswordForEmail(el.emailRecovery.value,{redirectTo:window.location.href});el.btnSendRecovery.textContent='Enviar';setStatus('Verifique e-mail')};
+    el.btnSendRecovery.onclick=async()=>{if(!el.emailRecovery.value)return;el.btnSendRecovery.textContent='...';await supabaseClient.auth.resetPasswordForEmail(el.emailRecovery.value,{redirectTo:window.location.href});el.btnSendRecovery.textContent='ENVIAR';setStatus('Verifique e-mail')};
     el.btnSavePass.onclick=async()=>{if(!el.newPassword.value)return;el.btnSavePass.textContent='...';await supabaseClient.auth.updateUser({password:el.newPassword.value});window.location.reload();};
 
     supabaseClient.auth.onAuthStateChange((e,s)=>{if(e==='PASSWORD_RECOVERY'){el.loginForm.classList.add('hidden');el.updatePassPanel.classList.remove('hidden');}else if(s){currentUser=s.user;el.loginForm.classList.add('hidden');el.updatePassPanel.classList.add('hidden');el.userPanel.classList.remove('hidden');el.appArea.classList.remove('hidden');el.nomeInput.value=currentUser.user_metadata.full_name||'';el.avatarPreview.src=currentUser.user_metadata.avatar_url||"https://via.placeholder.com/80?text=Foto";fetchMessages();supabaseClient.channel('realtime').on('postgres_changes',{event:'*',schema:'public',table:'banco'},fetchMessages).subscribe();}else{currentUser=null;el.loginForm.classList.remove('hidden');el.userPanel.classList.add('hidden');el.appArea.classList.add('hidden');}});
   </script>
 </body>
-              </html>
+</html>
