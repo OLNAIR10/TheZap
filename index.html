@@ -27,95 +27,88 @@
     overflow:hidden; display:flex; flex-direction:column;
   }
 
-  .topbar{ background:var(--top); color:#fff; padding:12px 14px; display:flex; gap:12px; align-items:center; flex-shrink: 0; }
-  .logo{ width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700; font-size: 14px;}
-  .title{ font-weight:700; font-size:16px; }
-  .subtitle{ font-size:12px; opacity:0.90; }
+  /* TOPO VERDE (Compacto) */
+  .topbar{ background:var(--top); color:#fff; padding:8px 12px; display:flex; gap:10px; align-items:center; flex-shrink: 0; }
+  .logo{ width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700; font-size: 12px;}
+  .title{ font-weight:700; font-size:14px; }
+  .subtitle{ font-size:11px; opacity:0.90; }
 
   .main { flex:1; display:flex; flex-direction:column; min-height:0; position: relative; }
 
-  /* Painel de Autenticação / Topo */
-  .auth-panel{ padding:15px; border-bottom:1px solid #f0f0f0; background:#f9f9f9; flex-shrink: 0; }
-  .auth-inputs { display: flex; flex-direction: column; gap: 10px; }
-  
-  input[type="email"], input[type="password"], input[type="text"]{ 
-    width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; font-size:14px; outline: none;
+  /* --- PAINEL DE AUTENTICAÇÃO / TOPO BRANCO (SUPER COMPACTO) --- */
+  .auth-panel{ 
+    padding: 6px 12px; /* Reduzi muito o espaçamento */
+    border-bottom:1px solid #f0f0f0; 
+    background:#fff; 
+    flex-shrink: 0; 
   }
-  .password-container { position: relative; width: 100%; display: flex; align-items: center; }
-  .password-container input { padding-right: 40px; }
-  .toggle-eye { position: absolute; right: 12px; cursor: pointer; font-size: 18px; color: #888; }
   
-  /* --- BOTÕES TRANSPARENTES (MUDANÇA SOLICITADA) --- */
-  .btn-group { display:flex; gap:5px; margin-top:5px; position: relative; align-items: center; }
+  /* Inputs gerais */
+  .auth-inputs { display: flex; flex-direction: column; gap: 8px; }
+  input[type="email"], input[type="password"]{ 
+    width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-size:14px; outline: none;
+  }
   
-  .btn{ 
-    padding:8px 12px; 
-    border-radius:8px; 
+  /* ESTILO DOS BOTÕES (TRANSPARENTES E NEGRITO) */
+  .btn-group { display:flex; gap:5px; margin-top:0; align-items: center; }
+  
+  .btn { 
+    padding: 5px 8px; 
     border:none; 
     cursor:pointer; 
-    font-weight: 900; /* Negrito Forte */
-    flex: 1; 
-    background: transparent !important; /* Fundo Transparente */
-    box-shadow: none !important;
+    font-weight: 900 !important; /* NEGRITO FORTE */
+    background: transparent !important; /* FUNDO TRANSPARENTE */
+    font-size: 11px;
     text-transform: uppercase;
-    font-size: 12px;
+    letter-spacing: 0.5px;
   }
   
   .btn-primary{ color: var(--top) !important; } /* Texto Verde */
   .btn-secondary{ color: #555 !important; } /* Texto Cinza */
-  .btn-danger{ color: red !important; min-width: auto; flex: 0;} /* Texto Vermelho */
+  .btn-danger{ color: red !important; } /* Texto Vermelho */
 
-  /* --- PAINEL DO USUÁRIO COMPACTO (MUDANÇA SOLICITADA) --- */
-  /* Transforma o painel vertical em uma linha horizontal */
+  /* --- PAINEL DO USUÁRIO LOGADO (LINHA ÚNICA) --- */
   #userPanel {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 10px;
-    padding: 5px 0; /* Remove excesso de espaço */
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
   }
 
-  /* Esconde elementos desnecessários para economizar espaço */
-  #userPanel h2, #userPanel label, #userPanel .avatar-label {
-    display: none;
-  }
+  /* Esconde títulos desnecessários */
+  #userPanel h2, #userPanel label { display: none; }
 
-  /* Foto menor e alinhada */
-  #userPanel .profile-upload-area {
-    margin: 0;
-    width: auto;
-  }
+  /* Foto de Perfil Pequena */
+  #userPanel .profile-upload-area { margin: 0; display: block; }
   #userPanel .avatar-preview {
-    width: 45px; height: 45px; /* Foto menor */
+    width: 38px; height: 38px; /* Tamanho reduzido */
     border: 2px solid var(--top); 
-    cursor: pointer; background: #ddd;
     border-radius: 50%; object-fit: cover;
+    cursor: pointer;
   }
 
-  /* Input de nome mais limpo */
-  #userPanel .auth-inputs {
-    flex: 1; /* Ocupa o espaço do meio */
-    gap: 0;
-  }
-  #userPanel input[type="text"] {
+  /* Input de Nome (Sem borda, parece texto puro) */
+  #userPanel .auth-inputs { flex: 1; margin: 0; gap: 0; }
+  #userPanel #campoNome {
     background: transparent;
     border: none;
-    border-bottom: 1px solid #ccc;
-    border-radius: 0;
-    padding: 5px 0;
-    font-weight: 600;
+    border-bottom: 1px solid transparent;
+    font-weight: 700;
     color: #333;
+    padding: 4px 0;
+    font-size: 14px;
+    width: 100%;
   }
-  
-  /* Botões no modo compacto */
-  #userPanel .btn-group {
-    margin: 0;
-    gap: 0;
-    flex: 0;
-  }
+  #userPanel #campoNome:focus { border-bottom: 1px solid var(--accent); }
+
+  /* Grupo de botões à direita */
+  #userPanel .btn-group { flex: 0; white-space: nowrap; }
+
   /* ------------------------------------------------ */
 
-
+  /* Chat Layout */
   .msg-row { display: flex; gap: 8px; margin-bottom: 10px; width: 100%; }
   .msg-row.me { flex-direction: row-reverse; }
   
@@ -156,6 +149,7 @@
   @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
   .recording-status { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: var(--recording-color); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; display: none; }
 
+  /* Dropdown Menu */
   .dropdown-wrapper { flex: 0; position: relative; }
   .dropdown-content { display: none; position: absolute; top: 100%; right: 0; min-width: 150px; background: #fff; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 100; border-radius: 8px; margin-top: 5px; border: 1px solid #ddd; }
   .dropdown-content.show { display: block; }
@@ -163,6 +157,10 @@
 
   .hidden{ display:none !important; }
   .status-msg { margin-top: 10px; font-size: 13px; text-align: center; color: var(--muted); }
+  
+  .password-container { position: relative; width: 100%; display: flex; align-items: center; }
+  .password-container input { padding-right: 40px; }
+  .toggle-eye { position: absolute; right: 12px; cursor: pointer; font-size: 18px; color: #888; }
 </style>
 </head>
 <body>
@@ -175,60 +173,56 @@
 
       <div class="main">
         <div id="authPanel" class="auth-panel">
-          <!-- LOGIN (Mantido normal) -->
+          
+          <!-- LOGIN (MODO NORMAL) -->
           <div id="loginForm">
-            <h2 style="font-size:16px;">Acesse sua conta</h2>
+            <h2 style="font-size:16px; margin-bottom:8px;">Entrar</h2>
             <div class="auth-inputs">
               <input type="email" id="email" placeholder="E-mail">
               <div class="password-container">
                 <input type="password" id="password" placeholder="Senha">
                 <span id="btnTogglePass" class="toggle-eye">👁️</span>
               </div>
-              <span id="linkForgot" class="link-text" style="text-align:right; font-size:13px; color:#007bff; cursor:pointer;">Esqueci minha senha</span>
+              <span id="linkForgot" class="link-text" style="text-align:right; font-size:12px; color:#007bff; cursor:pointer;">Esqueci minha senha</span>
             </div>
-            <div class="btn-group">
-              <button id="btnLogin" class="btn btn-primary">ENTRAR</button>
-              <button id="btnSignup" class="btn btn-secondary">CADASTRAR</button>
+            <div class="btn-group" style="margin-top:10px;">
+              <button id="btnLogin" class="btn btn-primary" style="border:1px solid var(--top); background:transparent;">ENTRAR</button>
+              <button id="btnSignup" class="btn btn-secondary" style="border:1px solid #ccc; background:transparent;">CADASTRAR</button>
             </div>
           </div>
 
           <!-- RECUPERAÇÃO -->
           <div id="recoveryPanel" class="hidden">
-            <h2>Recuperar Senha</h2>
-            <div class="auth-inputs">
-                <input type="email" id="emailRecovery" placeholder="Seu e-mail">
-            </div>
+            <h2>Recuperar</h2>
+            <div class="auth-inputs"><input type="email" id="emailRecovery" placeholder="Seu e-mail"></div>
             <div class="btn-group"><button id="btnSendRecovery" class="btn btn-primary">ENVIAR</button><button id="btnBackLogin" class="btn btn-secondary">VOLTAR</button></div>
           </div>
 
           <!-- NOVA SENHA -->
           <div id="updatePassPanel" class="hidden">
-            <h2>Redefinir Senha</h2>
-            <div class="auth-inputs">
-                <div class="password-container"><input type="password" id="newPassword" placeholder="Nova Senha"><span id="btnTogglePassNew" class="toggle-eye">👁️</span></div>
-            </div>
+            <h2>Nova Senha</h2>
+            <div class="auth-inputs"><div class="password-container"><input type="password" id="newPassword" placeholder="Nova Senha"><span id="btnTogglePassNew" class="toggle-eye">👁️</span></div></div>
             <div class="btn-group"><button id="btnSavePass" class="btn btn-primary">SALVAR</button></div>
           </div>
 
-          <!-- USUÁRIO LOGADO (COMPACTO) -->
-          <!-- Note a mudança de estrutura para ser horizontal -->
+          <!-- USUÁRIO LOGADO (SUPER COMPACTO) -->
           <div id="userPanel" class="hidden">
             
-            <!-- Foto (Esquerda) -->
+            <!-- Foto -->
             <div class="profile-upload-area" onclick="document.getElementById('avatarInput').click()">
                 <img id="avatarPreview" class="avatar-preview" src="https://via.placeholder.com/80?text=Foto" title="Alterar">
                 <input type="file" id="avatarInput" hidden accept="image/*">
             </div>
 
-            <!-- Nome (Meio) -->
+            <!-- Nome -->
             <div class="auth-inputs">
-              <input type="text" id="campoNome" placeholder="Seu Nome">
+              <input type="text" id="campoNome" placeholder="Nome">
             </div>
             
-            <!-- Botões (Direita - Apenas Texto) -->
+            <!-- Botões -->
             <div class="btn-group">
               <div class="dropdown-wrapper">
-                <button onclick="toggleMenu()" class="btn btn-primary">OPÇÕES ☰</button>
+                <button onclick="toggleMenu()" class="btn btn-primary">OPÇÕES ▾</button>
                 <div id="myDropdown" class="dropdown-content">
                   <button id="btnSalvarPerfil" style="color: var(--top); font-weight: bold;">💾 Salvar Perfil</button>
                   <a href="/termos.html">📄 Termos</a>
@@ -239,6 +233,7 @@
               <button id="btnLogout" class="btn btn-danger">SAIR</button>
             </div>
           </div>
+          
           <div id="authStatus" class="status-msg"></div>
         </div>
 
@@ -300,17 +295,14 @@
     function scrollToBottom() { setTimeout(() => { el.messagesWrap.scrollTop = el.messagesWrap.scrollHeight; }, 100); }
     function toggleEye(input, icon) { const t = input.getAttribute('type')==='password'?'text':'password'; input.setAttribute('type', t); icon.textContent = t==='password'?'👁️':'🙈'; }
 
-    // --- PERFIL E AVATAR ---
+    // --- PERFIL ---
     async function updateProfile() {
         const nome = el.nomeInput.value.trim();
         const file = el.avatarInput.files[0];
-        
         if(!nome && !file) return;
         document.getElementById("myDropdown").classList.remove("show");
-        el.btnSalvarPerfil.textContent = 'Salvando...';
-
+        el.btnSalvarPerfil.textContent = '...';
         let avatarUrl = currentUser.user_metadata.avatar_url;
-
         try {
             if(file) {
                 const fileName = `avatars/${currentUser.id}_${Date.now()}.png`;
@@ -319,19 +311,13 @@
                 const { data } = supabaseClient.storage.from('arquivos').getPublicUrl(fileName);
                 avatarUrl = data.publicUrl;
             }
-            const { error: userErr } = await supabaseClient.auth.updateUser({
-                data: { full_name: nome, avatar_url: avatarUrl }
-            });
+            const { error: userErr } = await supabaseClient.auth.updateUser({ data: { full_name: nome, avatar_url: avatarUrl } });
             if(userErr) throw userErr;
             currentUser.user_metadata.full_name = nome;
             currentUser.user_metadata.avatar_url = avatarUrl;
             el.avatarPreview.src = avatarUrl || "https://via.placeholder.com/80?text=Foto";
-            setStatus('Perfil atualizado!');
-        } catch (err) {
-            setStatus('Erro: ' + err.message, true);
-        } finally {
-            el.btnSalvarPerfil.textContent = '💾 Salvar Perfil';
-        }
+            setStatus('Salvo!');
+        } catch (err) { setStatus(err.message, true); } finally { el.btnSalvarPerfil.textContent = '💾 Salvar Perfil'; }
     }
     
     // --- CHAT ---
@@ -341,7 +327,6 @@
       const isMe = currentUser && currentUser.id === msg.user_id;
       const date = new Date(msg.created_at);
       const dataFormatada = `${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR')}`;
-      
       const avatarUrl = msg.autor_avatar || "https://via.placeholder.com/32?text=?";
 
       const div = document.createElement('div');
