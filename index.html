@@ -14,11 +14,13 @@
     --bg:#e9f7f2; --top:#075e54; --accent:#25d366; --muted:#6b6b6b;
     --card-radius:12px; --shadow: 0 10px 30px rgba(0,0,0,0.10);
     --recording-color: #e53935;
+    /* Configuração de Cores pedida */
+    --msg-bg: #d9fdd3; /* Verde Claro */
+    --msg-text: #000000; /* Preto */
   }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial;background:var(--bg);-webkit-font-smoothing:antialiased;}
   
-  /* Layout Centralizado */
   .frame{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:8px;}
   .card{
     width:100%; max-width:720px; height: calc(100vh - 16px);
@@ -26,16 +28,13 @@
     overflow:hidden; display:flex; flex-direction:column;
   }
 
-  /* Topo */
   .topbar{ background:var(--top); color:#fff; padding:12px 14px; display:flex; gap:12px; align-items:center; flex-shrink: 0; }
   .logo{ width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700; font-size: 14px;}
   .title{ font-weight:700; font-size:16px; }
   .subtitle{ font-size:12px; opacity:0.90; }
 
-  /* Área Principal */
   .main { flex:1; display:flex; flex-direction:column; min-height:0; position: relative; }
 
-  /* Painel de Autenticação */
   .auth-panel{ padding:20px; border-bottom:1px solid #f0f0f0; background:#f9f9f9; }
   .auth-panel h2{ margin:0 0 10px; font-size:18px; color: var(--top); }
   .auth-inputs { display: flex; flex-direction: column; gap: 10px; }
@@ -45,11 +44,9 @@
   }
   input:focus { border-color: var(--accent); }
 
-  /* CSS SENHA COM OLHO */
   .password-container { position: relative; width: 100%; display: flex; align-items: center; }
   .password-container input { padding-right: 40px; }
   .toggle-eye { position: absolute; right: 12px; cursor: pointer; font-size: 18px; background: none; border: none; padding: 0; color: #888; user-select: none; }
-  .toggle-eye:hover { color: var(--top); }
   
   .btn-group { display:flex; gap:10px; margin-top:5px; position: relative; }
   .btn{ padding:10px 16px; border-radius:8px; border:none; cursor:pointer; font-weight: 600; flex: 1; transition: opacity 0.2s; }
@@ -58,7 +55,6 @@
   .btn-secondary{ background:#e0e0e0; color:#333; }
   .btn-danger{ background:#dc3545; color:white; flex: 0; min-width: 80px;}
 
-  /* Links de texto */
   .link-text { font-size: 13px; color: #007bff; text-decoration: none; text-align: right; display: block; margin-top: -5px; cursor: pointer; }
   
   /* MENU SUSPENSO */
@@ -76,38 +72,77 @@
   }
   .dropdown-content button:hover, .dropdown-content a:hover { background-color: #e9f7f2; }
 
-  /* Área de Mensagens */
+  /* --- ÁREA DE MENSAGENS (ALTERADO) --- */
   .app{ display:flex; flex-direction:column; height:100%; min-height:0; }
   
   .messages-wrap{ 
-    flex:1; overflow-y: auto; padding:14px; 
+    flex:1; 
+    overflow-y: auto; 
+    padding:14px; 
     background-image: linear-gradient(#e5ddd5 2px, transparent 2px), linear-gradient(90deg, #e5ddd5 2px, transparent 2px);
     background-size: 20px 20px;
     background-color: #e5ddd5;
-    display:flex; flex-direction:column-reverse; 
+    /* Alterado: Coluna normal (não reverse) para mensagens entrarem de baixo */
+    display:flex; 
+    flex-direction:column; 
+    gap: 8px;
   }
   
-  .list{ display:flex; flex-direction:column; gap:8px; width:100%; }
+  .list{ display:flex; flex-direction:column; gap:8px; width:100%; padding-bottom: 10px;}
 
-  .bubble{ max-width:85%; padding:8px 10px; border-radius:8px; background:#fff; align-self:flex-start; position:relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); margin-bottom: 2px;}
-  .bubble.me{ background:#d9fdd3; align-self:flex-end; }
+  /* --- BALÕES DE MENSAGEM (ALTERADO) --- */
+  .bubble{ 
+    max-width:85%; 
+    padding:8px 10px; 
+    border-radius:8px; 
+    align-self:flex-start; /* Outros à esquerda */
+    position:relative; 
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1); 
+    
+    /* Configuração pedida: Verde Claro para todos e Texto Preto Negrito */
+    background: var(--msg-bg); 
+    color: var(--msg-text);
+    font-weight: bold;
+  }
+
+  /* Mensagens enviadas por mim (opcional: manter verde ou diferenciar alinhamento) */
+  .bubble.me{ 
+    align-self:flex-end; /* Eu à direita */
+    /* background: #fff;  Se quiser diferenciar, mude aqui */
+  }
   
-  .bubble-autor{ font-size: 11px; font-weight:700; color:var(--top); margin-bottom:2px; }
+  .bubble-autor{ font-size: 11px; font-weight:800; color:var(--top); margin-bottom:4px; }
   .bubble.me .bubble-autor { display: none; }
 
-  .bubble-text{ font-size: 14px; color: #111; line-height: 1.4; white-space: pre-wrap;}
+  .bubble-text{ 
+    font-size: 14px; 
+    line-height: 1.4; 
+    white-space: pre-wrap;
+    font-weight: bold; /* Reforçando negrito */
+    color: #000;
+  }
   
   .bubble-file-img{ max-width:100%; border-radius:6px; margin-top:6px; cursor: pointer; }
-  .bubble-file-link{ display:block; background:#f0f0f0; padding:10px; border-radius:6px; margin-top:6px; text-decoration:none; color:#007bff; font-size: 13px; display:flex; align-items:center; gap: 5px;}
+  .bubble-file-link{ display:block; background:#fff; padding:10px; border-radius:6px; margin-top:6px; text-decoration:none; color:#007bff; font-size: 13px; display:flex; align-items:center; gap: 5px; font-weight: normal;}
   
-  /* PLAYER DE ÁUDIO NO BALÃO */
   audio { width: 100%; margin-top: 5px; height: 32px; }
 
-  .meta{ font-size:10px; color:#999; margin-top:4px; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 5px;}
-  .btn-trash { border: none; background: none; cursor: pointer; font-size: 14px; padding: 0 5px; opacity: 0.5; color: #888; margin-left: 5px; }
+  /* DATA E HORA RODAPÉ */
+  .meta{ 
+    font-size:10px; 
+    color:#444; /* Escureci um pouco para ler melhor no verde */
+    margin-top:4px; 
+    text-align: right; 
+    display: flex; 
+    align-items: center; 
+    justify-content: flex-end; 
+    gap: 5px;
+    font-weight: normal; /* Data não precisa ser negrito */
+  }
+  
+  .btn-trash { border: none; background: none; cursor: pointer; font-size: 14px; padding: 0 5px; opacity: 0.5; color: #555; margin-left: 5px; }
   .btn-trash:hover { opacity: 1; color: red; }
 
-  /* Compositor (Input) */
   .composer{ padding:8px; background:#f0f0f0; display: flex; gap: 8px; align-items: flex-end; position: relative; }
   textarea{ flex:1; min-height:40px; max-height:100px; padding:10px; border-radius:20px; border:none; resize:none; font-size:15px; outline:none; font-family: inherit;}
   
@@ -115,26 +150,11 @@
   .btn-attach { background: transparent; color: #555; font-size: 20px; }
   .btn-send { background: var(--top); color: white; font-size: 18px; }
   
-  /* ESTILO DO BOTÃO DE MICROFONE */
   .btn-mic { background: #e0e0e0; color: #555; font-size: 18px; }
-  .btn-mic.recording { 
-    background: var(--recording-color); 
-    color: white; 
-    animation: pulse 1s infinite; 
-  }
+  .btn-mic.recording { background: var(--recording-color); color: white; animation: pulse 1s infinite; }
   
-  @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-  }
-
-  /* Status de Gravando */
-  .recording-status {
-    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
-    background: var(--recording-color); color: white; padding: 4px 12px;
-    border-radius: 12px; font-size: 12px; display: none;
-  }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+  .recording-status { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: var(--recording-color); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; display: none; }
 
   .hidden{ display:none !important; }
   .text-center { text-align: center; color: var(--muted); font-size: 14px; margin-top: 20px; }
@@ -155,7 +175,6 @@
       <div class="main">
         
         <div id="authPanel" class="auth-panel">
-          <!-- TELA 1: LOGIN -->
           <div id="loginForm">
             <h2>Acesse sua conta</h2>
             <div class="auth-inputs">
@@ -172,7 +191,6 @@
             </div>
           </div>
 
-          <!-- TELA 2: RECUPERAÇÃO -->
           <div id="recoveryPanel" class="hidden">
             <h2>Recuperar Senha</h2>
             <div class="auth-inputs">
@@ -185,7 +203,6 @@
             </div>
           </div>
 
-          <!-- TELA 3: NOVA SENHA -->
           <div id="updatePassPanel" class="hidden">
             <h2>Redefinir Senha</h2>
             <div class="auth-inputs">
@@ -200,7 +217,6 @@
             </div>
           </div>
 
-          <!-- TELA 4: USUÁRIO LOGADO -->
           <div id="userPanel" class="hidden">
             <h2>Olá, <span id="displayUserName">Usuário</span>!</h2>
             <div class="auth-inputs">
@@ -234,18 +250,10 @@
 
           <div class="composer" id="composer">
              <div id="recStatus" class="recording-status">Gravando... Clique para Enviar</div>
-             
-             <!-- Botão Anexo -->
              <button id="btnUpload" class="btn-icon btn-attach" title="Anexar">📎</button>
              <input type="file" id="campoArquivo" hidden>
-             
-             <!-- Campo Texto -->
              <textarea id="campoTexto" placeholder="Mensagem..."></textarea>
-             
-             <!-- Botão Microfone (NOVO) -->
              <button id="btnMic" class="btn-icon btn-mic" title="Gravar Áudio">🎤</button>
-
-             <!-- Botão Enviar -->
              <button id="btnEnviar" class="btn-icon btn-send">➤</button>
           </div>
         </div>
@@ -285,23 +293,22 @@
       btnSalvarNome: document.getElementById('btnSalvarNome'),
       displayUser: document.getElementById('displayUserName'),
       mensagensDiv: document.getElementById('mensagens'),
+      messagesWrap: document.getElementById('messagesWrap'), // Container do scroll
       headerStatus: document.getElementById('headerStatus'),
       texto: document.getElementById('campoTexto'),
       fileInput: document.getElementById('campoArquivo'),
       btnUpload: document.getElementById('btnUpload'),
       btnEnviar: document.getElementById('btnEnviar'),
-      btnMic: document.getElementById('btnMic'), // Novo
-      recStatus: document.getElementById('recStatus') // Novo
+      btnMic: document.getElementById('btnMic'),
+      recStatus: document.getElementById('recStatus')
     };
 
     let currentUser = null;
-    
-    // --- VARIÁVEIS DE GRAVAÇÃO ---
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
 
-    // --- SENHA OLHO ---
+    // --- FUNÇÕES DE AJUDA ---
     function toggleEye(input, icon) {
         const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
         input.setAttribute('type', type);
@@ -310,7 +317,6 @@
     el.btnTogglePass.onclick = () => toggleEye(el.pass, el.btnTogglePass);
     el.btnTogglePassNew.onclick = () => toggleEye(el.newPassword, el.btnTogglePassNew);
 
-    // --- MENU E COMPARTILHAR ---
     function toggleMenu() { document.getElementById("myDropdown").classList.toggle("show"); }
     window.onclick = function(event) {
       if (!event.target.matches('.btn-primary') && !event.target.matches('.btn-primary *')) {
@@ -328,98 +334,71 @@
       } else { alert("Link copiado: " + window.location.href); }
     }
 
-    // --- AUTH HELPERS ---
     function setStatus(msg, isError = false) {
       el.authStatus.textContent = msg;
       el.authStatus.style.color = isError ? '#d93025' : '#666';
       setTimeout(() => { el.authStatus.textContent = ''; }, 5000);
     }
     function showPanel(panelName) {
-        el.loginForm.classList.add('hidden');
-        el.recoveryPanel.classList.add('hidden');
-        el.updatePassPanel.classList.add('hidden');
-        el.userPanel.classList.add('hidden');
+        el.loginForm.classList.add('hidden'); el.recoveryPanel.classList.add('hidden');
+        el.updatePassPanel.classList.add('hidden'); el.userPanel.classList.add('hidden');
         el.appArea.classList.add('hidden');
-        
         if(panelName === 'login') el.loginForm.classList.remove('hidden');
         if(panelName === 'recovery') el.recoveryPanel.classList.remove('hidden');
         if(panelName === 'updatePass') el.updatePassPanel.classList.remove('hidden');
-        if(panelName === 'app') {
-            el.userPanel.classList.remove('hidden');
-            el.appArea.classList.remove('hidden');
-        }
+        if(panelName === 'app') { el.userPanel.classList.remove('hidden'); el.appArea.classList.remove('hidden'); scrollToBottom(); }
+    }
+    
+    // Função para rolar para o final (Última mensagem)
+    function scrollToBottom() {
+        setTimeout(() => {
+            el.messagesWrap.scrollTop = el.messagesWrap.scrollHeight;
+        }, 100);
     }
 
-    // --- LÓGICA DE GRAVAÇÃO DE ÁUDIO ---
+    // --- ÁUDIO ---
     el.btnMic.onclick = async () => {
         if (!isRecording) {
-            // INICIAR GRAVAÇÃO
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
-                
-                mediaRecorder.ondataavailable = event => {
-                    audioChunks.push(event.data);
-                };
-
+                mediaRecorder.ondataavailable = event => { audioChunks.push(event.data); };
                 mediaRecorder.onstop = async () => {
-                    // Cria o arquivo de áudio
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); // WebM é padrão web
-                    // Envia para o Supabase
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     await uploadAudioAndSend(audioBlob);
                 };
-
                 mediaRecorder.start();
                 isRecording = true;
                 el.btnMic.classList.add('recording');
                 el.recStatus.style.display = 'block';
-                
-            } catch (err) {
-                alert('Erro ao acessar microfone: ' + err.message);
-            }
+            } catch (err) { alert('Erro microfone: ' + err.message); }
         } else {
-            // PARAR GRAVAÇÃO
             mediaRecorder.stop();
             isRecording = false;
             el.btnMic.classList.remove('recording');
             el.recStatus.style.display = 'none';
         }
     };
-
     async function uploadAudioAndSend(audioBlob) {
         el.btnMic.disabled = true;
-        el.recStatus.textContent = "Enviando áudio...";
-        el.recStatus.style.display = 'block';
-
+        el.recStatus.textContent = "Enviando...";
         try {
             const fileName = `${currentUser.id}/${Date.now()}_audio.webm`;
-            // Upload do Blob de áudio
             const { data, error: upErr } = await supabaseClient.storage.from('arquivos').upload(fileName, audioBlob);
             if(upErr) throw upErr;
-
             const { data: pubData } = supabaseClient.storage.from('arquivos').getPublicUrl(fileName);
             
-            // Grava no banco
             const { error: inErr } = await supabaseClient.from('banco').insert([{
-                texto: '', // Sem texto, apenas áudio
-                url_arquivo: pubData.publicUrl,
-                user_id: currentUser.id,
+                texto: '', url_arquivo: pubData.publicUrl, user_id: currentUser.id,
                 autor_nome: currentUser.user_metadata.full_name || currentUser.email.split('@')[0]
             }]);
-
             if(inErr) throw inErr;
-
-        } catch (err) {
-            alert('Erro ao enviar áudio: ' + err.message);
-        } finally {
-            el.btnMic.disabled = false;
-            el.recStatus.style.display = 'none';
-            el.recStatus.textContent = "Gravando... Clique para Enviar";
-        }
+        } catch (err) { alert('Erro audio: ' + err.message); } 
+        finally { el.btnMic.disabled = false; el.recStatus.style.display = 'none'; el.recStatus.textContent = "Gravando..."; }
     }
 
-    // --- AUTH ACTIONS ---
+    // --- AUTH ---
     async function handleLogin() {
       const email = el.email.value.trim(); const password = el.pass.value.trim();
       if(!email || !password) return setStatus('Preencha dados.', true);
@@ -434,17 +413,15 @@
       el.btnSignup.textContent = '...';
       const { error } = await supabaseClient.auth.signUp({ email, password });
       el.btnSignup.textContent = 'Cadastrar';
-      if(error) setStatus(error.message, true); else setStatus('Cadastro realizado!');
+      if(error) setStatus(error.message, true); else setStatus('Cadastrado!');
     }
     async function handleLogout() { await supabaseClient.auth.signOut(); }
-    
     el.linkForgot.onclick = () => { el.emailRecovery.value = el.email.value; showPanel('recovery'); }
     el.btnBackLogin.onclick = () => showPanel('login');
-    
     async function handleSendRecovery() {
         const email = el.emailRecovery.value.trim();
         if(!email) return setStatus('Digite e-mail.', true);
-        el.btnSendRecovery.textContent = 'Enviando...';
+        el.btnSendRecovery.textContent = '...';
         const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
         el.btnSendRecovery.textContent = 'Enviar Link';
         if(error) setStatus(error.message, true); else { setStatus('Link enviado!'); setTimeout(() => showPanel('login'), 3000); }
@@ -462,17 +439,22 @@
       document.getElementById("myDropdown").classList.remove("show");
       el.btnSalvarNome.textContent = '...';
       const { error } = await supabaseClient.auth.updateUser({ data: { full_name: nome } });
-      el.btnSalvarNome.textContent = '📝 Atualizar Nome';
+      el.btnSalvarNome.textContent = 'Atualizar Nome';
       if(error) setStatus(error.message, true); else { setStatus('Atualizado!'); if(currentUser.user_metadata) currentUser.user_metadata.full_name = nome; el.displayUser.textContent = nome; }
     }
 
-    // --- CHAT DISPLAY ---
+    // --- CHAT DISPLAY (ALTERADO) ---
     function getHiddenMessages() { return JSON.parse(localStorage.getItem('hidden_msgs_' + (currentUser ? currentUser.id : 'anon')) || '[]'); }
     
     function renderMessage(msg) {
       const isMe = currentUser && currentUser.id === msg.user_id;
       const date = new Date(msg.created_at);
-      const hora = date.getHours().toString().padStart(2,'0') + ':' + date.getMinutes().toString().padStart(2,'0');
+      
+      // FORMATAÇÃO DE DATA E HORA COMPLETA (DD/MM/AAAA HH:MM:SS)
+      const dia = date.toLocaleDateString('pt-BR');
+      const hora = date.toLocaleTimeString('pt-BR'); // Já vem com HH:MM:SS
+      const dataFormatada = `${dia} ${hora}`;
+
       const div = document.createElement('div');
       div.className = `bubble ${isMe ? 'me' : ''}`;
       div.id = `msg-${msg.id}`;
@@ -489,18 +471,29 @@
         else if (isAudio) htmlContent += `<audio controls src="${msg.url_arquivo}"></audio>`;
         else htmlContent += `<a href="${msg.url_arquivo}" target="_blank" class="bubble-file-link">📄 Baixar Arquivo</a>`;
       }
-      htmlContent += `<div class="meta">${hora} <button class="btn-trash" title="Apagar para mim" onclick="deleteMessage(${msg.id})">🗑</button></div>`;
+      htmlContent += `<div class="meta">${dataFormatada} <button class="btn-trash" title="Apagar para mim" onclick="deleteMessage(${msg.id})">🗑</button></div>`;
       div.innerHTML = htmlContent;
       return div;
     }
 
     async function fetchMessages() {
-      const { data, error } = await supabaseClient.from('banco').select('*').order('created_at', { ascending: false }).limit(50);
+      // ALTERADO: order ascending: true (Antigas no topo, Novas no fundo)
+      const { data, error } = await supabaseClient.from('banco')
+        .select('*')
+        .order('created_at', { ascending: true }) 
+        .limit(50);
+        
       if(error) return console.error(error);
       el.mensagensDiv.innerHTML = '';
       const hiddenList = getHiddenMessages();
+      
       if(data.length === 0) el.mensagensDiv.innerHTML = '<div class="text-center">Nenhuma mensagem ainda.</div>';
-      else data.forEach(msg => { if (!hiddenList.includes(msg.id)) el.mensagensDiv.appendChild(renderMessage(msg)); });
+      else {
+          data.forEach(msg => { 
+              if (!hiddenList.includes(msg.id)) el.mensagensDiv.appendChild(renderMessage(msg)); 
+          });
+          scrollToBottom(); // Rola para baixo ao carregar
+      }
     }
 
     async function sendMessage() {
@@ -559,4 +552,4 @@
     });
   </script>
 </body>
-                      </html>
+</html>
