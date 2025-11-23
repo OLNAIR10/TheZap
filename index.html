@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Mural OGP - Chat</title>
+
+<!-- Importando Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  /* --- CSS GLOBAL E VARIÁVEIS --- */
+  :root{
+    --bg:#e9f7f2; --top:#075e54; --accent:#25d366; --muted:#6b6b6b;
+    --card-radius:12px; --shadow: 0 10px 30px rgba(0,0,0,0.10);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial;background:var(--bg);-webkit-font-smoothing:antialiased;}
+  
+  /* Layout Centralizado */
+  .frame{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:8px;}
+  .card{
+    width:100%; max-width:720px; height: calc(100vh - 16px);
+    background:#fff; border-radius:var(--card-radius); box-shadow:var(--shadow);
+    overflow:hidden; display:flex; flex-direction:column;
+  }
+
+  /* Topo */
+  .topbar{ background:var(--top); color:#fff; padding:12px 14px; display:flex; gap:12px; align-items:center; flex-shrink: 0; }
+  .logo{ width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700; font-size: 14px;}
+  .title{ font-weight:700; font-size:16px; }
+  .subtitle{ font-size:12px; opacity:0.90; }
+
+  /* Área Principal */
+  .main { flex:1; display:flex; flex-direction:column; min-height:0; position: relative; }
+
+  /* Painel de Autenticação */
+  .auth-panel{ padding:20px; border-bottom:1px solid #f0f0f0; background:#f9f9f9; }
+  .auth-panel h2{ margin:0 0 10px; font-size:18px; color: var(--top); }
+  .auth-inputs { display: flex; flex-direction: column; gap: 10px; }
+  input[type="email"], input[type="password"], input[type="text"]{ 
+    width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; font-size:14px; outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  
+  .btn-group { display:flex; gap:10px; margin-top:5px; }
+  .btn{ padding:10px 16px; border-radius:8px; border:none; cursor:pointer; font-weight: 600; flex: 1; transition: opacity 0.2s; }
+  .btn:active { opacity: 0.7; }
+  .btn-primary{ background:var(--top); color:white; }
+  .btn-secondary{ background:#e0e0e0; color:#333; }
+  .btn-danger{ background:#dc3545; color:white; flex: 0; min-width: 80px;}
+
+  /* Área de Mensagens */
+  .app{ display:flex; flex-direction:column; height:100%; min-height:0; }
+  
+  /* Container Flex-Reverse para o chat começar de baixo */
+  .messages-wrap{ 
+    flex:1; overflow-y: auto; padding:14px; 
+    background-image: linear-gradient(#e5ddd5 2px, transparent 2px), linear-gradient(90deg, #e5ddd5 2px, transparent 2px);
+    background-size: 20px 20px;
+    background-color: #e5ddd5;
+    display:flex; flex-direction:column-reverse; 
+  }
+  
+  .list{ display:flex; flex-direction:column; gap:8px; width:100%; }
+
+  /* Balões de Mensagem */
+  .bubble{ max-width:85%; padding:8px 10px; border-radius:8px; background:#fff; align-self:flex-start; position:relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); margin-bottom: 2px;}
+  .bubble.me{ background:#d9fdd3; align-self:flex-end; }
+  
+  .bubble-autor{ font-size: 11px; font-weight:700; color:var(--top); margin-bottom:2px; }
+  .bubble.me .bubble-autor { display: none; } /* Esconde nome se for eu */
+
+  .bubble-text{ font-size: 14px; color: #111; line-height: 1.4; white-space: pre-wrap;}
+  
+  .bubble-file-img{ max-width:100%; border-radius:6px; margin-top:6px; cursor: pointer; }
+  .bubble-file-link{ display:block; background:#f0f0f0; padding:10px; border-radius:6px; margin-top:6px; text-decoration:none; color:#007bff; font-size: 13px; display:flex; align-items:center; gap: 5px;}
+
+  .meta{ font-size:10px; color:#999; margin-top:4px; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 5px;}
+  
+  .btn-trash { border: none; background: none; cursor: pointer; font-size: 12px; padding: 0; opacity: 0.4; }
+  .btn-trash:hover { opacity: 1; color: red; }
+
+  /* Compositor (Input) */
+  .composer{ padding:8px; background:#f0f0f0; display: flex; gap: 8px; align-items: flex-end; }
+  textarea{ flex:1; min-height:40px; max-height:100px; padding:10px; border-radius:20px; border:none; resize:none; font-size:15px; outline:none; font-family: inherit;}
+  
+  .btn-icon { width: 40px; height: 40px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .btn-attach { background: transparent; color: #555; font-size: 20px; }
+  .btn-send { background: var(--top); color: white; font-size: 18px; }
+  
+  /* Utilitários */
+  .hidden{ display:none !important; }
+  .text-center { text-align: center; color: var(--muted); font-size: 14px; margin-top: 20px; }
+  .status-msg { margin-top: 10px; font-size: 13px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="card">
+      <!-- TOPO -->
+      <div class="topbar">
+        <div class="logo">TZ</div>
+        <div>
+          <div class="title">THEZAP</div>
+          <div class="subtitle" id="headerStatus">Desconectado</div>
+        </div>
+      </div>
+
+      <!-- ÁREA CENTRAL -->
+      <div class="main">
+        
+        <!-- PAINEL DE LOGIN / CADASTRO -->
+        <div id="authPanel" class="auth-panel">
+          <!-- Formulário de Login -->
+          <div id="loginForm">
+            <h2>Acesse sua conta</h2>
+            <div class="auth-inputs">
+              <input type="email" id="email" placeholder="E-mail">
+              <input type="password" id="password" placeholder="Senha">
+            </div>
+            <div class="btn-group">
+              <button id="btnLogin" class="btn btn-primary">Entrar</button>
+              <button id="btnSignup" class="btn btn-secondary">Cadastrar</button>
+            </div>
+          </div>
+
+          <!-- Painel Logado (Alterar nome e Sair) -->
+          <div id="userPanel" class="hidden">
+            <h2>Olá, <span id="displayUserName">Usuário</span>!</h2>
+            <div class="auth-inputs">
+              <label style="font-size:12px; color:#666;">Seu nome público:</label>
+              <input type="text" id="campoNome" placeholder="Como quer ser chamado?">
+            </div>
+            <div class="btn-group">
+              <button id="btnSalvarNome" class="btn btn-primary">Atualizar Nome</button>
+              <button id="btnLogout" class="btn btn-danger">Sair</button>
+            </div>
+          </div>
+          
+          <div id="authStatus" class="status-msg"></div>
+        </div>
+
+        <!-- APP / CHAT -->
+        <div class="app hidden" id="appArea">
+          <div id="messagesWrap" class="messages-wrap">
+            <div id="mensagens" class="list">
+               <!-- Mensagens serão injetadas aqui -->
+            </div>
+          </div>
+
+          <!-- Área de Escrita -->
+          <div class="composer" id="composer">
+             <button id="btnUpload" class="btn-icon btn-attach" title="Anexar">📎</button>
+             <input type="file" id="campoArquivo" hidden>
+             
+             <textarea id="campoTexto" placeholder="Mensagem..."></textarea>
+             
+             <button id="btnEnviar" class="btn-icon btn-send">➤</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // CONFIGURAÇÃO DO SUPABASE
+    // ============================================================
+    
+    const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
+
+    // Inicializa o cliente
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // --- ELEMENTOS DOM ---
+    const el = {
+      loginForm: document.getElementById('loginForm'),
+      userPanel: document.getElementById('userPanel'),
+      appArea: document.getElementById('appArea'),
+      authStatus: document.getElementById('authStatus'),
+      email: document.getElementById('email'),
+      pass: document.getElementById('password'),
+      btnLogin: document.getElementById('btnLogin'),
+      btnSignup: document.getElementById('btnSignup'),
+      btnLogout: document.getElementById('btnLogout'),
+      nomeInput: document.getElementById('campoNome'),
+      btnSalvarNome: document.getElementById('btnSalvarNome'),
+      displayUser: document.getElementById('displayUserName'),
+      mensagensDiv: document.getElementById('mensagens'),
+      headerStatus: document.getElementById('headerStatus'),
+      texto: document.getElementById('campoTexto'),
+      fileInput: document.getElementById('campoArquivo'),
+      btnUpload: document.getElementById('btnUpload'),
+      btnEnviar: document.getElementById('btnEnviar')
+    };
+
+    let currentUser = null;
+
+    // --- UI HELPER ---
+    function setStatus(msg, isError = false) {
+      el.authStatus.textContent = msg;
+      el.authStatus.style.color = isError ? '#d93025' : '#666';
+      setTimeout(() => { el.authStatus.textContent = ''; }, 5000);
+    }
+
+    // --- AUTHENTICATION ---
+    async function handleLogin() {
+      const email = el.email.value.trim();
+      const password = el.pass.value.trim();
+      if(!email || !password) return setStatus('Preencha e-mail e senha.', true);
+
+      el.btnLogin.textContent = '...';
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      el.btnLogin.textContent = 'Entrar';
+      
+      if(error) setStatus(error.message, true);
+    }
+
+    async function handleSignup() {
+      const email = el.email.value.trim();
+      const password = el.pass.value.trim();
+      if(!email || !password) return setStatus('Preencha e-mail e senha.', true);
+
+      el.btnSignup.textContent = '...';
+      const { error } = await supabaseClient.auth.signUp({ email, password });
+      el.btnSignup.textContent = 'Cadastrar';
+
+      if(error) setStatus(error.message, true);
+      else setStatus('Cadastro realizado! Verifique seu e-mail (se necessário) ou faça login.');
+    }
+
+    async function handleLogout() {
+      await supabaseClient.auth.signOut();
+    }
+
+    async function updateName() {
+      const nome = el.nomeInput.value.trim();
+      if(!nome) return;
+
+      el.btnSalvarNome.textContent = 'Salvando...';
+      const { error } = await supabaseClient.auth.updateUser({ data: { full_name: nome } });
+      el.btnSalvarNome.textContent = 'Atualizar Nome';
+
+      if(error) setStatus(error.message, true);
+      else {
+        setStatus('Nome atualizado!');
+        if(currentUser.user_metadata) currentUser.user_metadata.full_name = nome;
+        el.displayUser.textContent = nome;
+      }
+    }
+
+    // --- CHAT LOGIC ---
+    function renderMessage(msg) {
+      const isMe = currentUser && currentUser.id === msg.user_id;
+      const date = new Date(msg.created_at);
+      const hora = date.getHours().toString().padStart(2,'0') + ':' + date.getMinutes().toString().padStart(2,'0');
+
+      const div = document.createElement('div');
+      div.className = `bubble ${isMe ? 'me' : ''}`;
+      div.id = `msg-${msg.id}`;
+
+      let htmlContent = `<div class="bubble-autor">${msg.autor_nome || 'Anônimo'}</div>`;
+      
+      if(msg.texto) {
+        const cleanText = msg.texto.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        htmlContent += `<div class="bubble-text">${cleanText}</div>`;
+      }
+
+      if(msg.url_arquivo) {
+        const ext = msg.url_arquivo.split('.').pop().toLowerCase().split('?')[0];
+        const isImg = ['jpg','jpeg','png','gif','webp'].includes(ext);
+        
+        if(isImg) {
+          htmlContent += `<img src="${msg.url_arquivo}" class="bubble-file-img" onclick="window.open(this.src)">`;
+        } else {
+          htmlContent += `<a href="${msg.url_arquivo}" target="_blank" class="bubble-file-link">📄 Baixar Arquivo</a>`;
+        }
+      }
+
+      htmlContent += `
+        <div class="meta">
+          ${hora}
+          ${isMe ? `<button class="btn-trash" onclick="deleteMessage(${msg.id})">🗑</button>` : ''}
+        </div>
+      `;
+
+      div.innerHTML = htmlContent;
+      return div;
+    }
+
+    async function fetchMessages() {
+      // Ordena por created_at DESC
+      const { data, error } = await supabaseClient
+        .from('banco')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if(error) return console.error(error);
+
+      el.mensagensDiv.innerHTML = '';
+      if(data.length === 0) {
+        el.mensagensDiv.innerHTML = '<div class="text-center">Nenhuma mensagem ainda.</div>';
+      } else {
+        data.forEach(msg => {
+          el.mensagensDiv.appendChild(renderMessage(msg));
+        });
+      }
+    }
+
+    async function sendMessage() {
+      const text = el.texto.value.trim();
+      const file = el.fileInput.files[0];
+
+      if(!text && !file) return;
+
+      el.btnEnviar.disabled = true;
+      let fileUrl = null;
+
+      try {
+        // Upload Arquivo
+        if(file) {
+          const fileName = `${currentUser.id}/${Date.now()}_${file.name}`;
+          const { data, error: upErr } = await supabaseClient.storage.from('arquivos').upload(fileName, file);
+          if(upErr) throw upErr;
+          
+          const { data: pubData } = supabaseClient.storage.from('arquivos').getPublicUrl(fileName);
+          fileUrl = pubData.publicUrl;
+        }
+
+        // Insert DB
+        const { error: inErr } = await supabaseClient.from('banco').insert([{
+          texto: text,
+          url_arquivo: fileUrl,
+          user_id: currentUser.id,
+          autor_nome: currentUser.user_metadata.full_name || currentUser.email.split('@')[0]
+        }]);
+
+        if(inErr) throw inErr;
+
+        el.texto.value = '';
+        el.fileInput.value = '';
+        el.btnUpload.innerHTML = '📎';
+
+      } catch (err) {
+        alert('Erro ao enviar: ' + err.message);
+      } finally {
+        el.btnEnviar.disabled = false;
+      }
+    }
+
+    window.deleteMessage = async (id) => {
+      if(!confirm('Apagar mensagem?')) return;
+      await supabaseClient.from('banco').delete().eq('id', id);
+    };
+
+    // --- EVENT LISTENERS ---
+    el.btnLogin.onclick = handleLogin;
+    el.btnSignup.onclick = handleSignup;
+    el.btnLogout.onclick = handleLogout;
+    el.btnSalvarNome.onclick = updateName;
+    
+    el.btnEnviar.onclick = sendMessage;
+    el.texto.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }};
+    
+    el.btnUpload.onclick = () => el.fileInput.click();
+    el.fileInput.onchange = () => {
+      if(el.fileInput.files.length) el.btnUpload.innerHTML = '✅';
+      else el.btnUpload.innerHTML = '📎';
+    };
+
+    // --- AUTH STATE CHANGE ---
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        currentUser = session.user;
+        el.loginForm.classList.add('hidden');
+        el.userPanel.classList.remove('hidden');
+        el.appArea.classList.remove('hidden');
+        
+        const name = currentUser.user_metadata.full_name || currentUser.email;
+        el.displayUser.textContent = name;
+        el.nomeInput.value = currentUser.user_metadata.full_name || '';
+        el.headerStatus.textContent = 'Online';
+
+        fetchMessages();
+        
+        supabaseClient.channel('chat_realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'banco' }, () => {
+            fetchMessages();
+        }).subscribe();
+
+      } else {
+        currentUser = null;
+        el.loginForm.classList.remove('hidden');
+        el.userPanel.classList.add('hidden');
+        el.appArea.classList.add('hidden');
+        el.headerStatus.textContent = 'Desconectado';
+      }
+    });
+  </script>
+</body>
+  </html>
