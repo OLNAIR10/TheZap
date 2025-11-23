@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Mural OGP - Chat</title>
+<title>Mural TheZap</title>
 
 <!-- Importando Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -88,6 +88,12 @@
   .btn-icon { width: 40px; height: 40px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
   .btn-attach { background: transparent; color: #555; font-size: 20px; }
   .btn-send { background: var(--top); color: white; font-size: 18px; }
+
+  /* Botão de Refresh manual (caso precise) */
+  .refresh-btn { 
+    position: absolute; top: 60px; right: 10px; z-index: 10;
+    background: rgba(255,255,255,0.8); border: 1px solid #ddd; padding: 5px 10px; border-radius: 20px; font-size: 12px; cursor: pointer;
+  }
   
   /* Utilitários */
   .hidden{ display:none !important; }
@@ -102,7 +108,7 @@
       <div class="topbar">
         <div class="logo">TZ</div>
         <div>
-          <div class="title">THEZAP</div>
+          <div class="title">TheZap</div>
           <div class="subtitle" id="headerStatus">Desconectado</div>
         </div>
       </div>
@@ -143,6 +149,9 @@
 
         <!-- APP / CHAT -->
         <div class="app hidden" id="appArea">
+          <!-- Botãozinho discreto de atualizar -->
+          <button onclick="fetchMessages()" class="refresh-btn">🔄 Atualizar</button>
+
           <div id="messagesWrap" class="messages-wrap">
             <div id="mensagens" class="list">
                <!-- Mensagens serão injetadas aqui -->
@@ -341,9 +350,13 @@
 
         if(inErr) throw inErr;
 
+        // Limpar form
         el.texto.value = '';
         el.fileInput.value = '';
         el.btnUpload.innerHTML = '📎';
+        
+        // --- FIX: ATUALIZA A TELA IMEDIATAMENTE ---
+        fetchMessages();
 
       } catch (err) {
         alert('Erro ao enviar: ' + err.message);
@@ -355,6 +368,9 @@
     window.deleteMessage = async (id) => {
       if(!confirm('Apagar mensagem?')) return;
       await supabaseClient.from('banco').delete().eq('id', id);
+      // Remove do DOM imediatamente também
+      const elMsg = document.getElementById(`msg-${id}`);
+      if(elMsg) elMsg.remove();
     };
 
     // --- EVENT LISTENERS ---
@@ -387,6 +403,7 @@
 
         fetchMessages();
         
+        // Tenta ouvir em tempo real
         supabaseClient.channel('chat_realtime')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'banco' }, () => {
             fetchMessages();
@@ -402,4 +419,4 @@
     });
   </script>
 </body>
-  </html>
+</html>
