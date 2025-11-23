@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Mural TheZap</title>
+<title>Mural OGP - Chat</title>
 
 <!-- Importando Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -13,6 +13,7 @@
   :root{
     --bg:#e9f7f2; --top:#075e54; --accent:#25d366; --muted:#6b6b6b;
     --card-radius:12px; --shadow: 0 10px 30px rgba(0,0,0,0.10);
+    --recording-color: #e53935;
   }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial;background:var(--bg);-webkit-font-smoothing:antialiased;}
@@ -38,22 +39,46 @@
   .auth-panel{ padding:20px; border-bottom:1px solid #f0f0f0; background:#f9f9f9; }
   .auth-panel h2{ margin:0 0 10px; font-size:18px; color: var(--top); }
   .auth-inputs { display: flex; flex-direction: column; gap: 10px; }
+  
   input[type="email"], input[type="password"], input[type="text"]{ 
     width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; font-size:14px; outline: none;
   }
   input:focus { border-color: var(--accent); }
+
+  /* CSS SENHA COM OLHO */
+  .password-container { position: relative; width: 100%; display: flex; align-items: center; }
+  .password-container input { padding-right: 40px; }
+  .toggle-eye { position: absolute; right: 12px; cursor: pointer; font-size: 18px; background: none; border: none; padding: 0; color: #888; user-select: none; }
+  .toggle-eye:hover { color: var(--top); }
   
-  .btn-group { display:flex; gap:10px; margin-top:5px; }
+  .btn-group { display:flex; gap:10px; margin-top:5px; position: relative; }
   .btn{ padding:10px 16px; border-radius:8px; border:none; cursor:pointer; font-weight: 600; flex: 1; transition: opacity 0.2s; }
   .btn:active { opacity: 0.7; }
   .btn-primary{ background:var(--top); color:white; }
   .btn-secondary{ background:#e0e0e0; color:#333; }
   .btn-danger{ background:#dc3545; color:white; flex: 0; min-width: 80px;}
 
+  /* Links de texto */
+  .link-text { font-size: 13px; color: #007bff; text-decoration: none; text-align: right; display: block; margin-top: -5px; cursor: pointer; }
+  
+  /* MENU SUSPENSO */
+  .dropdown-wrapper { flex: 1; position: relative; }
+  .dropdown-content {
+    display: none; position: absolute; top: 100%; left: 0; width: 100%;
+    background-color: #fff; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 10;
+    border-radius: 8px; margin-top: 5px; overflow: hidden; border: 1px solid #ddd;
+  }
+  .dropdown-content.show { display: block; }
+  .dropdown-content button, .dropdown-content a {
+    display: block; width: 100%; padding: 12px; text-align: left;
+    border: none; background: none; border-bottom: 1px solid #f0f0f0;
+    font-size: 14px; color: #333; text-decoration: none; cursor: pointer; font-family: inherit;
+  }
+  .dropdown-content button:hover, .dropdown-content a:hover { background-color: #e9f7f2; }
+
   /* Área de Mensagens */
   .app{ display:flex; flex-direction:column; height:100%; min-height:0; }
   
-  /* Container Flex-Reverse para o chat começar de baixo */
   .messages-wrap{ 
     flex:1; overflow-y: auto; padding:14px; 
     background-image: linear-gradient(#e5ddd5 2px, transparent 2px), linear-gradient(90deg, #e5ddd5 2px, transparent 2px);
@@ -64,38 +89,53 @@
   
   .list{ display:flex; flex-direction:column; gap:8px; width:100%; }
 
-  /* Balões de Mensagem */
   .bubble{ max-width:85%; padding:8px 10px; border-radius:8px; background:#fff; align-self:flex-start; position:relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); margin-bottom: 2px;}
   .bubble.me{ background:#d9fdd3; align-self:flex-end; }
   
   .bubble-autor{ font-size: 11px; font-weight:700; color:var(--top); margin-bottom:2px; }
-  .bubble.me .bubble-autor { display: none; } /* Esconde nome se for eu */
+  .bubble.me .bubble-autor { display: none; }
 
   .bubble-text{ font-size: 14px; color: #111; line-height: 1.4; white-space: pre-wrap;}
   
   .bubble-file-img{ max-width:100%; border-radius:6px; margin-top:6px; cursor: pointer; }
   .bubble-file-link{ display:block; background:#f0f0f0; padding:10px; border-radius:6px; margin-top:6px; text-decoration:none; color:#007bff; font-size: 13px; display:flex; align-items:center; gap: 5px;}
+  
+  /* PLAYER DE ÁUDIO NO BALÃO */
+  audio { width: 100%; margin-top: 5px; height: 32px; }
 
   .meta{ font-size:10px; color:#999; margin-top:4px; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 5px;}
-  
-  .btn-trash { border: none; background: none; cursor: pointer; font-size: 12px; padding: 0; opacity: 0.4; }
+  .btn-trash { border: none; background: none; cursor: pointer; font-size: 14px; padding: 0 5px; opacity: 0.5; color: #888; margin-left: 5px; }
   .btn-trash:hover { opacity: 1; color: red; }
 
   /* Compositor (Input) */
-  .composer{ padding:8px; background:#f0f0f0; display: flex; gap: 8px; align-items: flex-end; }
+  .composer{ padding:8px; background:#f0f0f0; display: flex; gap: 8px; align-items: flex-end; position: relative; }
   textarea{ flex:1; min-height:40px; max-height:100px; padding:10px; border-radius:20px; border:none; resize:none; font-size:15px; outline:none; font-family: inherit;}
   
-  .btn-icon { width: 40px; height: 40px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .btn-icon { width: 40px; height: 40px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
   .btn-attach { background: transparent; color: #555; font-size: 20px; }
   .btn-send { background: var(--top); color: white; font-size: 18px; }
-
-  /* Botão de Refresh manual (caso precise) */
-  .refresh-btn { 
-    position: absolute; top: 60px; right: 10px; z-index: 10;
-    background: rgba(255,255,255,0.8); border: 1px solid #ddd; padding: 5px 10px; border-radius: 20px; font-size: 12px; cursor: pointer;
+  
+  /* ESTILO DO BOTÃO DE MICROFONE */
+  .btn-mic { background: #e0e0e0; color: #555; font-size: 18px; }
+  .btn-mic.recording { 
+    background: var(--recording-color); 
+    color: white; 
+    animation: pulse 1s infinite; 
   }
   
-  /* Utilitários */
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+
+  /* Status de Gravando */
+  .recording-status {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    background: var(--recording-color); color: white; padding: 4px 12px;
+    border-radius: 12px; font-size: 12px; display: none;
+  }
+
   .hidden{ display:none !important; }
   .text-center { text-align: center; color: var(--muted); font-size: 14px; margin-top: 20px; }
   .status-msg { margin-top: 10px; font-size: 13px; text-align: center; color: var(--muted); }
@@ -104,26 +144,27 @@
 <body>
   <div class="frame">
     <div class="card">
-      <!-- TOPO -->
       <div class="topbar">
         <div class="logo">TZ</div>
         <div>
-          <div class="title">TheZap</div>
+          <div class="title">THEZAP</div>
           <div class="subtitle" id="headerStatus">Desconectado</div>
         </div>
       </div>
 
-      <!-- ÁREA CENTRAL -->
       <div class="main">
         
-        <!-- PAINEL DE LOGIN / CADASTRO -->
         <div id="authPanel" class="auth-panel">
-          <!-- Formulário de Login -->
+          <!-- TELA 1: LOGIN -->
           <div id="loginForm">
             <h2>Acesse sua conta</h2>
             <div class="auth-inputs">
               <input type="email" id="email" placeholder="E-mail">
-              <input type="password" id="password" placeholder="Senha">
+              <div class="password-container">
+                <input type="password" id="password" placeholder="Senha">
+                <span id="btnTogglePass" class="toggle-eye">👁️</span>
+              </div>
+              <span id="linkForgot" class="link-text">Esqueci minha senha</span>
             </div>
             <div class="btn-group">
               <button id="btnLogin" class="btn btn-primary">Entrar</button>
@@ -131,15 +172,54 @@
             </div>
           </div>
 
-          <!-- Painel Logado (Alterar nome e Sair) -->
+          <!-- TELA 2: RECUPERAÇÃO -->
+          <div id="recoveryPanel" class="hidden">
+            <h2>Recuperar Senha</h2>
+            <div class="auth-inputs">
+                <p style="font-size:13px; color:#666; margin:0;">Digite seu e-mail para receber o link.</p>
+                <input type="email" id="emailRecovery" placeholder="Seu e-mail cadastrado">
+            </div>
+            <div class="btn-group">
+                <button id="btnSendRecovery" class="btn btn-primary">Enviar Link</button>
+                <button id="btnBackLogin" class="btn btn-secondary">Voltar</button>
+            </div>
+          </div>
+
+          <!-- TELA 3: NOVA SENHA -->
+          <div id="updatePassPanel" class="hidden">
+            <h2>Redefinir Senha</h2>
+            <div class="auth-inputs">
+                <p style="font-size:13px; color:#666; margin:0;">Crie sua nova senha:</p>
+                <div class="password-container">
+                    <input type="password" id="newPassword" placeholder="Nova Senha">
+                    <span id="btnTogglePassNew" class="toggle-eye">👁️</span>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button id="btnSavePass" class="btn btn-primary">Salvar Nova Senha</button>
+            </div>
+          </div>
+
+          <!-- TELA 4: USUÁRIO LOGADO -->
           <div id="userPanel" class="hidden">
             <h2>Olá, <span id="displayUserName">Usuário</span>!</h2>
             <div class="auth-inputs">
               <label style="font-size:12px; color:#666;">Seu nome público:</label>
               <input type="text" id="campoNome" placeholder="Como quer ser chamado?">
             </div>
+            
             <div class="btn-group">
-              <button id="btnSalvarNome" class="btn btn-primary">Atualizar Nome</button>
+              <div class="dropdown-wrapper">
+                <button onclick="toggleMenu()" class="btn btn-primary" style="width: 100%; display: flex; justify-content: center; gap: 8px;">
+                  ☰ Opções
+                </button>
+                <div id="myDropdown" class="dropdown-content">
+                  <button id="btnSalvarNome" style="color: var(--top); font-weight: bold;">📝 Atualizar Nome</button>
+                  <a href="/termos.html">📄 Termos e Opções</a>
+                  <a href="https://wa.me/?text=Quero+anunciar">📢 Anunciar</a>
+                  <button onclick="shareApp()">🔗 Compartilhar</button>
+                </div>
+              </div>
               <button id="btnLogout" class="btn btn-danger">Sair</button>
             </div>
           </div>
@@ -147,24 +227,25 @@
           <div id="authStatus" class="status-msg"></div>
         </div>
 
-        <!-- APP / CHAT -->
         <div class="app hidden" id="appArea">
-          <!-- Botãozinho discreto de atualizar -->
-          <button onclick="fetchMessages()" class="refresh-btn">🔄 Atualizar</button>
-
           <div id="messagesWrap" class="messages-wrap">
-            <div id="mensagens" class="list">
-               <!-- Mensagens serão injetadas aqui -->
-            </div>
+            <div id="mensagens" class="list"></div>
           </div>
 
-          <!-- Área de Escrita -->
           <div class="composer" id="composer">
+             <div id="recStatus" class="recording-status">Gravando... Clique para Enviar</div>
+             
+             <!-- Botão Anexo -->
              <button id="btnUpload" class="btn-icon btn-attach" title="Anexar">📎</button>
              <input type="file" id="campoArquivo" hidden>
              
+             <!-- Campo Texto -->
              <textarea id="campoTexto" placeholder="Mensagem..."></textarea>
              
+             <!-- Botão Microfone (NOVO) -->
+             <button id="btnMic" class="btn-icon btn-mic" title="Gravar Áudio">🎤</button>
+
+             <!-- Botão Enviar -->
              <button id="btnEnviar" class="btn-icon btn-send">➤</button>
           </div>
         </div>
@@ -174,26 +255,31 @@
   </div>
 
   <script>
-    // ============================================================
-    // CONFIGURAÇÃO DO SUPABASE
-    // ============================================================
-    
+    // CONFIGURAÇÃO SUPABASE
     const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
 
-    // Inicializa o cliente
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // --- ELEMENTOS DOM ---
     const el = {
       loginForm: document.getElementById('loginForm'),
+      recoveryPanel: document.getElementById('recoveryPanel'),
+      updatePassPanel: document.getElementById('updatePassPanel'),
       userPanel: document.getElementById('userPanel'),
       appArea: document.getElementById('appArea'),
       authStatus: document.getElementById('authStatus'),
       email: document.getElementById('email'),
       pass: document.getElementById('password'),
+      btnTogglePass: document.getElementById('btnTogglePass'),
       btnLogin: document.getElementById('btnLogin'),
       btnSignup: document.getElementById('btnSignup'),
+      linkForgot: document.getElementById('linkForgot'),
+      emailRecovery: document.getElementById('emailRecovery'),
+      btnSendRecovery: document.getElementById('btnSendRecovery'),
+      btnBackLogin: document.getElementById('btnBackLogin'),
+      newPassword: document.getElementById('newPassword'),
+      btnTogglePassNew: document.getElementById('btnTogglePassNew'),
+      btnSavePass: document.getElementById('btnSavePass'),
       btnLogout: document.getElementById('btnLogout'),
       nomeInput: document.getElementById('campoNome'),
       btnSalvarNome: document.getElementById('btnSalvarNome'),
@@ -203,220 +289,274 @@
       texto: document.getElementById('campoTexto'),
       fileInput: document.getElementById('campoArquivo'),
       btnUpload: document.getElementById('btnUpload'),
-      btnEnviar: document.getElementById('btnEnviar')
+      btnEnviar: document.getElementById('btnEnviar'),
+      btnMic: document.getElementById('btnMic'), // Novo
+      recStatus: document.getElementById('recStatus') // Novo
     };
 
     let currentUser = null;
+    
+    // --- VARIÁVEIS DE GRAVAÇÃO ---
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
 
-    // --- UI HELPER ---
+    // --- SENHA OLHO ---
+    function toggleEye(input, icon) {
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+        icon.textContent = type === 'password' ? '👁️' : '🙈';
+    }
+    el.btnTogglePass.onclick = () => toggleEye(el.pass, el.btnTogglePass);
+    el.btnTogglePassNew.onclick = () => toggleEye(el.newPassword, el.btnTogglePassNew);
+
+    // --- MENU E COMPARTILHAR ---
+    function toggleMenu() { document.getElementById("myDropdown").classList.toggle("show"); }
+    window.onclick = function(event) {
+      if (!event.target.matches('.btn-primary') && !event.target.matches('.btn-primary *')) {
+        var dropdowns = document.getElementsByClassName("dropdown-content");
+        for (var i = 0; i < dropdowns.length; i++) {
+          var openDropdown = dropdowns[i];
+          if (openDropdown.classList.contains('show')) { openDropdown.classList.remove('show'); }
+        }
+      }
+    }
+    async function shareApp() {
+      if (navigator.share) {
+        try { await navigator.share({ title: 'Mural TheZap', text: 'Venha conversar no Mural TheZap!', url: window.location.href }); } 
+        catch (err) { console.log('Erro ao compartilhar', err); }
+      } else { alert("Link copiado: " + window.location.href); }
+    }
+
+    // --- AUTH HELPERS ---
     function setStatus(msg, isError = false) {
       el.authStatus.textContent = msg;
       el.authStatus.style.color = isError ? '#d93025' : '#666';
       setTimeout(() => { el.authStatus.textContent = ''; }, 5000);
     }
+    function showPanel(panelName) {
+        el.loginForm.classList.add('hidden');
+        el.recoveryPanel.classList.add('hidden');
+        el.updatePassPanel.classList.add('hidden');
+        el.userPanel.classList.add('hidden');
+        el.appArea.classList.add('hidden');
+        
+        if(panelName === 'login') el.loginForm.classList.remove('hidden');
+        if(panelName === 'recovery') el.recoveryPanel.classList.remove('hidden');
+        if(panelName === 'updatePass') el.updatePassPanel.classList.remove('hidden');
+        if(panelName === 'app') {
+            el.userPanel.classList.remove('hidden');
+            el.appArea.classList.remove('hidden');
+        }
+    }
 
-    // --- AUTHENTICATION ---
+    // --- LÓGICA DE GRAVAÇÃO DE ÁUDIO ---
+    el.btnMic.onclick = async () => {
+        if (!isRecording) {
+            // INICIAR GRAVAÇÃO
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    // Cria o arquivo de áudio
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); // WebM é padrão web
+                    // Envia para o Supabase
+                    await uploadAudioAndSend(audioBlob);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                el.btnMic.classList.add('recording');
+                el.recStatus.style.display = 'block';
+                
+            } catch (err) {
+                alert('Erro ao acessar microfone: ' + err.message);
+            }
+        } else {
+            // PARAR GRAVAÇÃO
+            mediaRecorder.stop();
+            isRecording = false;
+            el.btnMic.classList.remove('recording');
+            el.recStatus.style.display = 'none';
+        }
+    };
+
+    async function uploadAudioAndSend(audioBlob) {
+        el.btnMic.disabled = true;
+        el.recStatus.textContent = "Enviando áudio...";
+        el.recStatus.style.display = 'block';
+
+        try {
+            const fileName = `${currentUser.id}/${Date.now()}_audio.webm`;
+            // Upload do Blob de áudio
+            const { data, error: upErr } = await supabaseClient.storage.from('arquivos').upload(fileName, audioBlob);
+            if(upErr) throw upErr;
+
+            const { data: pubData } = supabaseClient.storage.from('arquivos').getPublicUrl(fileName);
+            
+            // Grava no banco
+            const { error: inErr } = await supabaseClient.from('banco').insert([{
+                texto: '', // Sem texto, apenas áudio
+                url_arquivo: pubData.publicUrl,
+                user_id: currentUser.id,
+                autor_nome: currentUser.user_metadata.full_name || currentUser.email.split('@')[0]
+            }]);
+
+            if(inErr) throw inErr;
+
+        } catch (err) {
+            alert('Erro ao enviar áudio: ' + err.message);
+        } finally {
+            el.btnMic.disabled = false;
+            el.recStatus.style.display = 'none';
+            el.recStatus.textContent = "Gravando... Clique para Enviar";
+        }
+    }
+
+    // --- AUTH ACTIONS ---
     async function handleLogin() {
-      const email = el.email.value.trim();
-      const password = el.pass.value.trim();
-      if(!email || !password) return setStatus('Preencha e-mail e senha.', true);
-
+      const email = el.email.value.trim(); const password = el.pass.value.trim();
+      if(!email || !password) return setStatus('Preencha dados.', true);
       el.btnLogin.textContent = '...';
       const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
       el.btnLogin.textContent = 'Entrar';
-      
       if(error) setStatus(error.message, true);
     }
-
     async function handleSignup() {
-      const email = el.email.value.trim();
-      const password = el.pass.value.trim();
-      if(!email || !password) return setStatus('Preencha e-mail e senha.', true);
-
+      const email = el.email.value.trim(); const password = el.pass.value.trim();
+      if(!email || !password) return setStatus('Preencha dados.', true);
       el.btnSignup.textContent = '...';
       const { error } = await supabaseClient.auth.signUp({ email, password });
       el.btnSignup.textContent = 'Cadastrar';
-
-      if(error) setStatus(error.message, true);
-      else setStatus('Cadastro realizado! Verifique seu e-mail (se necessário) ou faça login.');
+      if(error) setStatus(error.message, true); else setStatus('Cadastro realizado!');
     }
-
-    async function handleLogout() {
-      await supabaseClient.auth.signOut();
+    async function handleLogout() { await supabaseClient.auth.signOut(); }
+    
+    el.linkForgot.onclick = () => { el.emailRecovery.value = el.email.value; showPanel('recovery'); }
+    el.btnBackLogin.onclick = () => showPanel('login');
+    
+    async function handleSendRecovery() {
+        const email = el.emailRecovery.value.trim();
+        if(!email) return setStatus('Digite e-mail.', true);
+        el.btnSendRecovery.textContent = 'Enviando...';
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+        el.btnSendRecovery.textContent = 'Enviar Link';
+        if(error) setStatus(error.message, true); else { setStatus('Link enviado!'); setTimeout(() => showPanel('login'), 3000); }
     }
-
+    async function handleSaveNewPass() {
+        const newPass = el.newPassword.value.trim();
+        if(!newPass) return setStatus('Digite senha.', true);
+        el.btnSavePass.textContent = '...';
+        const { error } = await supabaseClient.auth.updateUser({ password: newPass });
+        el.btnSavePass.textContent = 'Salvar';
+        if(error) setStatus(error.message, true); else { currentUser = (await supabaseClient.auth.getUser()).data.user; showPanel('app'); }
+    }
     async function updateName() {
-      const nome = el.nomeInput.value.trim();
-      if(!nome) return;
-
-      el.btnSalvarNome.textContent = 'Salvando...';
+      const nome = el.nomeInput.value.trim(); if(!nome) return;
+      document.getElementById("myDropdown").classList.remove("show");
+      el.btnSalvarNome.textContent = '...';
       const { error } = await supabaseClient.auth.updateUser({ data: { full_name: nome } });
-      el.btnSalvarNome.textContent = 'Atualizar Nome';
-
-      if(error) setStatus(error.message, true);
-      else {
-        setStatus('Nome atualizado!');
-        if(currentUser.user_metadata) currentUser.user_metadata.full_name = nome;
-        el.displayUser.textContent = nome;
-      }
+      el.btnSalvarNome.textContent = '📝 Atualizar Nome';
+      if(error) setStatus(error.message, true); else { setStatus('Atualizado!'); if(currentUser.user_metadata) currentUser.user_metadata.full_name = nome; el.displayUser.textContent = nome; }
     }
 
-    // --- CHAT LOGIC ---
+    // --- CHAT DISPLAY ---
+    function getHiddenMessages() { return JSON.parse(localStorage.getItem('hidden_msgs_' + (currentUser ? currentUser.id : 'anon')) || '[]'); }
+    
     function renderMessage(msg) {
       const isMe = currentUser && currentUser.id === msg.user_id;
       const date = new Date(msg.created_at);
       const hora = date.getHours().toString().padStart(2,'0') + ':' + date.getMinutes().toString().padStart(2,'0');
-
       const div = document.createElement('div');
       div.className = `bubble ${isMe ? 'me' : ''}`;
       div.id = `msg-${msg.id}`;
 
       let htmlContent = `<div class="bubble-autor">${msg.autor_nome || 'Anônimo'}</div>`;
+      if(msg.texto) htmlContent += `<div class="bubble-text">${msg.texto.replace(/</g, "&lt;")}</div>`;
       
-      if(msg.texto) {
-        const cleanText = msg.texto.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        htmlContent += `<div class="bubble-text">${cleanText}</div>`;
-      }
-
       if(msg.url_arquivo) {
         const ext = msg.url_arquivo.split('.').pop().toLowerCase().split('?')[0];
         const isImg = ['jpg','jpeg','png','gif','webp'].includes(ext);
+        const isAudio = ['webm','mp3','wav','ogg','m4a'].includes(ext);
         
-        if(isImg) {
-          htmlContent += `<img src="${msg.url_arquivo}" class="bubble-file-img" onclick="window.open(this.src)">`;
-        } else {
-          htmlContent += `<a href="${msg.url_arquivo}" target="_blank" class="bubble-file-link">📄 Baixar Arquivo</a>`;
-        }
+        if(isImg) htmlContent += `<img src="${msg.url_arquivo}" class="bubble-file-img" onclick="window.open(this.src)">`;
+        else if (isAudio) htmlContent += `<audio controls src="${msg.url_arquivo}"></audio>`;
+        else htmlContent += `<a href="${msg.url_arquivo}" target="_blank" class="bubble-file-link">📄 Baixar Arquivo</a>`;
       }
-
-      htmlContent += `
-        <div class="meta">
-          ${hora}
-          ${isMe ? `<button class="btn-trash" onclick="deleteMessage(${msg.id})">🗑</button>` : ''}
-        </div>
-      `;
-
+      htmlContent += `<div class="meta">${hora} <button class="btn-trash" title="Apagar para mim" onclick="deleteMessage(${msg.id})">🗑</button></div>`;
       div.innerHTML = htmlContent;
       return div;
     }
 
     async function fetchMessages() {
-      // Ordena por created_at DESC
-      const { data, error } = await supabaseClient
-        .from('banco')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
+      const { data, error } = await supabaseClient.from('banco').select('*').order('created_at', { ascending: false }).limit(50);
       if(error) return console.error(error);
-
       el.mensagensDiv.innerHTML = '';
-      if(data.length === 0) {
-        el.mensagensDiv.innerHTML = '<div class="text-center">Nenhuma mensagem ainda.</div>';
-      } else {
-        data.forEach(msg => {
-          el.mensagensDiv.appendChild(renderMessage(msg));
-        });
-      }
+      const hiddenList = getHiddenMessages();
+      if(data.length === 0) el.mensagensDiv.innerHTML = '<div class="text-center">Nenhuma mensagem ainda.</div>';
+      else data.forEach(msg => { if (!hiddenList.includes(msg.id)) el.mensagensDiv.appendChild(renderMessage(msg)); });
     }
 
     async function sendMessage() {
       const text = el.texto.value.trim();
       const file = el.fileInput.files[0];
-
       if(!text && !file) return;
-
       el.btnEnviar.disabled = true;
       let fileUrl = null;
-
       try {
-        // Upload Arquivo
         if(file) {
           const fileName = `${currentUser.id}/${Date.now()}_${file.name}`;
           const { data, error: upErr } = await supabaseClient.storage.from('arquivos').upload(fileName, file);
           if(upErr) throw upErr;
-          
           const { data: pubData } = supabaseClient.storage.from('arquivos').getPublicUrl(fileName);
           fileUrl = pubData.publicUrl;
         }
-
-        // Insert DB
         const { error: inErr } = await supabaseClient.from('banco').insert([{
-          texto: text,
-          url_arquivo: fileUrl,
-          user_id: currentUser.id,
+          texto: text, url_arquivo: fileUrl, user_id: currentUser.id,
           autor_nome: currentUser.user_metadata.full_name || currentUser.email.split('@')[0]
         }]);
-
         if(inErr) throw inErr;
-
-        // Limpar form
-        el.texto.value = '';
-        el.fileInput.value = '';
-        el.btnUpload.innerHTML = '📎';
-        
-        // --- FIX: ATUALIZA A TELA IMEDIATAMENTE ---
-        fetchMessages();
-
-      } catch (err) {
-        alert('Erro ao enviar: ' + err.message);
-      } finally {
-        el.btnEnviar.disabled = false;
-      }
+        el.texto.value = ''; el.fileInput.value = ''; el.btnUpload.innerHTML = '📎';
+      } catch (err) { alert('Erro: ' + err.message); } finally { el.btnEnviar.disabled = false; }
     }
 
     window.deleteMessage = async (id) => {
-      if(!confirm('Apagar mensagem?')) return;
-      await supabaseClient.from('banco').delete().eq('id', id);
-      // Remove do DOM imediatamente também
-      const elMsg = document.getElementById(`msg-${id}`);
-      if(elMsg) elMsg.remove();
+      if(!confirm('Ocultar esta mensagem?')) return;
+      let hiddenList = getHiddenMessages();
+      hiddenList.push(id);
+      localStorage.setItem('hidden_msgs_' + (currentUser ? currentUser.id : 'anon'), JSON.stringify(hiddenList));
+      const msgEl = document.getElementById(`msg-${id}`);
+      if(msgEl) msgEl.remove();
     };
 
-    // --- EVENT LISTENERS ---
-    el.btnLogin.onclick = handleLogin;
-    el.btnSignup.onclick = handleSignup;
-    el.btnLogout.onclick = handleLogout;
-    el.btnSalvarNome.onclick = updateName;
-    
+    // EVENTOS
+    el.btnLogin.onclick = handleLogin; el.btnSignup.onclick = handleSignup; el.btnLogout.onclick = handleLogout;
+    el.btnSalvarNome.onclick = updateName; el.btnSendRecovery.onclick = handleSendRecovery; el.btnSavePass.onclick = handleSaveNewPass;
     el.btnEnviar.onclick = sendMessage;
     el.texto.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }};
-    
     el.btnUpload.onclick = () => el.fileInput.click();
-    el.fileInput.onchange = () => {
-      if(el.fileInput.files.length) el.btnUpload.innerHTML = '✅';
-      else el.btnUpload.innerHTML = '📎';
-    };
+    el.fileInput.onchange = () => { if(el.fileInput.files.length) el.btnUpload.innerHTML = '✅'; else el.btnUpload.innerHTML = '📎'; };
 
-    // --- AUTH STATE CHANGE ---
     supabaseClient.auth.onAuthStateChange((event, session) => {
-      if (session) {
+      if (event === 'PASSWORD_RECOVERY') showPanel('updatePass');
+      else if (session) {
         currentUser = session.user;
-        el.loginForm.classList.add('hidden');
-        el.userPanel.classList.remove('hidden');
-        el.appArea.classList.remove('hidden');
-        
-        const name = currentUser.user_metadata.full_name || currentUser.email;
-        el.displayUser.textContent = name;
+        if (!el.updatePassPanel.classList.contains('hidden') === false) showPanel('app');
+        el.displayUser.textContent = currentUser.user_metadata.full_name || currentUser.email;
         el.nomeInput.value = currentUser.user_metadata.full_name || '';
         el.headerStatus.textContent = 'Online';
-
         fetchMessages();
-        
-        // Tenta ouvir em tempo real
-        supabaseClient.channel('chat_realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'banco' }, () => {
-            fetchMessages();
-        }).subscribe();
-
+        supabaseClient.channel('chat_realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'banco' }, () => { fetchMessages(); }).subscribe();
       } else {
-        currentUser = null;
-        el.loginForm.classList.remove('hidden');
-        el.userPanel.classList.add('hidden');
-        el.appArea.classList.add('hidden');
-        el.headerStatus.textContent = 'Desconectado';
+        currentUser = null; showPanel('login'); el.headerStatus.textContent = 'Desconectado';
       }
     });
   </script>
 </body>
-</html>
+                      </html>
