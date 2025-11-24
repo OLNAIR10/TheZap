@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* CSS GERAL */
-  :root{ --bg:#e9f7f2; --top:#075e54; --accent:#25d366; --muted:#6b6b6b; --card-bg:#fff; --input-bg:#f0f0f0; --input-text:#000; --msg-in:#fff; --msg-out:#d9fdd3; --msg-text:#000; --recording:#e53935; --select-bg: #b3e5fc; /* Cor de seleção */ }
+  :root{ --bg:#e9f7f2; --top:#075e54; --accent:#25d366; --muted:#6b6b6b; --card-bg:#fff; --input-bg:#f0f0f0; --input-text:#000; --msg-in:#fff; --msg-out:#d9fdd3; --msg-text:#000; --recording:#e53935; --select-bg: #b3e5fc; }
   body.dark-mode { --bg:#111b21; --top:#202c33; --card-bg:#111b21; --input-bg:#2a3942; --input-text:#e9edef; --msg-in:#202c33; --msg-out:#005c4b; --msg-text:#e9edef; --muted:#8696a0; --select-bg: #004d40; }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;} 
   html,body{height:100%;margin:0;font-family:system-ui,-apple-system,sans-serif;background:var(--bg);transition:background 0.3s; user-select: none;}
@@ -24,7 +24,7 @@
   .typing-indicator{font-size:11px;color:#25d366;font-weight:bold;display:none;animation:blink 1s infinite;}
   @keyframes blink{50%{opacity:0.5;}}
   
-  /* TOPO DE SELEÇÃO (ESCONDIDO POR PADRÃO) */
+  /* TOPO DE SELEÇÃO */
   .selection-bar {
       position: absolute; top: 0; left: 0; width: 100%; height: 60px;
       background: #fff; color: #333; display: none; align-items: center;
@@ -50,11 +50,9 @@
   .bubble{max-width:80%;padding:6px 8px;border-radius:8px;background:var(--msg-in);color:var(--msg-text);box-shadow:0 1px 2px rgba(0,0,0,0.1);position:relative;font-size:14px; transition: background 0.2s;}
   .bubble.me{background:var(--msg-out);}
   
-  /* MENSAGEM SELECIONADA */
   .msg-row.selected .bubble { background: var(--select-bg) !important; }
   .msg-row.selected { background: rgba(0,0,0,0.05); border-radius: 5px;}
 
-  /* RESTO DO CSS */
   .reply-preview{background:rgba(0,0,0,0.05);border-left:4px solid var(--accent);padding:4px;border-radius:4px;font-size:11px;margin-bottom:4px;cursor:pointer;}
   .reactions{position:absolute;bottom:-10px;right:10px;background:#fff;border-radius:10px;padding:2px 6px;font-size:10px;box-shadow:0 1px 2px rgba(0,0,0,0.2);display:none;color:#000;}
   .reactions.show{display:block;}
@@ -65,7 +63,6 @@
   .meta{font-size:10px;color:var(--muted);text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:2px;}
   .ticks{font-size:14px;} .ticks.blue{color:#34b7f1;}
   
-  /* BOTÕES DENTRO DA MSG (Só aparecem se não estiver selecionando) */
   .msg-actions { display: inline-flex; gap: 5px; margin-left: 5px; }
   .selection-active .msg-actions { display: none !important; }
 
@@ -118,9 +115,15 @@
       <!-- BUSCA -->
       <div class="search-box" id="searchBox"><input type="text" id="searchInput" placeholder="Buscar mensagem..." onkeyup="filterMessages()"></div>
 
-      <!-- MENU SUSPENSO -->
+      <!-- MENU SUSPENSO (AGORA COM OS LINKS NOVOS) -->
       <div id="myDropdown" class="dropdown-content">
         <a href="/perfil.html">👤 Meu Perfil</a>
+        
+        <!-- LINKS NOVOS -->
+        <a href="/privado.html" style="color: #6a1b9a; font-weight: bold;">🔒 Chat Privado / Grupos</a>
+        <a href="/anuncios.html" style="color: #075e54; font-weight: bold;">📢 Mural de Anúncios</a>
+        <!-- FIM LINKS NOVOS -->
+
         <button onclick="toggleDarkMode()">🌙 Tema Escuro/Claro</button>
         <button onclick="document.getElementById('wallInput').click()">🖼️ Papel de Parede</button>
         <a href="/termos.html">📄 Termos</a>
@@ -154,7 +157,7 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const ADMIN_EMAILS = ['seu_email@gmail.com']; 
+    const ADMIN_EMAILS = ['olnair10pereira@gmail.com']; 
 
     const el={msgDiv:document.getElementById('mensagens'),wrap:document.getElementById('messagesWrap'),txt:document.getElementById('campoTexto'),replyBar:document.getElementById('replyBar'),replyTxt:document.getElementById('replyText'),preview:document.getElementById('previewArea'),imgPrev:document.getElementById('imgPreview'),fileIn:document.getElementById('fileInput'),mic:document.getElementById('btnMic'),send:document.getElementById('btnEnviar'),status:document.getElementById('statusText'),typing:document.getElementById('typingInd'), selBar:document.getElementById('selectionBar'), selCount:document.getElementById('selCount')};
     
@@ -219,7 +222,6 @@
         div.className = `msg-row ${isMe ? 'me' : ''}`;
         div.id = `msg-${msg.id}`;
         
-        // LOGICA DE EVENTOS (TOQUE LONGO E CLIQUE)
         div.addEventListener('touchstart', () => startLongPress(msg.id));
         div.addEventListener('touchend', () => cancelLongPress());
         div.addEventListener('mousedown', () => startLongPress(msg.id));
@@ -235,8 +237,6 @@
             else content += `<img src="${msg.url_arquivo}" class="bubble-img" onclick="if(!selectionMode) window.open('${msg.url_arquivo}')">`;
         }
         const reactions = msg.reacoes && Object.keys(msg.reacoes).length ? `<div class="reactions show">❤️ ${Object.keys(msg.reacoes).length}</div>` : '';
-        
-        // Botões normais (Responder) - Escondidos no modo seleção
         const replyBtn = `<span class="msg-actions"><button class="btn-trash" onclick='setReply(${JSON.stringify(msg)})'>↩</button></span>`;
 
         div.innerHTML = `
@@ -251,22 +251,12 @@
         scrollToBottom();
     }
 
-    // --- LOGICA DE SELEÇÃO MÚLTIPLA ---
-    function startLongPress(id) {
-        longPressTimer = setTimeout(() => {
-            enterSelectionMode(id);
-        }, 600); // 600ms para ativar
-    }
+    function startLongPress(id) { longPressTimer = setTimeout(() => { enterSelectionMode(id); }, 600); }
     function cancelLongPress() { clearTimeout(longPressTimer); }
 
     function handleClick(msg, e) {
-        // Se estiver no modo seleção, clica para marcar/desmarcar
-        if(selectionMode) {
-            toggleSelection(msg.id);
-        } else {
-            // Se não, detecta duplo clique para curtir (simulado)
-            if (e.detail === 2) react(msg.id, '❤️');
-        }
+        if(selectionMode) { toggleSelection(msg.id); } 
+        else { if (e.detail === 2) react(msg.id, '❤️'); }
     }
 
     function enterSelectionMode(id) {
@@ -275,7 +265,6 @@
         el.selBar.classList.add('active');
         document.body.classList.add('selection-active');
         toggleSelection(id);
-        // Vibrar se possível
         if(navigator.vibrate) navigator.vibrate(50);
     }
 
@@ -284,7 +273,6 @@
         selectedIds.clear();
         el.selBar.classList.remove('active');
         document.body.classList.remove('selection-active');
-        // Remove visual de todos
         document.querySelectorAll('.msg-row').forEach(row => row.classList.remove('selected'));
         el.selCount.textContent = '0';
     }
@@ -292,39 +280,22 @@
     function toggleSelection(id) {
         const row = document.getElementById(`msg-${id}`);
         if(!row) return;
-
-        if(selectedIds.has(id)) {
-            selectedIds.delete(id);
-            row.classList.remove('selected');
-        } else {
-            selectedIds.add(id);
-            row.classList.add('selected');
-        }
+        if(selectedIds.has(id)) { selectedIds.delete(id); row.classList.remove('selected'); } 
+        else { selectedIds.add(id); row.classList.add('selected'); }
         el.selCount.textContent = selectedIds.size;
-
-        // Se desmarcar tudo, sai do modo
         if(selectedIds.size === 0) exitSelectionMode();
     }
 
     async function deleteSelectedMessages() {
         if(selectedIds.size === 0) return;
         if(!confirm(`Apagar ${selectedIds.size} mensagens para todos?`)) return;
-
         const idsToDelete = Array.from(selectedIds);
-        
-        // Apaga do banco (Realtime vai apagar da tela)
         const { error } = await supabaseClient.from('banco').delete().in('id', idsToDelete);
-        
-        if(error) alert('Erro ao apagar: ' + error.message);
-        else exitSelectionMode();
+        if(error) alert('Erro: ' + error.message); else exitSelectionMode();
     }
 
-    function removeMessageFromScreen(id) {
-        const row = document.getElementById(`msg-${id}`);
-        if(row) row.remove();
-    }
+    function removeMessageFromScreen(id) { const row = document.getElementById(`msg-${id}`); if(row) row.remove(); }
 
-    // SEND LOGIC
     async function sendMessage() {
         const text = el.txt.value.trim();
         if(!text && !fileToSend) return;
@@ -372,4 +343,4 @@
     el.send.onclick = sendMessage; el.txt.onkeydown = e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
   </script>
 </body>
-                </html>
+        </html>
