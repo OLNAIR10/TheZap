@@ -6,16 +6,15 @@
 <title>TheZap Privado</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* Ajuste para Mobile (DVH) */
+  /* CSS GERAL */
   :root{ --bg:#e9f7f2; --top:#4a148c; --card-bg:#fff; --input-bg:#f0f0f0; --msg-in:#fff; --msg-out:#e1bee7; }
   
-  /* O segredo está aqui: 100dvh ignora a barra do navegador */
   body { margin:0; font-family:sans-serif; background: var(--bg); display:flex; justify-content:center; height: 100dvh; overflow:hidden; }
   
   .card { width:100%; max-width:720px; background:var(--card-bg); display:flex; flex-direction:column; height:100%; position: relative; }
   
   /* TOPO ROXO */
-  .topbar { background:var(--top); color:white; padding:10px; display:flex; align-items:center; justify-content:space-between; flex-shrink: 0; }
+  .topbar { background:var(--top); color:white; padding:10px; display:flex; align-items:center; justify-content:space-between; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10; }
   .btn-back { color:white; text-decoration:none; font-size:24px; margin-right:15px; cursor: pointer; }
   
   /* MENSAGENS */
@@ -26,66 +25,93 @@
   .bubble-autor { font-size:11px; font-weight:bold; color:var(--top); margin-bottom:2px; }
   .meta { font-size:10px; color:#555; text-align:right; margin-top: 3px;}
 
-  /* BARRA DE DIGITAR (FIXA NO FUNDO) */
+  /* BARRA DE DIGITAR */
   .composer { padding:10px; background:var(--input-bg); display:flex; gap:10px; align-items: center; border-top: 1px solid #ddd; flex-shrink: 0; }
   input { flex:1; padding:12px; border-radius:20px; border:none; outline:none; background: white; font-size: 15px;}
   .btn-send { background:var(--top); color:white; border:none; width: 45px; height: 45px; border-radius:50%; cursor:pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+
+  /* MODAL DE ENTRADA NA SALA (NOVO) */
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+  .modal-box { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+  .modal-box h2 { color: var(--top); margin-top: 0; }
+  .modal-box input { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; text-align: center; }
+  .modal-box input:focus { border-color: var(--top); }
+  .btn-enter { background: var(--top); color: white; padding: 12px; width: 100%; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
 <div class="card">
+    <!-- TOPO -->
     <div class="topbar">
         <div style="display:flex; align-items:center;">
             <a href="/" class="btn-back">⬅</a>
             <div>
-                <div style="font-weight:bold; font-size: 16px;" id="roomName">Carregando...</div>
+                <div style="font-weight:bold; font-size: 16px;" id="roomName">Privado</div>
                 <div style="font-size:12px; opacity: 0.8;">Chat Secreto</div>
             </div>
         </div>
     </div>
 
+    <!-- ÁREA DE MENSAGENS -->
     <div id="messagesWrap" class="messages-wrap"></div>
 
+    <!-- BARRA DE DIGITAR -->
     <div class="composer">
         <input type="text" id="txt" placeholder="Digite aqui...">
         <button class="btn-send" onclick="send()">➤</button>
     </div>
 </div>
 
+<!-- MODAL DE ENTRADA (Aparece ao abrir) -->
+<div id="loginRoomModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2>🔒 Chat Privado</h2>
+        <p>Crie um nome para a sala ou digite um existente para entrar.</p>
+        <input type="text" id="inputSala" placeholder="Ex: familia123">
+        <button class="btn-enter" onclick="entrarSala()">ENTRAR NA SALA</button>
+        <br><br>
+        <a href="/" style="color: #666; text-decoration: none; font-size: 14px;">Voltar ao Início</a>
+    </div>
+</div>
+
 <script>
     const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
     let currentUser = null;
     let currentRoom = null;
 
+    // 1. VERIFICA LOGIN
     async function init() {
-        const {data} = await supabase.auth.getSession();
+        const {data} = await supabaseClient.auth.getSession();
         if(!data.session) return window.location.href = '/';
         currentUser = data.session.user;
-
-        // Pergunta a sala assim que abre (com pequeno delay para carregar a tela)
-        setTimeout(async () => {
-            let room = prompt("🔒 CHAT PRIVADO\n\nDigite o NOME DA SALA para criar ou entrar (Ex: familia, amor, trabalho):");
-            
-            if(!room || room.trim() === "") {
-                window.location.href = '/'; // Volta se cancelar
-                return;
-            }
-            
-            currentRoom = room.toLowerCase().trim().replace(/\s/g, ''); // Remove espaços
-            document.getElementById('roomName').textContent = "Sala: " + currentRoom;
-            
-            fetchMessages();
-            setupRealtime();
-        }, 100);
+        // Modal já está aberto, esperando usuário digitar
     }
     init();
 
+    // 2. ENTRAR NA SALA
+    function entrarSala() {
+        const salaInput = document.getElementById('inputSala').value.trim();
+        if(!salaInput) return alert("Digite um nome para a sala!");
+
+        currentRoom = salaInput.toLowerCase().replace(/\s/g, ''); // Remove espaços e minúsculas
+        
+        // Atualiza visual
+        document.getElementById('roomName').textContent = "Sala: " + currentRoom;
+        document.getElementById('loginRoomModal').classList.add('hidden'); // Esconde modal
+        
+        // Carrega dados
+        fetchMessages();
+        setupRealtime();
+    }
+
+    // 3. CARREGAR MENSAGENS
     async function fetchMessages() {
-        const { data } = await supabase.from('banco')
+        const { data } = await supabaseClient.from('banco')
             .select('*')
             .eq('sala_id', currentRoom)
             .order('created_at', { ascending: true });
@@ -96,6 +122,7 @@
         scrollToBottom();
     }
 
+    // 4. RENDERIZAR NA TELA
     function renderMessage(msg) {
         const isMe = msg.user_id === currentUser.id;
         const div = document.createElement('div');
@@ -109,15 +136,15 @@
         scrollToBottom();
     }
 
+    // 5. ENVIAR
     async function send() {
         const txt = document.getElementById('txt');
         if(!txt.value.trim()) return;
         
-        // Envia e limpa imediatamente para não travar
         const texto = txt.value;
         txt.value = ''; 
         
-        await supabase.from('banco').insert([{
+        await supabaseClient.from('banco').insert([{
             texto: texto,
             user_id: currentUser.id,
             autor_nome: currentUser.user_metadata.full_name,
@@ -125,8 +152,9 @@
         }]);
     }
 
+    // 6. TEMPO REAL
     function setupRealtime() {
-        supabase.channel('private-room')
+        supabaseClient.channel('private-room')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'banco', filter: `sala_id=eq.${currentRoom}` }, payload => {
             renderMessage(payload.new);
         }).subscribe();
