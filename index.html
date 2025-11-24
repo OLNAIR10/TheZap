@@ -3,133 +3,196 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Mural OGP - Chat</title>
+<title>TheZap - Chat</title>
 
 <!-- Importando Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-  /* --- CSS GLOBAL E VARIÁVEIS --- */
+  /* --- CSS GLOBAL E VARIÁVEIS (TEMA CLARO PADRÃO) --- */
   :root{
-    --bg:#e9f7f2; --top:#075e54; --accent:#25d366; --muted:#6b6b6b;
-    --card-radius:12px; --shadow: 0 10px 30px rgba(0,0,0,0.10);
-    --recording-color: #e53935;
-    --msg-bg: #d9fdd3;
+    --bg: #e9f7f2; 
+    --top: #075e54; 
+    --header-text: #ffffff;
+    --accent: #25d366; 
+    --muted: #6b6b6b;
+    --card-bg: #ffffff;
+    --input-bg: #f0f0f0;
+    --input-text: #000000;
+    --msg-bg-in: #ffffff; /* Mensagem recebida */
+    --msg-bg-out: #d9fdd3; /* Mensagem enviada */
     --msg-text: #000000;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial;background:var(--bg);-webkit-font-smoothing:antialiased;}
-  
-  .frame{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:8px;}
-  .card{
-    width:100%; max-width:720px; height: calc(100vh - 16px);
-    background:#fff; border-radius:var(--card-radius); box-shadow:var(--shadow);
-    overflow:hidden; display:flex; flex-direction:column;
+    --shadow: 0 10px 30px rgba(0,0,0,0.10);
+    --recording-color: #e53935;
+    --border-color: #ddd;
   }
 
-  /* TOPO VERDE */
-  .topbar{ background:var(--top); color:#fff; padding:8px 12px; display:flex; gap:10px; align-items:center; flex-shrink: 0; }
-  .logo{ width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700; font-size: 12px;}
-  .title{ font-weight:700; font-size:14px; }
-  .subtitle{ font-size:11px; opacity:0.90; }
+  /* --- TEMA ESCURO (DARK MODE) --- */
+  body.dark-mode {
+    --bg: #111b21;
+    --top: #202c33;
+    --header-text: #e9edef;
+    --card-bg: #111b21; /* Fundo geral */
+    --input-bg: #2a3942;
+    --input-text: #d1d7db;
+    --msg-bg-in: #202c33;
+    --msg-bg-out: #005c4b;
+    --msg-text: #e9edef;
+    --muted: #8696a0;
+    --border-color: #2a3942;
+    --shadow: none;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial;background:var(--bg);-webkit-font-smoothing:antialiased; transition: background 0.3s;}
+  
+  .frame{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:0;}
+  
+  /* No celular, ocupa 100%. No PC, mantém o card centralizado */
+  @media(min-width: 768px) { .frame{padding:8px;} .card{max-width:720px; height: calc(100vh - 16px); border-radius:12px;} }
+  
+  .card{
+    width:100%; height: 100vh;
+    background:var(--card-bg); box-shadow:var(--shadow);
+    overflow:hidden; display:flex; flex-direction:column;
+    transition: background 0.3s;
+  }
+
+  /* TOPO */
+  .topbar{ background:var(--top); color:var(--header-text); padding:10px 15px; display:flex; gap:12px; align-items:center; flex-shrink: 0; transition: background 0.3s; }
+  
+  /* LOGOTIPO SVG */
+  .brand-logo { width: 35px; height: 35px; fill: white; }
+  .title{ font-weight:700; font-size:16px; letter-spacing: 0.5px;}
+  .subtitle{ font-size:12px; opacity:0.85; }
 
   .main { flex:1; display:flex; flex-direction:column; min-height:0; position: relative; }
 
-  /* --- PAINEL COMPACTO --- */
-  .auth-panel{ padding: 6px 12px; border-bottom:1px solid #f0f0f0; background:#fff; flex-shrink: 0; }
-  .auth-inputs { display: flex; flex-direction: column; gap: 8px; }
-  input[type="email"], input[type="password"]{ width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-size:14px; outline: none; }
+  /* PAINEL AUTH / TOPO USUÁRIO */
+  .auth-panel{ padding: 8px 15px; border-bottom:1px solid var(--border-color); background:var(--card-bg); flex-shrink: 0; transition: background 0.3s; }
   
-  /* BOTÕES TRANSPARENTES */
-  .btn-group { display:flex; gap:5px; margin-top:0; align-items: center; }
-  .btn { padding: 5px 8px; border:none; cursor:pointer; font-weight: 900 !important; background: transparent !important; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .btn-primary{ color: var(--top) !important; } 
-  .btn-secondary{ color: #555 !important; } 
-  .btn-danger{ color: red !important; }
+  .auth-inputs { display: flex; flex-direction: column; gap: 10px; }
+  input[type="email"], input[type="password"], input[type="text"]{ 
+    width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color); 
+    font-size:14px; outline: none; background: var(--input-bg); color: var(--input-text);
+  }
+  
+  /* BOTÕES */
+  .btn-group { display:flex; gap:10px; align-items: center; }
+  .btn { 
+    padding: 6px 10px; border:none; cursor:pointer; font-weight: 800; 
+    background: transparent !important; font-size: 12px; text-transform: uppercase; 
+  }
+  .btn-primary{ color: var(--accent) !important; } 
+  .btn-secondary{ color: var(--muted) !important; } 
+  .btn-danger{ color: #ef5350 !important; }
 
-  /* USER PANEL HORIZONTAL */
-  #userPanel { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
-  #userPanel h2, #userPanel label { display: none; }
+  /* USER PANEL */
+  #userPanel { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
   #userPanel .profile-upload-area { margin: 0; display: block; }
-  #userPanel .avatar-preview { width: 38px; height: 38px; border: 2px solid var(--top); border-radius: 50%; object-fit: cover; cursor: pointer; }
+  #userPanel .avatar-preview { width: 42px; height: 42px; border: 2px solid var(--accent); border-radius: 50%; object-fit: cover; cursor: pointer; }
   #userPanel .auth-inputs { flex: 1; margin: 0; gap: 0; }
-  #userPanel #campoNome { background: transparent; border: none; border-bottom: 1px solid transparent; font-weight: 700; color: #333; padding: 4px 0; font-size: 14px; width: 100%; }
+  #userPanel #campoNome { background: transparent; border: none; border-bottom: 1px solid transparent; font-weight: 700; color: var(--input-text); padding: 4px 0; font-size: 15px; width: 100%; }
   #userPanel #campoNome:focus { border-bottom: 1px solid var(--accent); }
   #userPanel .btn-group { flex: 0; white-space: nowrap; }
 
-  /* CHAT */
+  /* CHAT AREA */
   .msg-row { display: flex; gap: 8px; margin-bottom: 10px; width: 100%; }
   .msg-row.me { flex-direction: row-reverse; }
   .chat-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #ccc; flex-shrink: 0; margin-top: 5px; }
-  .bubble{ max-width:80%; padding:8px 10px; border-radius:8px; position:relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); background: var(--msg-bg); color: var(--msg-text); font-weight: bold; }
-  .bubble-autor{ font-size: 11px; font-weight:800; color:var(--top); margin-bottom:4px; }
+  
+  .bubble{ 
+    max-width:80%; padding:8px 10px; border-radius:8px; position:relative; 
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1); font-weight: 500;
+    background: var(--msg-bg-in); color: var(--msg-text); /* Cor padrão (recebida) */
+  }
+  .bubble.me { background: var(--msg-bg-out); } /* Cor enviada */
+
+  .bubble-autor{ font-size: 11px; font-weight:800; color: var(--accent); margin-bottom:4px; }
   .bubble.me .bubble-autor { display: none; }
-  .bubble-text{ font-size: 14px; line-height: 1.4; white-space: pre-wrap; color: #000; }
+  .bubble-text{ font-size: 14.5px; line-height: 1.4; white-space: pre-wrap; }
   .bubble-file-img{ max-width:100%; border-radius:6px; margin-top:6px; cursor: pointer; }
-  .meta{ font-size:10px; color:#444; margin-top:4px; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 5px; font-weight: normal; }
-  .btn-trash { border: none; background: none; cursor: pointer; font-size: 14px; padding: 0 5px; opacity: 0.5; color: #555; }
-  .btn-trash:hover { color: red; }
+  .meta{ font-size:10px; color: var(--muted); margin-top:4px; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 5px; opacity: 0.8; }
+  .btn-trash { border: none; background: none; cursor: pointer; font-size: 14px; padding: 0 5px; opacity: 0.5; color: inherit; }
+  .btn-trash:hover { color: red; opacity: 1;}
 
   .app{ display:flex; flex-direction:column; height:100%; min-height:0; }
-  .messages-wrap{ flex:1; overflow-y: auto; padding:14px; background-image: linear-gradient(#e5ddd5 2px, transparent 2px), linear-gradient(90deg, #e5ddd5 2px, transparent 2px); background-size: 20px 20px; background-color: #e5ddd5; display:flex; flex-direction:column; gap: 2px; }
   
-  .composer{ padding:8px; background:#f0f0f0; display: flex; gap: 8px; align-items: flex-end; position: relative; }
-  textarea{ flex:1; min-height:40px; max-height:100px; padding:10px; border-radius:20px; border:none; resize:none; font-size:15px; outline:none; font-family: inherit;}
+  /* FUNDO DO CHAT (WALLPAPER) */
+  .messages-wrap{ 
+    flex:1; overflow-y: auto; padding:14px; 
+    background-color: var(--bg);
+    /* Padrão Zap (SVG Data URI) para tema claro/escuro é tratado no JS ou CSS complexo, aqui usamos cor sólida com overlay opcional */
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23999' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+    display:flex; flex-direction:column; gap: 2px; 
+    transition: background 0.3s;
+  }
+  
+  .composer{ padding:8px; background:var(--input-bg); display: flex; gap: 8px; align-items: flex-end; position: relative; transition: background 0.3s; }
+  textarea{ flex:1; min-height:40px; max-height:100px; padding:10px; border-radius:20px; border:none; resize:none; font-size:15px; outline:none; font-family: inherit; background: var(--card-bg); color: var(--input-text); }
+  
   .btn-icon { width: 40px; height: 40px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
   .btn-send { background: var(--top); color: white; font-size: 18px; }
-  .btn-mic { background: #e0e0e0; color: #555; font-size: 18px; }
+  .btn-mic { background: var(--border-color); color: var(--muted); font-size: 18px; }
   .btn-mic.recording { background: var(--recording-color); color: white; animation: pulse 1s infinite; }
   @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
   .recording-status { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: var(--recording-color); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; display: none; }
 
-  /* UTILS */
+  /* MENU OPÇÕES */
   .dropdown-wrapper { flex: 0; position: relative; }
-  .dropdown-content { display: none; position: absolute; top: 100%; right: 0; min-width: 150px; background: #fff; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 100; border-radius: 8px; margin-top: 5px; border: 1px solid #ddd; }
+  .dropdown-content { display: none; position: absolute; top: 100%; right: 0; min-width: 180px; background: var(--card-bg); box-shadow: 0 8px 16px rgba(0,0,0,0.3); z-index: 100; border-radius: 8px; margin-top: 5px; border: 1px solid var(--border-color); }
   .dropdown-content.show { display: block; }
-  .dropdown-content button, .dropdown-content a { display: block; width: 100%; padding: 12px; text-align: left; border: none; background: none; border-bottom: 1px solid #eee; font-size: 14px; text-decoration: none; color: #333; font-weight: normal; text-transform: none;}
+  .dropdown-content button, .dropdown-content a { display: block; width: 100%; padding: 12px; text-align: left; border: none; background: none; border-bottom: 1px solid var(--border-color); font-size: 14px; text-decoration: none; color: var(--input-text); font-weight: normal; text-transform: none; cursor: pointer; }
+  .dropdown-content button:hover, .dropdown-content a:hover { background: var(--input-bg); }
+
   .hidden{ display:none !important; }
   .status-msg { margin-top: 10px; font-size: 13px; text-align: center; color: var(--muted); }
   .password-container { position: relative; width: 100%; display: flex; align-items: center; }
   .password-container input { padding-right: 40px; }
-  .toggle-eye { position: absolute; right: 12px; cursor: pointer; font-size: 18px; color: #888; }
+  .toggle-eye { position: absolute; right: 12px; cursor: pointer; font-size: 18px; color: var(--muted); }
+  .link-text { font-size: 13px; color: var(--accent); text-decoration: none; text-align: right; display: block; margin-top: -5px; cursor: pointer; }
 </style>
 </head>
 <body>
   <div class="frame">
     <div class="card">
-      <div class="topbar"><div class="logo">TZ</div><div><div class="title">THEZAP</div><div class="subtitle" id="headerStatus">Desconectado</div></div></div>
+      <div class="topbar">
+        <!-- NOVO LOGOTIPO SVG -->
+        <svg class="brand-logo" viewBox="0 0 100 100">
+          <path d="M20,20 Q80,10 80,50 Q80,90 50,90 L20,95 L25,75 Q10,60 20,20 Z" fill="#25d366"/>
+          <path d="M45,25 L65,25 L50,50 L70,50 L35,80 L45,50 L25,50 Z" fill="white"/>
+        </svg>
+        <div><div class="title">TheZap</div><div class="subtitle" id="headerStatus">Conectando...</div></div>
+      </div>
+
       <div class="main">
         <div id="authPanel" class="auth-panel">
-          
           <!-- LOGIN -->
           <div id="loginForm">
-            <h2 style="font-size:16px; margin-bottom:8px;">Entrar</h2>
+            <h2 style="font-size:16px; margin-bottom:8px; color:var(--input-text);">Entrar</h2>
             <div class="auth-inputs">
               <input type="email" id="email" placeholder="E-mail">
               <div class="password-container"><input type="password" id="password" placeholder="Senha"><span id="btnTogglePass" class="toggle-eye">👁️</span></div>
-              <span id="linkForgot" class="link-text" style="text-align:right; font-size:12px; color:#007bff; cursor:pointer;">Esqueci minha senha</span>
+              <span id="linkForgot" class="link-text">Esqueci minha senha</span>
             </div>
             <div class="btn-group" style="margin-top:10px;">
-              <button id="btnLogin" class="btn btn-primary" style="border:1px solid var(--top); background:transparent;">ENTRAR</button>
-              <button id="btnSignup" class="btn btn-secondary" style="border:1px solid #ccc; background:transparent;">CADASTRAR</button>
+              <button id="btnLogin" class="btn btn-primary">ENTRAR</button>
+              <button id="btnSignup" class="btn btn-secondary">CADASTRAR</button>
             </div>
           </div>
-
           <!-- RECUPERAÇÃO -->
           <div id="recoveryPanel" class="hidden">
-            <h2>Recuperar</h2>
+            <h2 style="color:var(--input-text);">Recuperar</h2>
             <div class="auth-inputs"><input type="email" id="emailRecovery" placeholder="Seu e-mail"></div>
             <div class="btn-group"><button id="btnSendRecovery" class="btn btn-primary">ENVIAR</button><button id="btnBackLogin" class="btn btn-secondary">VOLTAR</button></div>
           </div>
-
           <!-- NOVA SENHA -->
           <div id="updatePassPanel" class="hidden">
-            <h2>Nova Senha</h2>
+            <h2 style="color:var(--input-text);">Nova Senha</h2>
             <div class="auth-inputs"><div class="password-container"><input type="password" id="newPassword" placeholder="Nova Senha"><span id="btnTogglePassNew" class="toggle-eye">👁️</span></div></div>
             <div class="btn-group"><button id="btnSavePass" class="btn btn-primary">SALVAR</button></div>
           </div>
-
-          <!-- USER LOGADO -->
+          <!-- USUÁRIO LOGADO -->
           <div id="userPanel" class="hidden">
             <div class="profile-upload-area" onclick="document.getElementById('avatarInput').click()">
                 <img id="avatarPreview" class="avatar-preview" src="https://via.placeholder.com/80?text=Foto" title="Alterar">
@@ -139,14 +202,17 @@
             <div class="btn-group">
               <div class="dropdown-wrapper"><button onclick="toggleMenu()" class="btn btn-primary">OPÇÕES ▾</button>
                 <div id="myDropdown" class="dropdown-content">
-                  <button id="btnSalvarPerfil" style="color: var(--top); font-weight: bold;">💾 Salvar Perfil</button>
+                  <button id="btnSalvarPerfil">💾 Salvar Perfil</button>
+                  <button onclick="toggleDarkMode()">🌙 Tema Escuro/Claro</button>
+                  <button onclick="document.getElementById('wallInput').click()">🖼️ Papel de Parede</button>
                   <a href="/termos.html">📄 Termos</a>
-                  <a href="https://wa.me/?text=Quero+anunciar">📢 Anunciar</a>
                   <button onclick="shareApp()">🔗 Compartilhar</button>
                 </div>
               </div>
               <button id="btnLogout" class="btn btn-danger">SAIR</button>
             </div>
+            <!-- Input oculto para Wallpaper -->
+            <input type="file" id="wallInput" hidden accept="image/*">
           </div>
           <div id="authStatus" class="status-msg"></div>
         </div>
@@ -155,7 +221,7 @@
           <div id="messagesWrap" class="messages-wrap"><div id="mensagens" class="list"></div></div>
           <div class="composer">
              <div id="recStatus" class="recording-status">Gravando...</div>
-             <button id="btnUpload" class="btn-icon" style="background:transparent; font-size:20px;">📎</button>
+             <button id="btnUpload" class="btn-icon" style="background:transparent; font-size:20px; color:var(--muted);">📎</button>
              <input type="file" id="campoArquivo" hidden>
              <textarea id="campoTexto" placeholder="Mensagem..."></textarea>
              <button id="btnMic" class="btn-icon btn-mic">🎤</button>
@@ -172,10 +238,38 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const el = {
-      loginForm: document.getElementById('loginForm'), userPanel: document.getElementById('userPanel'), appArea: document.getElementById('appArea'), authStatus: document.getElementById('authStatus'), email: document.getElementById('email'), pass: document.getElementById('password'), btnLogin: document.getElementById('btnLogin'), btnSignup: document.getElementById('btnSignup'), btnLogout: document.getElementById('btnLogout'), nomeInput: document.getElementById('campoNome'), btnSalvarPerfil: document.getElementById('btnSalvarPerfil'), avatarInput: document.getElementById('avatarInput'), avatarPreview: document.getElementById('avatarPreview'), mensagensDiv: document.getElementById('mensagens'), messagesWrap: document.getElementById('messagesWrap'), texto: document.getElementById('campoTexto'), fileInput: document.getElementById('campoArquivo'), btnUpload: document.getElementById('btnUpload'), btnEnviar: document.getElementById('btnEnviar'), btnMic: document.getElementById('btnMic'), recStatus: document.getElementById('recStatus'), recoveryPanel: document.getElementById('recoveryPanel'), updatePassPanel: document.getElementById('updatePassPanel'), emailRecovery: document.getElementById('emailRecovery'), btnSendRecovery: document.getElementById('btnSendRecovery'), btnBackLogin: document.getElementById('btnBackLogin'), newPassword: document.getElementById('newPassword'), btnSavePass: document.getElementById('btnSavePass'), btnTogglePass: document.getElementById('btnTogglePass'), btnTogglePassNew: document.getElementById('btnTogglePassNew'), linkForgot: document.getElementById('linkForgot')
+      loginForm: document.getElementById('loginForm'), userPanel: document.getElementById('userPanel'), appArea: document.getElementById('appArea'), authStatus: document.getElementById('authStatus'), email: document.getElementById('email'), pass: document.getElementById('password'), btnLogin: document.getElementById('btnLogin'), btnSignup: document.getElementById('btnSignup'), btnLogout: document.getElementById('btnLogout'), nomeInput: document.getElementById('campoNome'), btnSalvarPerfil: document.getElementById('btnSalvarPerfil'), avatarInput: document.getElementById('avatarInput'), avatarPreview: document.getElementById('avatarPreview'), mensagensDiv: document.getElementById('mensagens'), messagesWrap: document.getElementById('messagesWrap'), texto: document.getElementById('campoTexto'), fileInput: document.getElementById('campoArquivo'), btnUpload: document.getElementById('btnUpload'), btnEnviar: document.getElementById('btnEnviar'), btnMic: document.getElementById('btnMic'), recStatus: document.getElementById('recStatus'), recoveryPanel: document.getElementById('recoveryPanel'), updatePassPanel: document.getElementById('updatePassPanel'), emailRecovery: document.getElementById('emailRecovery'), btnSendRecovery: document.getElementById('btnSendRecovery'), btnBackLogin: document.getElementById('btnBackLogin'), newPassword: document.getElementById('newPassword'), btnSavePass: document.getElementById('btnSavePass'), btnTogglePass: document.getElementById('btnTogglePass'), btnTogglePassNew: document.getElementById('btnTogglePassNew'), linkForgot: document.getElementById('linkForgot'), wallInput: document.getElementById('wallInput')
     };
     let currentUser = null; let mediaRecorder = null; let audioChunks = []; let isRecording = false;
 
+    // --- PERSONALIZAÇÃO (Dark Mode & Wallpaper) ---
+    // Carrega preferências salvas
+    if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
+    const savedWall = localStorage.getItem('chatWallpaper');
+    if(savedWall) el.messagesWrap.style.backgroundImage = `url(${savedWall})`;
+    
+    window.toggleDarkMode = () => {
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        toggleMenu(); // Fecha menu
+    };
+
+    el.wallInput.onchange = () => {
+        const file = el.wallInput.files[0];
+        if(file){
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const bgUrl = e.target.result;
+                el.messagesWrap.style.backgroundImage = `url(${bgUrl})`;
+                el.messagesWrap.style.backgroundSize = 'cover';
+                localStorage.setItem('chatWallpaper', bgUrl); // Salva no navegador do usuário
+            };
+            reader.readAsDataURL(file);
+        }
+        toggleMenu();
+    };
+
+    // --- HELPERS ---
     function setStatus(msg, err=false) { el.authStatus.textContent = msg; el.authStatus.style.color=err?'#d93025':'#666'; setTimeout(()=>el.authStatus.textContent='',5000); }
     function toggleMenu() { document.getElementById("myDropdown").classList.toggle("show"); }
     window.onclick = e => { if(!e.target.matches('.btn-primary') && !e.target.matches('.btn-primary *')) { const d=document.getElementsByClassName("dropdown-content"); for(let i=0;i<d.length;i++) if(d[i].classList.contains('show')) d[i].classList.remove('show'); }};
@@ -221,25 +315,13 @@
             autor_nome: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
             autor_avatar: currentUser.user_metadata.avatar_url
         };
-        
-        // 1. Envia para o DB
         const { data, error } = await supabaseClient.from('banco').insert([msgData]).select();
         if(error) throw error;
-
-        // 2. Atualiza Instantaneamente (SEM esperar o Realtime)
-        if(data && data[0]) {
-             const hiddenList = getHiddenMessages();
-             if(!hiddenList.includes(data[0].id)) {
-                 el.mensagensDiv.appendChild(renderMessage(data[0]));
-                 scrollToBottom();
-             }
-        }
-        
+        if(data && data[0]) { const hiddenList = getHiddenMessages(); if(!hiddenList.includes(data[0].id)) { el.mensagensDiv.appendChild(renderMessage(data[0])); scrollToBottom(); } }
         el.texto.value=''; el.fileInput.value=''; el.btnUpload.innerHTML='📎';
       } catch(e){ alert(e.message); } finally { el.btnEnviar.disabled = false; }
     }
 
-    // INICIALIZAÇÃO
     el.btnLogin.onclick = handleLogin; el.btnSignup.onclick = handleSignup; el.btnLogout.onclick = async () => await supabaseClient.auth.signOut();
     el.btnSalvarPerfil.onclick = updateProfile; el.avatarInput.onchange = () => { if(el.avatarInput.files[0]) el.avatarPreview.src = URL.createObjectURL(el.avatarInput.files[0]); };
     el.btnEnviar.onclick = sendMessage; el.btnUpload.onclick = () => el.fileInput.click(); el.fileInput.onchange = () => el.btnUpload.innerHTML = el.fileInput.files.length?'✅':'📎';
@@ -247,11 +329,7 @@
     window.deleteMessage = async (id) => { if(confirm('Ocultar?')) { let h=getHiddenMessages(); h.push(id); localStorage.setItem('hidden_msgs_'+(currentUser?currentUser.id:'anon'),JSON.stringify(h)); document.getElementById(`msg-${id}`).remove(); }};
 
     el.btnMic.onclick=async()=>{if(!isRecording){try{const s=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(s);audioChunks=[];mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=async()=>{uploadAudioAndSend(new Blob(audioChunks,{type:'audio/webm'}))};mediaRecorder.start();isRecording=true;el.btnMic.classList.add('recording');el.recStatus.style.display='block';}catch(e){alert(e.message)}}else{mediaRecorder.stop();isRecording=false;el.btnMic.classList.remove('recording');el.recStatus.style.display='none'}};
-    async function uploadAudioAndSend(b){el.btnMic.disabled=true;el.recStatus.textContent="Enviando...";try{const f=`${currentUser.id}/${Date.now()}_audio.webm`;await supabaseClient.storage.from('arquivos').upload(f,b);const u=supabaseClient.storage.from('arquivos').getPublicUrl(f).data.publicUrl;
-        const msgData = {texto:'',url_arquivo:u,user_id:currentUser.id,autor_nome:currentUser.user_metadata.full_name,autor_avatar:currentUser.user_metadata.avatar_url};
-        const {data} = await supabaseClient.from('banco').insert([msgData]).select();
-        if(data && data[0]) { el.mensagensDiv.appendChild(renderMessage(data[0])); scrollToBottom(); }
-    }catch(e){alert(e.message)}finally{el.btnMic.disabled=false;el.recStatus.style.display='none';el.recStatus.textContent="Gravando..."}}
+    async function uploadAudioAndSend(b){el.btnMic.disabled=true;el.recStatus.textContent="Enviando...";try{const f=`${currentUser.id}/${Date.now()}_audio.webm`;await supabaseClient.storage.from('arquivos').upload(f,b);const u=supabaseClient.storage.from('arquivos').getPublicUrl(f).data.publicUrl; const msgData = {texto:'',url_arquivo:u,user_id:currentUser.id,autor_nome:currentUser.user_metadata.full_name,autor_avatar:currentUser.user_metadata.avatar_url}; const {data} = await supabaseClient.from('banco').insert([msgData]).select(); if(data && data[0]) { el.mensagensDiv.appendChild(renderMessage(data[0])); scrollToBottom(); } }catch(e){alert(e.message)}finally{el.btnMic.disabled=false;el.recStatus.style.display='none';el.recStatus.textContent="Gravando..."}}
 
     async function handleLogin(){const e=el.email.value,p=el.pass.value;if(!e||!p)return setStatus('Dados?',1);el.btnLogin.textContent='...';const{error}=await supabaseClient.auth.signInWithPassword({email:e,password:p});el.btnLogin.textContent='ENTRAR';if(error)setStatus(error.message,1)}
     async function handleSignup(){const e=el.email.value,p=el.pass.value;if(!e||!p)return setStatus('Dados?',1);el.btnSignup.textContent='...';const{error}=await supabaseClient.auth.signUp({email:e,password:p});el.btnSignup.textContent='CADASTRAR';if(error)setStatus(error.message,1);else setStatus('Sucesso!')}
@@ -261,18 +339,8 @@
     el.btnSavePass.onclick=async()=>{if(!el.newPassword.value)return;el.btnSavePass.textContent='...';await supabaseClient.auth.updateUser({password:el.newPassword.value});window.location.reload();};
 
     supabaseClient.auth.onAuthStateChange((e,s)=>{if(e==='PASSWORD_RECOVERY'){el.loginForm.classList.add('hidden');el.updatePassPanel.classList.remove('hidden');}else if(s){currentUser=s.user;el.loginForm.classList.add('hidden');el.updatePassPanel.classList.add('hidden');el.userPanel.classList.remove('hidden');el.appArea.classList.remove('hidden');el.nomeInput.value=currentUser.user_metadata.full_name||'';el.avatarPreview.src=currentUser.user_metadata.avatar_url||"https://via.placeholder.com/80?text=Foto";fetchMessages();
-        
-        // REALTIME LISTENER (Para ouvir os outros)
-        supabaseClient.channel('realtime').on('postgres_changes',{event:'INSERT',schema:'public',table:'banco'}, payload => {
-            // Checa se a mensagem já foi inserida localmente para não duplicar
-            const msgExists = document.getElementById(`msg-${payload.new.id}`);
-            if(!msgExists) {
-                 el.mensagensDiv.appendChild(renderMessage(payload.new));
-                 scrollToBottom();
-            }
-        }).subscribe();
-
-    }else{currentUser=null;el.loginForm.classList.remove('hidden');el.userPanel.classList.add('hidden');el.appArea.classList.add('hidden');}});
+        supabaseClient.channel('realtime').on('postgres_changes',{event:'INSERT',schema:'public',table:'banco'}, payload => { const msgExists = document.getElementById(`msg-${payload.new.id}`); if(!msgExists) { el.mensagensDiv.appendChild(renderMessage(payload.new)); scrollToBottom(); } }).subscribe();
+    }else{currentUser=null;el.loginForm.classList.remove('hidden');el.userPanel.classList.add('hidden');el.appArea.classList.add('hidden'); el.headerStatus.textContent='Desconectado';}});
   </script>
 </body>
 </html>
