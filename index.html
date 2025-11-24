@@ -3,230 +3,125 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>TheZap - Chat</title>
-
-<!-- Importando Supabase -->
+<title>TheZap Ultimate</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
-  /* --- CSS GLOBAL E VARIÁVEIS (TEMA CLARO PADRÃO) --- */
-  :root{
-    --bg: #e9f7f2; 
-    --top: #075e54; 
-    --header-text: #ffffff;
-    --accent: #25d366; 
-    --muted: #6b6b6b;
-    --card-bg: #ffffff;
-    --input-bg: #f0f0f0;
-    --input-text: #000000;
-    --msg-bg-in: #ffffff; /* Mensagem recebida */
-    --msg-bg-out: #d9fdd3; /* Mensagem enviada */
-    --msg-text: #000000;
-    --shadow: 0 10px 30px rgba(0,0,0,0.10);
-    --recording-color: #e53935;
-    --border-color: #ddd;
-  }
-
-  /* --- TEMA ESCURO (DARK MODE) --- */
-  body.dark-mode {
-    --bg: #111b21;
-    --top: #202c33;
-    --header-text: #e9edef;
-    --card-bg: #111b21; /* Fundo geral */
-    --input-bg: #2a3942;
-    --input-text: #d1d7db;
-    --msg-bg-in: #202c33;
-    --msg-bg-out: #005c4b;
-    --msg-text: #e9edef;
-    --muted: #8696a0;
-    --border-color: #2a3942;
-    --shadow: none;
-  }
-
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial;background:var(--bg);-webkit-font-smoothing:antialiased; transition: background 0.3s;}
+  /* CSS GERAL */
+  :root{ --bg:#e9f7f2; --top:#075e54; --accent:#25d366; --muted:#6b6b6b; --card-bg:#fff; --input-bg:#f0f0f0; --input-text:#000; --msg-in:#fff; --msg-out:#d9fdd3; --msg-text:#000; --recording:#e53935; }
+  body.dark-mode { --bg:#111b21; --top:#202c33; --card-bg:#111b21; --input-bg:#2a3942; --input-text:#e9edef; --msg-in:#202c33; --msg-out:#005c4b; --msg-text:#e9edef; --muted:#8696a0; }
+  *{box-sizing:border-box} html,body{height:100%;margin:0;font-family:system-ui,-apple-system,sans-serif;background:var(--bg);transition:background 0.3s;}
+  .frame{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:0;} @media(min-width:768px){.frame{padding:8px;}.card{max-width:720px;height:calc(100vh - 16px);border-radius:12px;}}
+  .card{width:100%;height:100vh;background:var(--card-bg);display:flex;flex-direction:column;overflow:hidden;}
   
-  .frame{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:0;}
-  
-  /* No celular, ocupa 100%. No PC, mantém o card centralizado */
-  @media(min-width: 768px) { .frame{padding:8px;} .card{max-width:720px; height: calc(100vh - 16px); border-radius:12px;} }
-  
-  .card{
-    width:100%; height: 100vh;
-    background:var(--card-bg); box-shadow:var(--shadow);
-    overflow:hidden; display:flex; flex-direction:column;
-    transition: background 0.3s;
-  }
-
   /* TOPO */
-  .topbar{ background:var(--top); color:var(--header-text); padding:10px 15px; display:flex; gap:12px; align-items:center; flex-shrink: 0; transition: background 0.3s; }
+  .topbar{background:var(--top);color:#fff;padding:8px 12px;display:flex;gap:10px;align-items:center;flex-shrink:0;justify-content:space-between;}
+  .top-left{display:flex;gap:10px;align-items:center;}
+  .brand-logo{width:30px;height:30px;fill:white;}
+  .info{display:flex;flex-direction:column;}
+  .title{font-weight:700;font-size:15px;}
+  .subtitle{font-size:11px;opacity:0.9;}
+  .typing-indicator{font-size:11px;color:#25d366;font-weight:bold;display:none;animation:blink 1s infinite;}
+  @keyframes blink{50%{opacity:0.5;}}
   
-  /* LOGOTIPO SVG */
-  .brand-logo { width: 35px; height: 35px; fill: white; }
-  .title{ font-weight:700; font-size:16px; letter-spacing: 0.5px;}
-  .subtitle{ font-size:12px; opacity:0.85; }
+  /* BUSCA */
+  .search-box{display:none;width:100%;padding:8px;background:var(--top);}
+  .search-box.active{display:block;}
+  .search-box input{width:100%;padding:6px;border-radius:5px;border:none;outline:none;}
 
-  .main { flex:1; display:flex; flex-direction:column; min-height:0; position: relative; }
-
-  /* PAINEL AUTH / TOPO USUÁRIO */
-  .auth-panel{ padding: 8px 15px; border-bottom:1px solid var(--border-color); background:var(--card-bg); flex-shrink: 0; transition: background 0.3s; }
+  /* CHAT */
+  .messages-wrap{flex:1;overflow-y:auto;padding:14px;background-color:var(--bg);background-image:url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 50L0 100L100 0Z' fill='%23999' fill-opacity='0.05'/%3E%3C/svg%3E");display:flex;flex-direction:column;gap:4px;}
   
-  .auth-inputs { display: flex; flex-direction: column; gap: 10px; }
-  input[type="email"], input[type="password"], input[type="text"]{ 
-    width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color); 
-    font-size:14px; outline: none; background: var(--input-bg); color: var(--input-text);
-  }
+  .msg-row{display:flex;gap:8px;margin-bottom:2px;width:100%;}
+  .msg-row.me{flex-direction:row-reverse;}
+  .chat-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;margin-top:5px;}
   
-  /* BOTÕES */
-  .btn-group { display:flex; gap:10px; align-items: center; }
-  .btn { 
-    padding: 6px 10px; border:none; cursor:pointer; font-weight: 800; 
-    background: transparent !important; font-size: 12px; text-transform: uppercase; 
-  }
-  .btn-primary{ color: var(--accent) !important; } 
-  .btn-secondary{ color: var(--muted) !important; } 
-  .btn-danger{ color: #ef5350 !important; }
-
-  /* USER PANEL */
-  #userPanel { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
-  #userPanel .profile-upload-area { margin: 0; display: block; }
-  #userPanel .avatar-preview { width: 42px; height: 42px; border: 2px solid var(--accent); border-radius: 50%; object-fit: cover; cursor: pointer; }
-  #userPanel .auth-inputs { flex: 1; margin: 0; gap: 0; }
-  #userPanel #campoNome { background: transparent; border: none; border-bottom: 1px solid transparent; font-weight: 700; color: var(--input-text); padding: 4px 0; font-size: 15px; width: 100%; }
-  #userPanel #campoNome:focus { border-bottom: 1px solid var(--accent); }
-  #userPanel .btn-group { flex: 0; white-space: nowrap; }
-
-  /* CHAT AREA */
-  .msg-row { display: flex; gap: 8px; margin-bottom: 10px; width: 100%; }
-  .msg-row.me { flex-direction: row-reverse; }
-  .chat-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #ccc; flex-shrink: 0; margin-top: 5px; }
+  .bubble{max-width:80%;padding:6px 8px;border-radius:8px;background:var(--msg-in);color:var(--msg-text);box-shadow:0 1px 2px rgba(0,0,0,0.1);position:relative;font-size:14px;}
+  .bubble.me{background:var(--msg-out);}
   
-  .bubble{ 
-    max-width:80%; padding:8px 10px; border-radius:8px; position:relative; 
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1); font-weight: 500;
-    background: var(--msg-bg-in); color: var(--msg-text); /* Cor padrão (recebida) */
-  }
-  .bubble.me { background: var(--msg-bg-out); } /* Cor enviada */
-
-  .bubble-autor{ font-size: 11px; font-weight:800; color: var(--accent); margin-bottom:4px; }
-  .bubble.me .bubble-autor { display: none; }
-  .bubble-text{ font-size: 14.5px; line-height: 1.4; white-space: pre-wrap; }
-  .bubble-file-img{ max-width:100%; border-radius:6px; margin-top:6px; cursor: pointer; }
-  .meta{ font-size:10px; color: var(--muted); margin-top:4px; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 5px; opacity: 0.8; }
-  .btn-trash { border: none; background: none; cursor: pointer; font-size: 14px; padding: 0 5px; opacity: 0.5; color: inherit; }
-  .btn-trash:hover { color: red; opacity: 1;}
-
-  .app{ display:flex; flex-direction:column; height:100%; min-height:0; }
+  /* REPLY STYLE */
+  .reply-preview{background:rgba(0,0,0,0.05);border-left:4px solid var(--accent);padding:4px;border-radius:4px;font-size:11px;margin-bottom:4px;cursor:pointer;}
   
-  /* FUNDO DO CHAT (WALLPAPER) */
-  .messages-wrap{ 
-    flex:1; overflow-y: auto; padding:14px; 
-    background-color: var(--bg);
-    /* Padrão Zap (SVG Data URI) para tema claro/escuro é tratado no JS ou CSS complexo, aqui usamos cor sólida com overlay opcional */
-    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23999' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
-    display:flex; flex-direction:column; gap: 2px; 
-    transition: background 0.3s;
-  }
-  
-  .composer{ padding:8px; background:var(--input-bg); display: flex; gap: 8px; align-items: flex-end; position: relative; transition: background 0.3s; }
-  textarea{ flex:1; min-height:40px; max-height:100px; padding:10px; border-radius:20px; border:none; resize:none; font-size:15px; outline:none; font-family: inherit; background: var(--card-bg); color: var(--input-text); }
-  
-  .btn-icon { width: 40px; height: 40px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
-  .btn-send { background: var(--top); color: white; font-size: 18px; }
-  .btn-mic { background: var(--border-color); color: var(--muted); font-size: 18px; }
-  .btn-mic.recording { background: var(--recording-color); color: white; animation: pulse 1s infinite; }
-  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-  .recording-status { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: var(--recording-color); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; display: none; }
+  /* REACTIONS */
+  .reactions{position:absolute;bottom:-10px;right:10px;background:#fff;border-radius:10px;padding:2px 6px;font-size:10px;box-shadow:0 1px 2px rgba(0,0,0,0.2);display:none;color:#000;}
+  .reactions.show{display:block;}
 
-  /* MENU OPÇÕES */
-  .dropdown-wrapper { flex: 0; position: relative; }
-  .dropdown-content { display: none; position: absolute; top: 100%; right: 0; min-width: 180px; background: var(--card-bg); box-shadow: 0 8px 16px rgba(0,0,0,0.3); z-index: 100; border-radius: 8px; margin-top: 5px; border: 1px solid var(--border-color); }
-  .dropdown-content.show { display: block; }
-  .dropdown-content button, .dropdown-content a { display: block; width: 100%; padding: 12px; text-align: left; border: none; background: none; border-bottom: 1px solid var(--border-color); font-size: 14px; text-decoration: none; color: var(--input-text); font-weight: normal; text-transform: none; cursor: pointer; }
-  .dropdown-content button:hover, .dropdown-content a:hover { background: var(--input-bg); }
+  .bubble-autor{font-size:11px;font-weight:800;color:var(--top);margin-bottom:2px;}
+  .bubble.me .bubble-autor{display:none;}
+  .bubble-text{white-space:pre-wrap;line-height:1.4;}
+  .bubble-img{max-width:100%;border-radius:6px;margin-top:4px;}
+  
+  .meta{font-size:10px;color:var(--muted);text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:2px;}
+  .ticks{font-size:14px;} .ticks.blue{color:#34b7f1;}
+  
+  /* COMPOSER */
+  .preview-area{padding:10px;background:var(--card-bg);border-top:1px solid #ddd;display:none;}
+  .preview-area img{height:100px;border-radius:8px;}
+  .reply-bar{background:var(--input-bg);padding:8px;border-left:4px solid var(--accent);font-size:12px;display:none;justify-content:space-between;align-items:center;color:var(--input-text);}
+  
+  .composer{padding:6px;background:var(--input-bg);display:flex;gap:6px;align-items:flex-end;}
+  textarea{flex:1;min-height:40px;max-height:100px;padding:10px;border-radius:20px;border:none;resize:none;outline:none;background:var(--card-bg);color:var(--input-text);}
+  .btn-icon{width:40px;height:40px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;color:var(--muted);font-size:20px;}
+  .btn-send{background:var(--top);color:#fff;}
+  .btn-mic.rec{background:var(--recording);color:#fff;animation:pulse 1s infinite;}
+  @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
 
-  .hidden{ display:none !important; }
-  .status-msg { margin-top: 10px; font-size: 13px; text-align: center; color: var(--muted); }
-  .password-container { position: relative; width: 100%; display: flex; align-items: center; }
-  .password-container input { padding-right: 40px; }
-  .toggle-eye { position: absolute; right: 12px; cursor: pointer; font-size: 18px; color: var(--muted); }
-  .link-text { font-size: 13px; color: var(--accent); text-decoration: none; text-align: right; display: block; margin-top: -5px; cursor: pointer; }
+  /* MENU */
+  .dropdown-content{display:none;position:absolute;top:50px;right:10px;background:var(--card-bg);box-shadow:0 5px 15px rgba(0,0,0,0.3);z-index:100;border-radius:8px;min-width:160px;overflow:hidden;}
+  .dropdown-content.show{display:block;}
+  .dropdown-content button, .dropdown-content a{display:block;width:100%;padding:12px;text-align:left;border:none;background:none;color:var(--input-text);text-decoration:none;font-size:14px;}
+  .dropdown-content button:hover{background:rgba(0,0,0,0.05);}
+
+  .hidden{display:none!important;}
 </style>
 </head>
 <body>
   <div class="frame">
     <div class="card">
+      <!-- TOPO -->
       <div class="topbar">
-        <!-- NOVO LOGOTIPO SVG -->
-        <svg class="brand-logo" viewBox="0 0 100 100">
-          <path d="M20,20 Q80,10 80,50 Q80,90 50,90 L20,95 L25,75 Q10,60 20,20 Z" fill="#25d366"/>
-          <path d="M45,25 L65,25 L50,50 L70,50 L35,80 L45,50 L25,50 Z" fill="white"/>
-        </svg>
-        <div><div class="title">TheZap</div><div class="subtitle" id="headerStatus">Conectando...</div></div>
-      </div>
-
-      <div class="main">
-        <div id="authPanel" class="auth-panel">
-          <!-- LOGIN -->
-          <div id="loginForm">
-            <h2 style="font-size:16px; margin-bottom:8px; color:var(--input-text);">Entrar</h2>
-            <div class="auth-inputs">
-              <input type="email" id="email" placeholder="E-mail">
-              <div class="password-container"><input type="password" id="password" placeholder="Senha"><span id="btnTogglePass" class="toggle-eye">👁️</span></div>
-              <span id="linkForgot" class="link-text">Esqueci minha senha</span>
-            </div>
-            <div class="btn-group" style="margin-top:10px;">
-              <button id="btnLogin" class="btn btn-primary">ENTRAR</button>
-              <button id="btnSignup" class="btn btn-secondary">CADASTRAR</button>
-            </div>
+        <div class="top-left">
+          <svg class="brand-logo" viewBox="0 0 100 100"><path d="M20,20 Q80,10 80,50 Q80,90 50,90 L20,95 L25,75 Q10,60 20,20 Z" fill="#25d366"/><path d="M45,25 L65,25 L50,50 L70,50 L35,80 L45,50 L25,50 Z" fill="white"/></svg>
+          <div class="info">
+            <div class="title">TheZap</div>
+            <div class="subtitle" id="statusText">Conectando...</div>
+            <div class="typing-indicator" id="typingInd"></div>
           </div>
-          <!-- RECUPERAÇÃO -->
-          <div id="recoveryPanel" class="hidden">
-            <h2 style="color:var(--input-text);">Recuperar</h2>
-            <div class="auth-inputs"><input type="email" id="emailRecovery" placeholder="Seu e-mail"></div>
-            <div class="btn-group"><button id="btnSendRecovery" class="btn btn-primary">ENVIAR</button><button id="btnBackLogin" class="btn btn-secondary">VOLTAR</button></div>
-          </div>
-          <!-- NOVA SENHA -->
-          <div id="updatePassPanel" class="hidden">
-            <h2 style="color:var(--input-text);">Nova Senha</h2>
-            <div class="auth-inputs"><div class="password-container"><input type="password" id="newPassword" placeholder="Nova Senha"><span id="btnTogglePassNew" class="toggle-eye">👁️</span></div></div>
-            <div class="btn-group"><button id="btnSavePass" class="btn btn-primary">SALVAR</button></div>
-          </div>
-          <!-- USUÁRIO LOGADO -->
-          <div id="userPanel" class="hidden">
-            <div class="profile-upload-area" onclick="document.getElementById('avatarInput').click()">
-                <img id="avatarPreview" class="avatar-preview" src="https://via.placeholder.com/80?text=Foto" title="Alterar">
-                <input type="file" id="avatarInput" hidden accept="image/*">
-            </div>
-            <div class="auth-inputs"><input type="text" id="campoNome" placeholder="Nome"></div>
-            <div class="btn-group">
-              <div class="dropdown-wrapper"><button onclick="toggleMenu()" class="btn btn-primary">OPÇÕES ▾</button>
-                <div id="myDropdown" class="dropdown-content">
-                  <button id="btnSalvarPerfil">💾 Salvar Perfil</button>
-                  <button onclick="toggleDarkMode()">🌙 Tema Escuro/Claro</button>
-                  <button onclick="document.getElementById('wallInput').click()">🖼️ Papel de Parede</button>
-                  <a href="/termos.html">📄 Termos</a>
-                  <button onclick="shareApp()">🔗 Compartilhar</button>
-                </div>
-              </div>
-              <button id="btnLogout" class="btn btn-danger">SAIR</button>
-            </div>
-            <!-- Input oculto para Wallpaper -->
-            <input type="file" id="wallInput" hidden accept="image/*">
-          </div>
-          <div id="authStatus" class="status-msg"></div>
         </div>
+        <div style="display:flex; gap:10px;">
+            <div class="btn-icon" onclick="toggleSearch()">🔍</div>
+            <div class="btn-icon" onclick="toggleMenu()">⋮</div>
+        </div>
+      </div>
+      
+      <!-- BUSCA -->
+      <div class="search-box" id="searchBox"><input type="text" id="searchInput" placeholder="Buscar mensagem..." onkeyup="filterMessages()"></div>
 
-        <div class="app hidden" id="appArea">
-          <div id="messagesWrap" class="messages-wrap"><div id="mensagens" class="list"></div></div>
-          <div class="composer">
-             <div id="recStatus" class="recording-status">Gravando...</div>
-             <button id="btnUpload" class="btn-icon" style="background:transparent; font-size:20px; color:var(--muted);">📎</button>
-             <input type="file" id="campoArquivo" hidden>
-             <textarea id="campoTexto" placeholder="Mensagem..."></textarea>
-             <button id="btnMic" class="btn-icon btn-mic">🎤</button>
-             <button id="btnEnviar" class="btn-icon btn-send">➤</button>
-          </div>
+      <!-- MENU SUSPENSO -->
+      <div id="myDropdown" class="dropdown-content">
+        <a href="/perfil.html">👤 Meu Perfil</a>
+        <button onclick="toggleDarkMode()">🌙 Tema Escuro/Claro</button>
+        <button onclick="document.getElementById('wallInput').click()">🖼️ Papel de Parede</button>
+        <a href="/termos.html">📄 Termos</a>
+        <button onclick="shareApp()">🔗 Compartilhar</button>
+        <button onclick="logout()" style="color:red;">✖ Sair</button>
+      </div>
+      <input type="file" id="wallInput" hidden accept="image/*">
+
+      <!-- ÁREA PRINCIPAL -->
+      <div class="main">
+        <div id="messagesWrap" class="messages-wrap"><div id="mensagens" style="display:flex;flex-direction:column;gap:4px;"></div></div>
+        
+        <!-- ÁREA DE PREVIEW -->
+        <div id="replyBar" class="reply-bar"><span id="replyText"></span> <button onclick="cancelReply()">✖</button></div>
+        <div id="previewArea" class="preview-area"><img id="imgPreview"> <button onclick="cancelImg()">✖</button></div>
+
+        <!-- COMPOSITOR -->
+        <div class="composer" id="composerArea">
+           <button class="btn-icon" onclick="document.getElementById('fileInput').click()">📎</button>
+           <input type="file" id="fileInput" hidden>
+           <textarea id="campoTexto" placeholder="Mensagem..."></textarea>
+           <button id="btnMic" class="btn-icon btn-mic">🎤</button>
+           <button id="btnEnviar" class="btn-icon btn-send">➤</button>
         </div>
       </div>
     </div>
@@ -235,113 +130,136 @@
   <script>
     const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const el = {
-      loginForm: document.getElementById('loginForm'), userPanel: document.getElementById('userPanel'), appArea: document.getElementById('appArea'), authStatus: document.getElementById('authStatus'), email: document.getElementById('email'), pass: document.getElementById('password'), btnLogin: document.getElementById('btnLogin'), btnSignup: document.getElementById('btnSignup'), btnLogout: document.getElementById('btnLogout'), nomeInput: document.getElementById('campoNome'), btnSalvarPerfil: document.getElementById('btnSalvarPerfil'), avatarInput: document.getElementById('avatarInput'), avatarPreview: document.getElementById('avatarPreview'), mensagensDiv: document.getElementById('mensagens'), messagesWrap: document.getElementById('messagesWrap'), texto: document.getElementById('campoTexto'), fileInput: document.getElementById('campoArquivo'), btnUpload: document.getElementById('btnUpload'), btnEnviar: document.getElementById('btnEnviar'), btnMic: document.getElementById('btnMic'), recStatus: document.getElementById('recStatus'), recoveryPanel: document.getElementById('recoveryPanel'), updatePassPanel: document.getElementById('updatePassPanel'), emailRecovery: document.getElementById('emailRecovery'), btnSendRecovery: document.getElementById('btnSendRecovery'), btnBackLogin: document.getElementById('btnBackLogin'), newPassword: document.getElementById('newPassword'), btnSavePass: document.getElementById('btnSavePass'), btnTogglePass: document.getElementById('btnTogglePass'), btnTogglePassNew: document.getElementById('btnTogglePassNew'), linkForgot: document.getElementById('linkForgot'), wallInput: document.getElementById('wallInput')
-    };
-    let currentUser = null; let mediaRecorder = null; let audioChunks = []; let isRecording = false;
-
-    // --- PERSONALIZAÇÃO (Dark Mode & Wallpaper) ---
-    // Carrega preferências salvas
-    if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
-    const savedWall = localStorage.getItem('chatWallpaper');
-    if(savedWall) el.messagesWrap.style.backgroundImage = `url(${savedWall})`;
+    const el={msgDiv:document.getElementById('mensagens'),wrap:document.getElementById('messagesWrap'),txt:document.getElementById('campoTexto'),replyBar:document.getElementById('replyBar'),replyTxt:document.getElementById('replyText'),preview:document.getElementById('previewArea'),imgPrev:document.getElementById('imgPreview'),fileIn:document.getElementById('fileInput'),mic:document.getElementById('btnMic'),send:document.getElementById('btnEnviar'),status:document.getElementById('statusText'),typing:document.getElementById('typingInd')};
     
-    window.toggleDarkMode = () => {
-        document.body.classList.toggle('dark-mode');
-        localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-        toggleMenu(); // Fecha menu
-    };
-
-    el.wallInput.onchange = () => {
-        const file = el.wallInput.files[0];
-        if(file){
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const bgUrl = e.target.result;
-                el.messagesWrap.style.backgroundImage = `url(${bgUrl})`;
-                el.messagesWrap.style.backgroundSize = 'cover';
-                localStorage.setItem('chatWallpaper', bgUrl); // Salva no navegador do usuário
-            };
-            reader.readAsDataURL(file);
-        }
-        toggleMenu();
-    };
-
-    // --- HELPERS ---
-    function setStatus(msg, err=false) { el.authStatus.textContent = msg; el.authStatus.style.color=err?'#d93025':'#666'; setTimeout(()=>el.authStatus.textContent='',5000); }
-    function toggleMenu() { document.getElementById("myDropdown").classList.toggle("show"); }
-    window.onclick = e => { if(!e.target.matches('.btn-primary') && !e.target.matches('.btn-primary *')) { const d=document.getElementsByClassName("dropdown-content"); for(let i=0;i<d.length;i++) if(d[i].classList.contains('show')) d[i].classList.remove('show'); }};
-    async function shareApp() { if(navigator.share) try{await navigator.share({title:'TheZap', url:window.location.href});}catch(e){} else alert(window.location.href); }
-    function scrollToBottom() { setTimeout(() => { el.messagesWrap.scrollTop = el.messagesWrap.scrollHeight; }, 100); }
-    function toggleEye(input, icon) { const t = input.getAttribute('type')==='password'?'text':'password'; input.setAttribute('type', t); icon.textContent = t==='password'?'👁️':'🙈'; }
-
-    async function updateProfile() { const nome = el.nomeInput.value.trim(); const file = el.avatarInput.files[0]; if(!nome && !file) return; document.getElementById("myDropdown").classList.remove("show"); el.btnSalvarPerfil.textContent = '...'; let avatarUrl = currentUser.user_metadata.avatar_url; try { if(file) { const fileName = `avatars/${currentUser.id}_${Date.now()}.png`; const { error: upErr } = await supabaseClient.storage.from('arquivos').upload(fileName, file); if(upErr) throw upErr; const { data } = supabaseClient.storage.from('arquivos').getPublicUrl(fileName); avatarUrl = data.publicUrl; } const { error: userErr } = await supabaseClient.auth.updateUser({ data: { full_name: nome, avatar_url: avatarUrl } }); if(userErr) throw userErr; currentUser.user_metadata.full_name = nome; currentUser.user_metadata.avatar_url = avatarUrl; el.avatarPreview.src = avatarUrl || "https://via.placeholder.com/80?text=Foto"; setStatus('Salvo!'); } catch (err) { setStatus(err.message, true); } finally { el.btnSalvarPerfil.textContent = '💾 Salvar Perfil'; } }
+    let currentUser=null, replyTo=null, fileToSend=null, mediaRecorder=null, audioChunks=[], isRec=false, channel=null;
     
-    function getHiddenMessages() { return JSON.parse(localStorage.getItem('hidden_msgs_' + (currentUser?currentUser.id:'anon')) || '[]'); }
-    function renderMessage(msg) {
-      const isMe = currentUser && currentUser.id === msg.user_id;
-      const date = new Date(msg.created_at);
-      const dataFormatada = `${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR')}`;
-      const avatarUrl = msg.autor_avatar || "https://via.placeholder.com/32?text=?";
-      const div = document.createElement('div'); div.className = `msg-row ${isMe ? 'me' : ''}`; div.id = `msg-${msg.id}`;
-      let htmlContent = `<div class="bubble-autor">${msg.autor_nome || 'Anônimo'}</div>`;
-      if(msg.texto) htmlContent += `<div class="bubble-text">${msg.texto.replace(/</g, "&lt;")}</div>`;
-      if(msg.url_arquivo) { const ext = msg.url_arquivo.split('.').pop().toLowerCase().split('?')[0]; if(['jpg','jpeg','png','gif','webp'].includes(ext)) htmlContent += `<img src="${msg.url_arquivo}" class="bubble-file-img" onclick="window.open(this.src)">`; else if(['webm','mp3','wav'].includes(ext)) htmlContent += `<audio controls src="${msg.url_arquivo}"></audio>`; else htmlContent += `<a href="${msg.url_arquivo}" target="_blank" class="bubble-file-link">📄 Baixar Arquivo</a>`; }
-      htmlContent += `<div class="meta">${dataFormatada} <button class="btn-trash" onclick="deleteMessage(${msg.id})">🗑</button></div>`;
-      div.innerHTML = `<img class="chat-avatar" src="${avatarUrl}" onclick="window.open('${avatarUrl}')"><div class="bubble ${isMe ? 'me' : ''}">${htmlContent}</div>`;
-      return div;
+    if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
+    if(localStorage.getItem('wall')) el.wrap.style.backgroundImage=`url(${localStorage.getItem('wall')})`;
+    
+    async function init() {
+        const {data} = await supabase.auth.getSession();
+        if(!data.session) return window.location.href = '/perfil.html';
+        currentUser = data.session.user;
+        el.status.textContent = 'Online';
+        setupRealtime();
+        fetchMessages();
+    }
+    init();
+
+    function setupRealtime() {
+        channel = supabase.channel('room1');
+        channel.on('presence', { event: 'sync' }, () => {
+            const state = channel.presenceState();
+            const typers = Object.values(state).flat().filter(u => u.typing && u.user_id !== currentUser.id);
+            el.typing.textContent = typers.length ? `${typers[0].name} digitando...` : '';
+            el.typing.style.display = typers.length ? 'block' : 'none';
+            el.status.style.display = typers.length ? 'none' : 'block';
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'banco' }, payload => {
+            if(payload.eventType === 'INSERT') appendMessage(payload.new);
+            if(payload.eventType === 'UPDATE') updateMessage(payload.new);
+            if(payload.eventType === 'DELETE') document.getElementById(`msg-${payload.old.id}`)?.remove();
+            playPop();
+        })
+        .subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') await channel.track({ user_id: currentUser.id, name: currentUser.user_metadata.full_name, typing: false });
+        });
     }
 
+    el.txt.addEventListener('input', () => { channel.track({ user_id: currentUser.id, name: currentUser.user_metadata.full_name, typing: el.txt.value.length > 0 }); });
+
     async function fetchMessages() {
-      const { data, error } = await supabaseClient.from('banco').select('*').order('created_at', { ascending: true }).limit(50);
-      if(error) return console.error(error);
-      el.mensagensDiv.innerHTML = '';
-      const hiddenList = getHiddenMessages();
-      data.forEach(msg => { if(!hiddenList.includes(msg.id)) el.mensagensDiv.appendChild(renderMessage(msg)); });
-      scrollToBottom();
+        const { data } = await supabase.from('banco').select('*').order('created_at', { ascending: true }).limit(100);
+        el.msgDiv.innerHTML = '';
+        data.forEach(appendMessage);
+        scrollToBottom();
+        data.forEach(msg => { if(msg.user_id !== currentUser.id && !msg.lido) supabase.from('banco').update({lido:true}).eq('id',msg.id).then(); });
+    }
+
+    function appendMessage(msg) {
+        if(document.getElementById(`msg-${msg.id}`)) return;
+        const isMe = msg.user_id === currentUser.id;
+        const date = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const ticks = msg.lido ? '<span class="ticks blue">✓✓</span>' : '<span class="ticks">✓</span>';
+        
+        const div = document.createElement('div');
+        div.className = `msg-row ${isMe ? 'me' : ''}`;
+        div.id = `msg-${msg.id}`;
+        div.ondblclick = () => react(msg.id, '❤️');
+
+        let content = '';
+        if(msg.reply_to) content += `<div class="reply-preview">↪ ${msg.reply_to.texto || 'Mídia'}</div>`;
+        if(!isMe) content += `<div class="bubble-autor">${msg.autor_nome}</div>`;
+        if(msg.texto) content += `<div class="bubble-text">${msg.texto}</div>`;
+        if(msg.url_arquivo) {
+            if(msg.url_arquivo.includes('.webm')) content += `<audio controls src="${msg.url_arquivo}"></audio>`;
+            else content += `<img src="${msg.url_arquivo}" class="bubble-img" onclick="window.open('${msg.url_arquivo}')">`;
+        }
+        const reactions = msg.reacoes && Object.keys(msg.reacoes).length ? `<div class="reactions show">❤️ ${Object.keys(msg.reacoes).length}</div>` : '';
+        const trashBtn = isMe ? `<button class="btn-trash" onclick="delMsg(${msg.id})">🗑</button>` : '';
+        const replyBtn = `<button class="btn-trash" onclick='setReply(${JSON.stringify(msg)})'>↩</button>`;
+
+        div.innerHTML = `
+            <img class="chat-avatar" src="${msg.autor_avatar || 'https://via.placeholder.com/30'}">
+            <div class="bubble ${isMe ? 'me' : ''}">
+                ${content}
+                <div class="meta">${date} ${isMe ? ticks : ''} ${replyBtn} ${trashBtn}</div>
+                ${reactions}
+            </div>
+        `;
+        el.msgDiv.appendChild(div);
+        scrollToBottom();
     }
 
     async function sendMessage() {
-      const text = el.texto.value.trim(); const file = el.fileInput.files[0];
-      if(!text && !file) return;
-      el.btnEnviar.disabled = true;
-      let fileUrl = null;
-      try {
-        if(file) { const fileName = `${currentUser.id}/${Date.now()}_${file.name}`; await supabaseClient.storage.from('arquivos').upload(fileName, file); fileUrl = supabaseClient.storage.from('arquivos').getPublicUrl(fileName).data.publicUrl; }
-        const msgData = {
-            texto: text, url_arquivo: fileUrl, user_id: currentUser.id,
-            autor_nome: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
-            autor_avatar: currentUser.user_metadata.avatar_url
-        };
-        const { data, error } = await supabaseClient.from('banco').insert([msgData]).select();
-        if(error) throw error;
-        if(data && data[0]) { const hiddenList = getHiddenMessages(); if(!hiddenList.includes(data[0].id)) { el.mensagensDiv.appendChild(renderMessage(data[0])); scrollToBottom(); } }
-        el.texto.value=''; el.fileInput.value=''; el.btnUpload.innerHTML='📎';
-      } catch(e){ alert(e.message); } finally { el.btnEnviar.disabled = false; }
+        const text = el.txt.value.trim();
+        if(!text && !fileToSend) return;
+        el.send.disabled = true;
+        let url = null;
+        if(fileToSend) {
+            const name = `${currentUser.id}/${Date.now()}`;
+            await supabase.storage.from('arquivos').upload(name, fileToSend);
+            url = supabase.storage.from('arquivos').getPublicUrl(name).data.publicUrl;
+        }
+        await supabase.from('banco').insert([{
+            texto: text, url_arquivo: url, user_id: currentUser.id,
+            autor_nome: currentUser.user_metadata.full_name,
+            autor_avatar: currentUser.user_metadata.avatar_url,
+            reply_to: replyTo ? { id: replyTo.id, texto: replyTo.texto || 'Mídia' } : null
+        }]);
+        el.txt.value = ''; cancelImg(); cancelReply(); el.send.disabled = false; playSwoosh();
     }
 
-    el.btnLogin.onclick = handleLogin; el.btnSignup.onclick = handleSignup; el.btnLogout.onclick = async () => await supabaseClient.auth.signOut();
-    el.btnSalvarPerfil.onclick = updateProfile; el.avatarInput.onchange = () => { if(el.avatarInput.files[0]) el.avatarPreview.src = URL.createObjectURL(el.avatarInput.files[0]); };
-    el.btnEnviar.onclick = sendMessage; el.btnUpload.onclick = () => el.fileInput.click(); el.fileInput.onchange = () => el.btnUpload.innerHTML = el.fileInput.files.length?'✅':'📎';
-    el.texto.onkeydown = e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }};
-    window.deleteMessage = async (id) => { if(confirm('Ocultar?')) { let h=getHiddenMessages(); h.push(id); localStorage.setItem('hidden_msgs_'+(currentUser?currentUser.id:'anon'),JSON.stringify(h)); document.getElementById(`msg-${id}`).remove(); }};
+    window.setReply = (msg) => { replyTo = msg; el.replyBar.style.display='flex'; el.replyTxt.textContent = `Resp: ${msg.autor_nome}`; el.txt.focus(); };
+    window.cancelReply = () => { replyTo = null; el.replyBar.style.display='none'; };
+    window.delMsg = async (id) => { if(confirm('Apagar?')) await supabase.from('banco').delete().eq('id', id); };
+    window.react = async (id, emoji) => {
+        const {data} = await supabase.from('banco').select('reacoes').eq('id',id).single();
+        let r = data.reacoes || {}; r[currentUser.id] = emoji;
+        await supabase.from('banco').update({reacoes: r}).eq('id', id);
+    };
+    function updateMessage(msg) { const old = document.getElementById(`msg-${msg.id}`); if(old) { old.outerHTML = ''; appendMessage(msg); } }
 
-    el.btnMic.onclick=async()=>{if(!isRecording){try{const s=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(s);audioChunks=[];mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=async()=>{uploadAudioAndSend(new Blob(audioChunks,{type:'audio/webm'}))};mediaRecorder.start();isRecording=true;el.btnMic.classList.add('recording');el.recStatus.style.display='block';}catch(e){alert(e.message)}}else{mediaRecorder.stop();isRecording=false;el.btnMic.classList.remove('recording');el.recStatus.style.display='none'}};
-    async function uploadAudioAndSend(b){el.btnMic.disabled=true;el.recStatus.textContent="Enviando...";try{const f=`${currentUser.id}/${Date.now()}_audio.webm`;await supabaseClient.storage.from('arquivos').upload(f,b);const u=supabaseClient.storage.from('arquivos').getPublicUrl(f).data.publicUrl; const msgData = {texto:'',url_arquivo:u,user_id:currentUser.id,autor_nome:currentUser.user_metadata.full_name,autor_avatar:currentUser.user_metadata.avatar_url}; const {data} = await supabaseClient.from('banco').insert([msgData]).select(); if(data && data[0]) { el.mensagensDiv.appendChild(renderMessage(data[0])); scrollToBottom(); } }catch(e){alert(e.message)}finally{el.btnMic.disabled=false;el.recStatus.style.display='none';el.recStatus.textContent="Gravando..."}}
+    el.fileIn.onchange = e => { fileToSend=e.target.files[0]; if(fileToSend){el.preview.style.display='block'; el.imgPrev.src=URL.createObjectURL(fileToSend);} };
+    window.cancelImg = () => { fileToSend=null; el.fileIn.value=''; el.preview.style.display='none'; };
+    window.toggleMenu = () => document.getElementById('myDropdown').classList.toggle('show');
+    window.toggleSearch = () => { document.getElementById('searchBox').classList.toggle('active'); document.getElementById('searchInput').focus(); };
+    window.filterMessages = () => { const term = document.getElementById('searchInput').value.toLowerCase(); document.querySelectorAll('.msg-row').forEach(row => { row.style.display = row.textContent.toLowerCase().includes(term) ? 'flex' : 'none'; }); };
+    window.toggleDarkMode = () => { document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', document.body.classList.contains('dark-mode')?'dark':'light'); toggleMenu(); };
+    document.getElementById('wallInput').onchange = e => { const f = e.target.files[0]; if(!f)return; const r = new FileReader(); r.onload=ev=>{ el.wrap.style.backgroundImage=`url(${ev.target.result})`; localStorage.setItem('wall', ev.target.result); }; r.readAsDataURL(f); toggleMenu(); };
+    window.logout = async () => { await supabase.auth.signOut(); window.location.href='/perfil.html'; };
+    window.shareApp = async () => { if(navigator.share) await navigator.share({url:window.location.href}); else alert(window.location.href); };
+    function scrollToBottom(){ setTimeout(()=>el.wrap.scrollTop=el.wrap.scrollHeight, 100); }
+    
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    function playPop() { if(ctx.state === 'suspended') ctx.resume(); const o=ctx.createOscillator(), g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value=800; g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime+0.1); o.start(); o.stop(ctx.currentTime+0.1); }
+    function playSwoosh() { if(ctx.state === 'suspended') ctx.resume(); const o=ctx.createOscillator(), g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.type='triangle'; o.frequency.setValueAtTime(300, ctx.currentTime); o.frequency.exponentialRampToValueAtTime(600, ctx.currentTime+0.2); g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime+0.2); o.start(); o.stop(ctx.currentTime+0.2); }
 
-    async function handleLogin(){const e=el.email.value,p=el.pass.value;if(!e||!p)return setStatus('Dados?',1);el.btnLogin.textContent='...';const{error}=await supabaseClient.auth.signInWithPassword({email:e,password:p});el.btnLogin.textContent='ENTRAR';if(error)setStatus(error.message,1)}
-    async function handleSignup(){const e=el.email.value,p=el.pass.value;if(!e||!p)return setStatus('Dados?',1);el.btnSignup.textContent='...';const{error}=await supabaseClient.auth.signUp({email:e,password:p});el.btnSignup.textContent='CADASTRAR';if(error)setStatus(error.message,1);else setStatus('Sucesso!')}
-    el.btnTogglePass.onclick=()=>toggleEye(el.pass,el.btnTogglePass); el.btnTogglePassNew.onclick=()=>toggleEye(el.newPassword,el.btnTogglePassNew);
-    el.linkForgot.onclick=()=>{el.emailRecovery.value=el.email.value; el.loginForm.classList.add('hidden'); el.recoveryPanel.classList.remove('hidden');}; el.btnBackLogin.onclick=()=>{el.recoveryPanel.classList.add('hidden'); el.loginForm.classList.remove('hidden');};
-    el.btnSendRecovery.onclick=async()=>{if(!el.emailRecovery.value)return;el.btnSendRecovery.textContent='...';await supabaseClient.auth.resetPasswordForEmail(el.emailRecovery.value,{redirectTo:window.location.href});el.btnSendRecovery.textContent='ENVIAR';setStatus('Verifique e-mail')};
-    el.btnSavePass.onclick=async()=>{if(!el.newPassword.value)return;el.btnSavePass.textContent='...';await supabaseClient.auth.updateUser({password:el.newPassword.value});window.location.reload();};
-
-    supabaseClient.auth.onAuthStateChange((e,s)=>{if(e==='PASSWORD_RECOVERY'){el.loginForm.classList.add('hidden');el.updatePassPanel.classList.remove('hidden');}else if(s){currentUser=s.user;el.loginForm.classList.add('hidden');el.updatePassPanel.classList.add('hidden');el.userPanel.classList.remove('hidden');el.appArea.classList.remove('hidden');el.nomeInput.value=currentUser.user_metadata.full_name||'';el.avatarPreview.src=currentUser.user_metadata.avatar_url||"https://via.placeholder.com/80?text=Foto";fetchMessages();
-        supabaseClient.channel('realtime').on('postgres_changes',{event:'INSERT',schema:'public',table:'banco'}, payload => { const msgExists = document.getElementById(`msg-${payload.new.id}`); if(!msgExists) { el.mensagensDiv.appendChild(renderMessage(payload.new)); scrollToBottom(); } }).subscribe();
-    }else{currentUser=null;el.loginForm.classList.remove('hidden');el.userPanel.classList.add('hidden');el.appArea.classList.add('hidden'); el.headerStatus.textContent='Desconectado';}});
+    el.mic.onclick=async()=>{if(!isRec){try{const s=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(s);audioChunks=[];mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=async()=>{let b=new Blob(audioChunks,{type:'audio/webm'});fileToSend=b;sendMessage();fileToSend=null;};mediaRecorder.start();isRec=true;el.mic.classList.add('rec');}catch(e){alert(e)}}else{mediaRecorder.stop();isRec=false;el.mic.classList.remove('rec');}};
+    el.send.onclick = sendMessage; el.txt.onkeydown = e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
   </script>
 </body>
-          </html> 
- 
+</html>
