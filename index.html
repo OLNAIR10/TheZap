@@ -10,12 +10,14 @@
   :root{ --bg:#e9f7f2; --top:#075e54; --accent:#25d366; --muted:#6b6b6b; --card-bg:#fff; --input-bg:#f0f0f0; --input-text:#000; --msg-in:#fff; --msg-out:#d9fdd3; --msg-text:#000; --recording:#e53935; --select-bg: #b3e5fc; }
   body.dark-mode { --bg:#111b21; --top:#202c33; --card-bg:#111b21; --input-bg:#2a3942; --input-text:#e9edef; --msg-in:#202c33; --msg-out:#005c4b; --msg-text:#e9edef; --muted:#8696a0; --select-bg: #004d40; }
   
+  /* CORREÇÃO DE LAYOUT (TRAVAR RODAPÉ) */
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;} 
   html,body{height:100dvh; margin:0; font-family:system-ui,-apple-system,sans-serif; background:var(--bg); transition:background 0.3s; user-select: none; overflow: hidden;}
   
   .frame{height:100%; display:flex; align-items:center; justify-content:center; padding:0;} 
   @media(min-width:768px){.frame{padding:8px;}.card{max-width:720px; border-radius:12px;}}
   
+  /* CARD FLEXÍVEL */
   .card{width:100%; height:100%; background:var(--card-bg); display:flex; flex-direction:column; overflow:hidden; position: relative;}
   
   /* TOPO */
@@ -34,14 +36,45 @@
   .selection-bar.active { display: flex; }
   .sel-count { font-weight: bold; font-size: 18px; }
   
-  /* CHAT */
-  .messages-wrap{
-      flex:1; overflow-y:auto; padding:14px; 
-      background-color:var(--bg);
-      background-image:url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 50L0 100L100 0Z' fill='%23999' fill-opacity='0.05'/%3E%3C/svg%3E");
-      display:flex; flex-direction:column; gap:4px;
+  /* BUSCA */
+  .search-box{display:none;width:100%;padding:8px;background:var(--top);}
+  .search-box.active{display:block;}
+  .search-box input{width:100%;padding:6px;border-radius:5px;border:none;outline:none;}
+
+  /* --- ESTRUTURA PRINCIPAL (CORREÇÃO) --- */
+  .main { 
+      flex: 1; /* Ocupa todo o espaço restante */
+      display: flex; 
+      flex-direction: column; 
+      overflow: hidden; 
+      position: relative; 
+  }
+
+  .messages-wrap {
+      flex: 1; /* Cresce para empurrar o composer pra baixo */
+      overflow-y: auto; 
+      padding: 14px; 
+      background-color: var(--bg);
+      background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 50L0 100L100 0Z' fill='%23999' fill-opacity='0.05'/%3E%3C/svg%3E");
+      display: flex; 
+      flex-direction: column; 
+      gap: 4px;
   }
   
+  .composer {
+      flex-shrink: 0; /* Não encolhe */
+      padding: 6px; 
+      background: var(--input-bg); 
+      display: flex; 
+      gap: 6px; 
+      align-items: flex-end; 
+      border-top: 1px solid #ddd; 
+      position: relative; 
+      margin-top: auto; /* Garante que fique no fundo */
+  }
+  /* --------------------------------------- */
+
+  /* MENSAGENS */
   .msg-row{display:flex;gap:8px;margin-bottom:2px;width:100%; transition: background 0.2s;}
   .msg-row.me{flex-direction:row-reverse;}
   .chat-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;margin-top:5px;}
@@ -49,18 +82,12 @@
   .bubble{max-width:80%;padding:6px 8px;border-radius:8px;background:var(--msg-in);color:var(--msg-text);box-shadow:0 1px 2px rgba(0,0,0,0.1);position:relative;font-size:14px; transition: background 0.2s;}
   .bubble.me{background:var(--msg-out);}
   .msg-row.selected .bubble { background: var(--select-bg) !important; }
-  
-  /* --- NOVO PLAYER DE ÁUDIO CUSTOMIZADO --- */
-  .audio-custom {
-      display: flex; align-items: center; gap: 10px;
-      background: rgba(0,0,0,0.05);
-      padding: 8px 12px; border-radius: 20px;
-      cursor: pointer; width: 180px; /* Tamanho fixo aprox 50% de telas pequenas */
-      border: 1px solid rgba(0,0,0,0.1);
-  }
+  .msg-row.selected { background: rgba(0,0,0,0.05); border-radius: 5px;}
+
+  /* AUDIO CUSTOM */
+  .audio-custom { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.05); padding: 8px 12px; border-radius: 20px; cursor: pointer; width: 180px; border: 1px solid rgba(0,0,0,0.1); }
   .audio-icon { font-size: 20px; }
   .audio-txt { font-size: 13px; font-weight: bold; }
-  /* ----------------------------------------- */
 
   .reply-preview{background:rgba(0,0,0,0.05);border-left:4px solid var(--accent);padding:4px;border-radius:4px;font-size:11px;margin-bottom:4px;cursor:pointer;}
   .reactions{position:absolute;bottom:-10px;right:10px;background:#fff;border-radius:10px;padding:2px 6px;font-size:10px;box-shadow:0 1px 2px rgba(0,0,0,0.2);display:none;color:#000;}
@@ -78,22 +105,12 @@
   .preview-area img{height:100px;border-radius:8px;}
   .reply-bar{background:var(--input-bg);padding:8px;border-left:4px solid var(--accent);font-size:12px;display:none;justify-content:space-between;align-items:center;color:var(--input-text);}
   
-  /* COMPOSER */
-  .composer{padding:6px; background:var(--input-bg); display:flex; gap:6px; align-items:flex-end; flex-shrink: 0; border-top: 1px solid #ddd; position: relative; }
   textarea{flex:1;min-height:40px;max-height:100px;padding:10px;border-radius:20px;border:none;resize:none;outline:none;background:var(--card-bg);color:var(--input-text);}
   .btn-icon{width:40px;height:40px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;color:var(--muted);font-size:20px;}
   .btn-send{background:var(--top);color:#fff;}
-  
-  /* --- ESTILO DO GRAVANDO --- */
   .btn-mic.rec{background:var(--recording);color:#fff;animation:pulse 1s infinite;}
-  .recording-status { 
-      position: absolute; top: -40px; left: 50%; transform: translateX(-50%); 
-      background: var(--recording); color: white; 
-      padding: 6px 16px; border-radius: 20px; 
-      font-size: 13px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      display: none; z-index: 20;
-  }
-  @keyframes pulse{0%{transform:translateX(-50%) scale(1);}50%{transform:translateX(-50%) scale(1.1);}100%{transform:translateX(-50%) scale(1);}}
+  .recording-status { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); background: var(--recording); color: white; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: none; z-index: 20; }
+  @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
 
   /* MENU */
   .dropdown-content{display:none;position:absolute;top:50px;right:10px;background:var(--card-bg);box-shadow:0 5px 15px rgba(0,0,0,0.3);z-index:100;border-radius:8px;min-width:160px;overflow:hidden;}
@@ -101,12 +118,7 @@
   .dropdown-content button, .dropdown-content a{display:block;width:100%;padding:12px;text-align:left;border:none;background:none;color:var(--input-text);text-decoration:none;font-size:14px;}
   .dropdown-content button:hover{background:rgba(0,0,0,0.05);}
   
-  /* BUSCA */
-  .search-box{display:none;width:100%;padding:8px;background:var(--top);}
-  .search-box.active{display:block;}
-  .search-box input{width:100%;padding:6px;border-radius:5px;border:none;outline:none;}
-
-  /* PAINEL AUTH */
+  /* AUTH */
   .auth-panel{ padding: 20px; border-bottom:1px solid #f0f0f0; background:#f9f9f9; flex-shrink: 0; }
   .auth-inputs { display: flex; flex-direction: column; gap: 10px; }
   input[type="email"], input[type="password"]{ width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-size:14px; outline: none; }
@@ -185,7 +197,7 @@
           </div>
       </div>
 
-      <!-- APP AREA -->
+      <!-- ÁREA PRINCIPAL -->
       <div class="main hidden" id="mainAppArea">
         <div id="messagesWrap" class="messages-wrap"><div id="mensagens" style="display:flex;flex-direction:column;gap:4px;"></div></div>
         
@@ -193,9 +205,7 @@
         <div id="previewArea" class="preview-area"><img id="imgPreview"> <button onclick="cancelImg()">✖</button></div>
 
         <div class="composer" id="composerArea">
-           <!-- AVISO DE GRAVANDO (MAIS VISÍVEL) -->
            <div id="recStatus" class="recording-status">🎤 GRAVANDO...</div>
-           
            <button class="btn-icon" onclick="document.getElementById('fileInput').click()">📎</button>
            <input type="file" id="fileInput" hidden>
            <textarea id="campoTexto" placeholder="Mensagem..."></textarea>
@@ -306,10 +316,9 @@
         if(!isMe) content += `<div class="bubble-autor">${msg.autor_nome}</div>`;
         if(msg.texto) content += `<div class="bubble-text">${msg.texto}</div>`;
         
-        // --- NOVA LÓGICA DE ÁUDIO (BOTÃO 50%) ---
+        // ÁUDIO
         if(msg.url_arquivo) {
             if(msg.url_arquivo.includes('.webm')) {
-                // Gera o botão player customizado
                 content += `
                 <div class="audio-custom" onclick="playAudio(this)">
                     <audio src="${msg.url_arquivo}"></audio>
@@ -320,7 +329,6 @@
                 content += `<img src="${msg.url_arquivo}" class="bubble-img" onclick="if(!selectionMode) window.open('${msg.url_arquivo}')">`;
             }
         }
-        // -----------------------------------------
 
         const reactions = msg.reacoes && Object.keys(msg.reacoes).length ? `<div class="reactions show">❤️ ${Object.keys(msg.reacoes).length}</div>` : '';
         const trashBtn = (isMe || isAdmin) ? `<span class="msg-actions"><button class="btn-trash" onclick="delMsg(${msg.id})">🗑</button></span>` : '';
@@ -338,29 +346,23 @@
         scrollToBottom();
     }
 
-    // --- FUNÇÃO PARA TOCAR O ÁUDIO ---
     window.playAudio = (btn) => {
         const audio = btn.querySelector('audio');
         const icon = btn.querySelector('.audio-icon');
         if (audio.paused) {
-            document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime=0; }); // Para outros
-            audio.play();
-            icon.textContent = '⏸'; // Ícone de pause
+            document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime=0; });
+            audio.play(); icon.textContent = '⏸';
             audio.onended = () => icon.textContent = '🔊';
-        } else {
-            audio.pause();
-            icon.textContent = '🔊';
-        }
+        } else { audio.pause(); icon.textContent = '🔊'; }
     };
 
-    // SELEÇÃO, ENVIO, ETC (MANTIDO IGUAL)
     function startLongPress(id) { longPressTimer = setTimeout(() => { enterSelectionMode(id); }, 600); }
     function cancelLongPress() { clearTimeout(longPressTimer); }
     function handleClick(msg, e) { if(selectionMode) { toggleSelection(msg.id); } else { if (e.detail === 2) react(msg.id, '❤️'); } }
     function enterSelectionMode(id) { if(selectionMode) return; selectionMode = true; el.selBar.classList.add('active'); document.body.classList.add('selection-active'); toggleSelection(id); if(navigator.vibrate) navigator.vibrate(50); }
     function exitSelectionMode() { selectionMode = false; selectedIds.clear(); el.selBar.classList.remove('active'); document.body.classList.remove('selection-active'); document.querySelectorAll('.msg-row').forEach(row => row.classList.remove('selected')); el.selCount.textContent = '0'; }
     function toggleSelection(id) { const row = document.getElementById(`msg-${id}`); if(!row) return; if(selectedIds.has(id)) { selectedIds.delete(id); row.classList.remove('selected'); } else { selectedIds.add(id); row.classList.add('selected'); } el.selCount.textContent = selectedIds.size; if(selectedIds.size === 0) exitSelectionMode(); }
-    async function deleteSelectedMessages() { if(selectedIds.size === 0) return; if(!confirm(`Apagar ${selectedIds.size} mensagens?`)) return; const idsToDelete = Array.from(selectedIds); const { error } = await supabaseClient.from('banco').delete().in('id', idsToDelete); if(error) alert('Erro: ' + error.message); else exitSelectionMode(); }
+    async function deleteSelectedMessages() { if(selectedIds.size === 0) return; if(!confirm(`Apagar ${selectedIds.size} mensagens para todos?`)) return; const idsToDelete = Array.from(selectedIds); const { error } = await supabaseClient.from('banco').delete().in('id', idsToDelete); if(error) alert('Erro: ' + error.message); else exitSelectionMode(); }
     function removeMessageFromScreen(id) { const row = document.getElementById(`msg-${id}`); if(row) row.remove(); }
 
     async function sendMessage() {
@@ -411,4 +413,4 @@
     el.send.onclick = sendMessage; el.txt.onkeydown = e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
   </script>
 </body>
-</html>
+                                                                                                                                                  </html>
