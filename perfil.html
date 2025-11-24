@@ -50,7 +50,7 @@
     
     <!-- CARD DO USUÁRIO -->
     <div class="user-card">
-        <img id="avatarImg" class="avatar" src="https://via.placeholder.com/100" onclick="document.getElementById('fileInput').click()">
+        <img id="avatarImg" class="avatar" src="https://via.placeholder.com/100?text=Foto" onclick="document.getElementById('fileInput').click()">
         <div class="hint">(Toque na foto para alterar)</div>
         <div id="userName" class="user-name">Carregando...</div>
         <div id="userEmail" class="user-email">...</div>
@@ -81,16 +81,18 @@
 </div>
 
 <script>
-    // CONFIGURAÇÃO SUPABASE
+    // CONFIGURAÇÃO SUPABASE (Corrigida para supabaseClient)
     const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // MUDANÇA AQUI: Usando 'supabaseClient' igual no index.html
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentUser = null;
 
     // INICIAR
     async function init() {
-        const { data } = await supabase.auth.getSession();
+        const { data } = await supabaseClient.auth.getSession();
         if (!data.session) {
             // Se não tiver logado, manda pro início
             window.location.href = '/'; 
@@ -114,7 +116,7 @@
         const novoNome = prompt("Digite seu novo nome público:", currentUser.user_metadata.full_name);
         if (novoNome && novoNome.trim() !== "") {
             document.getElementById('userName').textContent = "Salvando...";
-            const { error } = await supabase.auth.updateUser({
+            const { error } = await supabaseClient.auth.updateUser({
                 data: { full_name: novoNome }
             });
             
@@ -140,15 +142,15 @@
             const fileName = `avatars/${currentUser.id}_${Date.now()}`;
             
             // Upload
-            const { error: uploadError } = await supabase.storage.from('arquivos').upload(fileName, file);
+            const { error: uploadError } = await supabaseClient.storage.from('arquivos').upload(fileName, file);
             if (uploadError) throw uploadError;
 
             // Pegar Link
-            const { data } = supabase.storage.from('arquivos').getPublicUrl(fileName);
+            const { data } = supabaseClient.storage.from('arquivos').getPublicUrl(fileName);
             const publicUrl = data.publicUrl;
 
             // Atualizar Perfil
-            const { error: updateError } = await supabase.auth.updateUser({
+            const { error: updateError } = await supabaseClient.auth.updateUser({
                 data: { avatar_url: publicUrl }
             });
             if (updateError) throw updateError;
@@ -166,11 +168,11 @@
     // FUNÇÃO 3: SAIR (LOGOUT)
     async function logout() {
         if(confirm("Tem certeza que deseja sair?")) {
-            await supabase.auth.signOut();
+            await supabaseClient.auth.signOut();
             window.location.href = '/';
         }
     }
 </script>
 
 </body>
-  </html>
+</html>
