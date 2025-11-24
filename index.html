@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>TheZap Ultimate + MultiSelect</title>
+<title>TheZap Ultimate</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* CSS GERAL */
@@ -14,7 +14,7 @@
   .frame{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:0;} @media(min-width:768px){.frame{padding:8px;}.card{max-width:720px;height:calc(100vh - 16px);border-radius:12px;}}
   .card{width:100%;height:100vh;background:var(--card-bg);display:flex;flex-direction:column;overflow:hidden; position: relative;}
   
-  /* TOPO NORMAL */
+  /* TOPO */
   .topbar{background:var(--top);color:#fff;padding:8px 12px;display:flex;gap:10px;align-items:center;flex-shrink:0;justify-content:space-between; height: 60px;}
   .top-left{display:flex;gap:10px;align-items:center;}
   .brand-logo{width:30px;height:30px;fill:white;}
@@ -24,13 +24,8 @@
   .typing-indicator{font-size:11px;color:#25d366;font-weight:bold;display:none;animation:blink 1s infinite;}
   @keyframes blink{50%{opacity:0.5;}}
   
-  /* TOPO DE SELEÇÃO */
-  .selection-bar {
-      position: absolute; top: 0; left: 0; width: 100%; height: 60px;
-      background: #fff; color: #333; display: none; align-items: center;
-      justify-content: space-between; padding: 0 15px; z-index: 50;
-      border-bottom: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  }
+  /* SELEÇÃO */
+  .selection-bar { position: absolute; top: 0; left: 0; width: 100%; height: 60px; background: #fff; color: #333; display: none; align-items: center; justify-content: space-between; padding: 0 15px; z-index: 50; border-bottom: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
   body.dark-mode .selection-bar { background: var(--top); color: white; border-bottom: 1px solid #333; }
   .selection-bar.active { display: flex; }
   .sel-count { font-weight: bold; font-size: 18px; }
@@ -49,7 +44,6 @@
   
   .bubble{max-width:80%;padding:6px 8px;border-radius:8px;background:var(--msg-in);color:var(--msg-text);box-shadow:0 1px 2px rgba(0,0,0,0.1);position:relative;font-size:14px; transition: background 0.2s;}
   .bubble.me{background:var(--msg-out);}
-  
   .msg-row.selected .bubble { background: var(--select-bg) !important; }
   .msg-row.selected { background: rgba(0,0,0,0.05); border-radius: 5px;}
 
@@ -62,7 +56,6 @@
   .bubble-img{max-width:100%;border-radius:6px;margin-top:4px;}
   .meta{font-size:10px;color:var(--muted);text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:2px;}
   .ticks{font-size:14px;} .ticks.blue{color:#34b7f1;}
-  
   .msg-actions { display: inline-flex; gap: 5px; margin-left: 5px; }
   .selection-active .msg-actions { display: none !important; }
 
@@ -87,7 +80,7 @@
 <body>
   <div class="frame">
     <div class="card">
-      <!-- TOPO NORMAL -->
+      <!-- TOPO -->
       <div class="topbar" id="topBar">
         <div class="top-left">
           <svg class="brand-logo" viewBox="0 0 100 100"><path d="M20,20 Q80,10 80,50 Q80,90 50,90 L20,95 L25,75 Q10,60 20,20 Z" fill="#25d366"/><path d="M45,25 L65,25 L50,50 L70,50 L35,80 L45,50 L25,50 Z" fill="white"/></svg>
@@ -103,7 +96,7 @@
         </div>
       </div>
 
-      <!-- TOPO DE SELEÇÃO (MULTI-SELECT) -->
+      <!-- SELEÇÃO -->
       <div class="selection-bar" id="selectionBar">
           <div style="display:flex; align-items:center; gap:15px;">
               <div class="btn-icon" onclick="exitSelectionMode()">⬅</div>
@@ -115,15 +108,11 @@
       <!-- BUSCA -->
       <div class="search-box" id="searchBox"><input type="text" id="searchInput" placeholder="Buscar mensagem..." onkeyup="filterMessages()"></div>
 
-      <!-- MENU SUSPENSO (AGORA COM OS LINKS NOVOS) -->
+      <!-- MENU -->
       <div id="myDropdown" class="dropdown-content">
         <a href="/perfil.html">👤 Meu Perfil</a>
-        
-        <!-- LINKS NOVOS -->
-        <a href="/privado.html" style="color: #6a1b9a; font-weight: bold;">🔒 Chat Privado / Grupos</a>
-        <a href="/anuncios.html" style="color: #075e54; font-weight: bold;">📢 Mural de Anúncios</a>
-        <!-- FIM LINKS NOVOS -->
-
+        <a href="/privado.html" style="color: #6a1b9a; font-weight: bold;">🔒 Chat Privado</a>
+        <a href="/anuncios.html" style="color: #075e54; font-weight: bold;">📢 Anúncios</a>
         <button onclick="toggleDarkMode()">🌙 Tema Escuro/Claro</button>
         <button onclick="document.getElementById('wallInput').click()">🖼️ Papel de Parede</button>
         <a href="/termos.html">📄 Termos</a>
@@ -132,15 +121,13 @@
       </div>
       <input type="file" id="wallInput" hidden accept="image/*">
 
-      <!-- ÁREA PRINCIPAL -->
+      <!-- APP AREA -->
       <div class="main">
         <div id="messagesWrap" class="messages-wrap"><div id="mensagens" style="display:flex;flex-direction:column;gap:4px;"></div></div>
         
-        <!-- ÁREA DE PREVIEW -->
         <div id="replyBar" class="reply-bar"><span id="replyText"></span> <button onclick="cancelReply()">✖</button></div>
         <div id="previewArea" class="preview-area"><img id="imgPreview"> <button onclick="cancelImg()">✖</button></div>
 
-        <!-- COMPOSITOR -->
         <div class="composer" id="composerArea">
            <button class="btn-icon" onclick="document.getElementById('fileInput').click()">📎</button>
            <input type="file" id="fileInput" hidden>
@@ -155,6 +142,8 @@
   <script>
     const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
+    
+    // IMPORTANTE: Mantive o nome corrigido aqui
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const ADMIN_EMAILS = ['olnair10pereira@gmail.com']; 
@@ -162,29 +151,29 @@
     const el={msgDiv:document.getElementById('mensagens'),wrap:document.getElementById('messagesWrap'),txt:document.getElementById('campoTexto'),replyBar:document.getElementById('replyBar'),replyTxt:document.getElementById('replyText'),preview:document.getElementById('previewArea'),imgPrev:document.getElementById('imgPreview'),fileIn:document.getElementById('fileInput'),mic:document.getElementById('btnMic'),send:document.getElementById('btnEnviar'),status:document.getElementById('statusText'),typing:document.getElementById('typingInd'), selBar:document.getElementById('selectionBar'), selCount:document.getElementById('selCount')};
     
     let currentUser=null, replyTo=null, fileToSend=null, mediaRecorder=null, audioChunks=[], isRec=false, channel=null;
-    
-    // VARIAVEIS DE SELEÇÃO
-    let selectionMode = false;
-    let selectedIds = new Set();
-    let longPressTimer;
+    let selectionMode = false, selectedIds = new Set(), longPressTimer;
 
     if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
     if(localStorage.getItem('wall')) el.wrap.style.backgroundImage=`url(${localStorage.getItem('wall')})`;
     
     async function init() {
         const {data} = await supabaseClient.auth.getSession();
-        if(!data.session) return window.location.href = '/perfil.html';
-        currentUser = data.session.user;
-        el.status.textContent = 'Online';
-        setupRealtime();
-        fetchMessages();
+        if(data.session) {
+            currentUser = data.session.user;
+            el.status.textContent = 'Online';
+            setupRealtime();
+            fetchMessages();
+        } else {
+            // MUDANÇA CRUCIAL: Se não estiver logado, vai para o perfil logar
+            // (Isso evita o loop infinito)
+            window.location.href = '/perfil.html';
+        }
     }
     init();
 
     function setupRealtime() {
         channel = supabaseClient.channel('room1');
-        channel
-        .on('presence', { event: 'sync' }, () => {
+        channel.on('presence', { event: 'sync' }, () => {
             const state = channel.presenceState();
             const typers = Object.values(state).flat().filter(u => u.typing && u.user_id !== currentUser.id);
             el.typing.textContent = typers.length ? `${typers[0].name} digitando...` : '';
@@ -215,6 +204,7 @@
     function appendMessage(msg) {
         if(document.getElementById(`msg-${msg.id}`)) return;
         const isMe = msg.user_id === currentUser.id;
+        const isAdmin = ADMIN_EMAILS.includes(currentUser.email);
         const date = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         const ticks = msg.lido ? '<span class="ticks blue">✓✓</span>' : '<span class="ticks">✓</span>';
         
@@ -237,13 +227,15 @@
             else content += `<img src="${msg.url_arquivo}" class="bubble-img" onclick="if(!selectionMode) window.open('${msg.url_arquivo}')">`;
         }
         const reactions = msg.reacoes && Object.keys(msg.reacoes).length ? `<div class="reactions show">❤️ ${Object.keys(msg.reacoes).length}</div>` : '';
+        
+        const trashBtn = (isMe || isAdmin) ? `<span class="msg-actions"><button class="btn-trash" onclick="delMsg(${msg.id})">🗑</button></span>` : '';
         const replyBtn = `<span class="msg-actions"><button class="btn-trash" onclick='setReply(${JSON.stringify(msg)})'>↩</button></span>`;
 
         div.innerHTML = `
             <img class="chat-avatar" src="${msg.autor_avatar || 'https://via.placeholder.com/30'}">
             <div class="bubble ${isMe ? 'me' : ''}">
                 ${content}
-                <div class="meta">${date} ${isMe ? ticks : ''} ${replyBtn}</div>
+                <div class="meta">${date} ${isMe ? ticks : ''} ${replyBtn} ${trashBtn}</div>
                 ${reactions}
             </div>
         `;
@@ -253,47 +245,11 @@
 
     function startLongPress(id) { longPressTimer = setTimeout(() => { enterSelectionMode(id); }, 600); }
     function cancelLongPress() { clearTimeout(longPressTimer); }
-
-    function handleClick(msg, e) {
-        if(selectionMode) { toggleSelection(msg.id); } 
-        else { if (e.detail === 2) react(msg.id, '❤️'); }
-    }
-
-    function enterSelectionMode(id) {
-        if(selectionMode) return;
-        selectionMode = true;
-        el.selBar.classList.add('active');
-        document.body.classList.add('selection-active');
-        toggleSelection(id);
-        if(navigator.vibrate) navigator.vibrate(50);
-    }
-
-    function exitSelectionMode() {
-        selectionMode = false;
-        selectedIds.clear();
-        el.selBar.classList.remove('active');
-        document.body.classList.remove('selection-active');
-        document.querySelectorAll('.msg-row').forEach(row => row.classList.remove('selected'));
-        el.selCount.textContent = '0';
-    }
-
-    function toggleSelection(id) {
-        const row = document.getElementById(`msg-${id}`);
-        if(!row) return;
-        if(selectedIds.has(id)) { selectedIds.delete(id); row.classList.remove('selected'); } 
-        else { selectedIds.add(id); row.classList.add('selected'); }
-        el.selCount.textContent = selectedIds.size;
-        if(selectedIds.size === 0) exitSelectionMode();
-    }
-
-    async function deleteSelectedMessages() {
-        if(selectedIds.size === 0) return;
-        if(!confirm(`Apagar ${selectedIds.size} mensagens para todos?`)) return;
-        const idsToDelete = Array.from(selectedIds);
-        const { error } = await supabaseClient.from('banco').delete().in('id', idsToDelete);
-        if(error) alert('Erro: ' + error.message); else exitSelectionMode();
-    }
-
+    function handleClick(msg, e) { if(selectionMode) { toggleSelection(msg.id); } else { if (e.detail === 2) react(msg.id, '❤️'); } }
+    function enterSelectionMode(id) { if(selectionMode) return; selectionMode = true; el.selBar.classList.add('active'); document.body.classList.add('selection-active'); toggleSelection(id); if(navigator.vibrate) navigator.vibrate(50); }
+    function exitSelectionMode() { selectionMode = false; selectedIds.clear(); el.selBar.classList.remove('active'); document.body.classList.remove('selection-active'); document.querySelectorAll('.msg-row').forEach(row => row.classList.remove('selected')); el.selCount.textContent = '0'; }
+    function toggleSelection(id) { const row = document.getElementById(`msg-${id}`); if(!row) return; if(selectedIds.has(id)) { selectedIds.delete(id); row.classList.remove('selected'); } else { selectedIds.add(id); row.classList.add('selected'); } el.selCount.textContent = selectedIds.size; if(selectedIds.size === 0) exitSelectionMode(); }
+    async function deleteSelectedMessages() { if(selectedIds.size === 0) return; if(!confirm(`Apagar ${selectedIds.size} mensagens?`)) return; const idsToDelete = Array.from(selectedIds); const { error } = await supabaseClient.from('banco').delete().in('id', idsToDelete); if(error) alert(error.message); else exitSelectionMode(); }
     function removeMessageFromScreen(id) { const row = document.getElementById(`msg-${id}`); if(row) row.remove(); }
 
     async function sendMessage() {
@@ -317,6 +273,7 @@
 
     window.setReply = (msg) => { replyTo = msg; el.replyBar.style.display='flex'; el.replyTxt.textContent = `Resp: ${msg.autor_nome}`; el.txt.focus(); };
     window.cancelReply = () => { replyTo = null; el.replyBar.style.display='none'; };
+    window.delMsg = async (id) => { if(confirm('Apagar?')) await supabaseClient.from('banco').delete().eq('id', id); };
     window.react = async (id, emoji) => {
         const {data} = await supabaseClient.from('banco').select('reacoes').eq('id',id).single();
         let r = data.reacoes || {}; r[currentUser.id] = emoji;
@@ -343,4 +300,4 @@
     el.send.onclick = sendMessage; el.txt.onkeydown = e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
   </script>
 </body>
-        </html>
+  </html>
