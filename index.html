@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>TheZap Ultimate</title>
+<title>TheZap Ultimate + MultiSelect</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* CSS GERAL */
@@ -14,7 +14,7 @@
   .frame{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:0;} @media(min-width:768px){.frame{padding:8px;}.card{max-width:720px;height:calc(100vh - 16px);border-radius:12px;}}
   .card{width:100%;height:100vh;background:var(--card-bg);display:flex;flex-direction:column;overflow:hidden; position: relative;}
   
-  /* TOPO */
+  /* TOPO NORMAL */
   .topbar{background:var(--top);color:#fff;padding:8px 12px;display:flex;gap:10px;align-items:center;flex-shrink:0;justify-content:space-between; height: 60px;}
   .top-left{display:flex;gap:10px;align-items:center;}
   .brand-logo{width:30px;height:30px;fill:white;}
@@ -24,7 +24,7 @@
   .typing-indicator{font-size:11px;color:#25d366;font-weight:bold;display:none;animation:blink 1s infinite;}
   @keyframes blink{50%{opacity:0.5;}}
   
-  /* SELEÇÃO */
+  /* TOPO DE SELEÇÃO */
   .selection-bar { position: absolute; top: 0; left: 0; width: 100%; height: 60px; background: #fff; color: #333; display: none; align-items: center; justify-content: space-between; padding: 0 15px; z-index: 50; border-bottom: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
   body.dark-mode .selection-bar { background: var(--top); color: white; border-bottom: 1px solid #333; }
   .selection-bar.active { display: flex; }
@@ -44,6 +44,7 @@
   
   .bubble{max-width:80%;padding:6px 8px;border-radius:8px;background:var(--msg-in);color:var(--msg-text);box-shadow:0 1px 2px rgba(0,0,0,0.1);position:relative;font-size:14px; transition: background 0.2s;}
   .bubble.me{background:var(--msg-out);}
+  
   .msg-row.selected .bubble { background: var(--select-bg) !important; }
   .msg-row.selected { background: rgba(0,0,0,0.05); border-radius: 5px;}
 
@@ -56,6 +57,7 @@
   .bubble-img{max-width:100%;border-radius:6px;margin-top:4px;}
   .meta{font-size:10px;color:var(--muted);text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:2px;}
   .ticks{font-size:14px;} .ticks.blue{color:#34b7f1;}
+  
   .msg-actions { display: inline-flex; gap: 5px; margin-left: 5px; }
   .selection-active .msg-actions { display: none !important; }
 
@@ -74,13 +76,25 @@
   .dropdown-content.show{display:block;}
   .dropdown-content button, .dropdown-content a{display:block;width:100%;padding:12px;text-align:left;border:none;background:none;color:var(--input-text);text-decoration:none;font-size:14px;}
   .dropdown-content button:hover{background:rgba(0,0,0,0.05);}
+  
+  /* PAINEL AUTH */
+  .auth-panel{ padding: 20px; border-bottom:1px solid #f0f0f0; background:#f9f9f9; flex-shrink: 0; }
+  .auth-inputs { display: flex; flex-direction: column; gap: 10px; }
+  input[type="email"], input[type="password"]{ width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-size:14px; outline: none; }
+  .password-container { position: relative; width: 100%; display: flex; align-items: center; }
+  .password-container input { padding-right: 40px; }
+  .toggle-eye { position: absolute; right: 12px; cursor: pointer; font-size: 18px; color: #888; }
+  .btn-group { display:flex; gap:10px; margin-top:10px; }
+  .btn { padding:10px; border-radius:8px; border:none; cursor:pointer; font-weight:bold; flex:1; }
+  .btn-primary{ background:var(--top); color:white; } 
+  .btn-secondary{ background:#ccc; color:#333; }
   .hidden{display:none!important;}
 </style>
 </head>
 <body>
   <div class="frame">
     <div class="card">
-      <!-- TOPO -->
+      <!-- TOPO NORMAL -->
       <div class="topbar" id="topBar">
         <div class="top-left">
           <svg class="brand-logo" viewBox="0 0 100 100"><path d="M20,20 Q80,10 80,50 Q80,90 50,90 L20,95 L25,75 Q10,60 20,20 Z" fill="#25d366"/><path d="M45,25 L65,25 L50,50 L70,50 L35,80 L45,50 L25,50 Z" fill="white"/></svg>
@@ -96,7 +110,7 @@
         </div>
       </div>
 
-      <!-- SELEÇÃO -->
+      <!-- TOPO DE SELEÇÃO (MULTI-SELECT) -->
       <div class="selection-bar" id="selectionBar">
           <div style="display:flex; align-items:center; gap:15px;">
               <div class="btn-icon" onclick="exitSelectionMode()">⬅</div>
@@ -108,7 +122,7 @@
       <!-- BUSCA -->
       <div class="search-box" id="searchBox"><input type="text" id="searchInput" placeholder="Buscar mensagem..." onkeyup="filterMessages()"></div>
 
-      <!-- MENU -->
+      <!-- MENU SUSPENSO -->
       <div id="myDropdown" class="dropdown-content">
         <a href="/perfil.html">👤 Meu Perfil</a>
         <a href="/privado.html" style="color: #6a1b9a; font-weight: bold;">🔒 Chat Privado</a>
@@ -121,8 +135,29 @@
       </div>
       <input type="file" id="wallInput" hidden accept="image/*">
 
-      <!-- APP AREA -->
-      <div class="main">
+      <!-- LOGIN FORM (QUANDO NÃO LOGADO) -->
+      <div id="authPanel" class="auth-panel">
+          <div id="loginForm">
+            <h2 style="margin-top:0;">Entrar no TheZap</h2>
+            <div class="auth-inputs">
+              <input type="email" id="email" placeholder="E-mail">
+              <div class="password-container"><input type="password" id="password" placeholder="Senha"><span id="btnTogglePass" class="toggle-eye">👁️</span></div>
+              <span id="linkForgot" style="text-align:right; font-size:12px; color:blue; cursor:pointer;">Esqueci a senha</span>
+            </div>
+            <div class="btn-group">
+              <button id="btnLogin" class="btn btn-primary">ENTRAR</button>
+              <button id="btnSignup" class="btn btn-secondary">CADASTRAR</button>
+            </div>
+          </div>
+          <div id="recoveryPanel" class="hidden">
+            <h2>Recuperar Senha</h2>
+            <div class="auth-inputs"><input type="email" id="emailRecovery" placeholder="Seu e-mail"></div>
+            <div class="btn-group"><button id="btnSendRecovery" class="btn btn-primary">ENVIAR LINK</button><button id="btnBackLogin" class="btn btn-secondary">VOLTAR</button></div>
+          </div>
+      </div>
+
+      <!-- ÁREA PRINCIPAL (QUANDO LOGADO) -->
+      <div class="main hidden" id="mainAppArea">
         <div id="messagesWrap" class="messages-wrap"><div id="mensagens" style="display:flex;flex-direction:column;gap:4px;"></div></div>
         
         <div id="replyBar" class="reply-bar"><span id="replyText"></span> <button onclick="cancelReply()">✖</button></div>
@@ -142,13 +177,17 @@
   <script>
     const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
-    
-    // IMPORTANTE: Mantive o nome corrigido aqui
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const ADMIN_EMAILS = ['olnair10pereira@gmail.com']; 
 
-    const el={msgDiv:document.getElementById('mensagens'),wrap:document.getElementById('messagesWrap'),txt:document.getElementById('campoTexto'),replyBar:document.getElementById('replyBar'),replyTxt:document.getElementById('replyText'),preview:document.getElementById('previewArea'),imgPrev:document.getElementById('imgPreview'),fileIn:document.getElementById('fileInput'),mic:document.getElementById('btnMic'),send:document.getElementById('btnEnviar'),status:document.getElementById('statusText'),typing:document.getElementById('typingInd'), selBar:document.getElementById('selectionBar'), selCount:document.getElementById('selCount')};
+    const el={
+        authPanel: document.getElementById('authPanel'),
+        mainAppArea: document.getElementById('mainAppArea'),
+        msgDiv:document.getElementById('mensagens'),wrap:document.getElementById('messagesWrap'),txt:document.getElementById('campoTexto'),replyBar:document.getElementById('replyBar'),replyTxt:document.getElementById('replyText'),preview:document.getElementById('previewArea'),imgPrev:document.getElementById('imgPreview'),fileIn:document.getElementById('fileInput'),mic:document.getElementById('btnMic'),send:document.getElementById('btnEnviar'),status:document.getElementById('statusText'),typing:document.getElementById('typingInd'), selBar:document.getElementById('selectionBar'), selCount:document.getElementById('selCount'),
+        email: document.getElementById('email'), pass: document.getElementById('password'), btnLogin: document.getElementById('btnLogin'), btnSignup: document.getElementById('btnSignup'), btnTogglePass: document.getElementById('btnTogglePass'),
+        linkForgot: document.getElementById('linkForgot'), recoveryPanel: document.getElementById('recoveryPanel'), loginForm: document.getElementById('loginForm'), emailRecovery: document.getElementById('emailRecovery'), btnSendRecovery: document.getElementById('btnSendRecovery'), btnBackLogin: document.getElementById('btnBackLogin')
+    };
     
     let currentUser=null, replyTo=null, fileToSend=null, mediaRecorder=null, audioChunks=[], isRec=false, channel=null;
     let selectionMode = false, selectedIds = new Set(), longPressTimer;
@@ -156,22 +195,64 @@
     if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
     if(localStorage.getItem('wall')) el.wrap.style.backgroundImage=`url(${localStorage.getItem('wall')})`;
     
+    // INICIALIZAÇÃO CORRIGIDA
     async function init() {
         const {data} = await supabaseClient.auth.getSession();
         if(data.session) {
+            // LOGADO: Esconde login, mostra chat
             currentUser = data.session.user;
+            el.authPanel.classList.add('hidden');
+            el.mainAppArea.classList.remove('hidden');
             el.status.textContent = 'Online';
             setupRealtime();
             fetchMessages();
         } else {
-            // MUDANÇA CRUCIAL: Se não estiver logado, vai para o perfil logar
-            // (Isso evita o loop infinito)
-            window.location.href = '/perfil.html';
+            // NÃO LOGADO: Mostra login, esconde chat
+            el.authPanel.classList.remove('hidden');
+            el.mainAppArea.classList.add('hidden');
+            el.status.textContent = 'Desconectado';
         }
     }
     init();
 
+    // AUTH LOGIC
+    async function handleLogin(){
+        const e=el.email.value,p=el.pass.value;
+        if(!e||!p) return alert('Preencha e-mail e senha');
+        el.btnLogin.textContent='...';
+        const{error}=await supabaseClient.auth.signInWithPassword({email:e,password:p});
+        el.btnLogin.textContent='ENTRAR';
+        if(error) alert(error.message);
+        else init();
+    }
+    async function handleSignup(){
+        const e=el.email.value,p=el.pass.value;
+        if(!e||!p) return alert('Preencha e-mail e senha');
+        el.btnSignup.textContent='...';
+        const{error}=await supabaseClient.auth.signUp({email:e,password:p});
+        el.btnSignup.textContent='CADASTRAR';
+        if(error) alert(error.message);
+        else alert('Cadastro realizado! Faça login.');
+    }
+    
+    el.btnLogin.onclick = handleLogin;
+    el.btnSignup.onclick = handleSignup;
+    el.btnTogglePass.onclick = () => {
+        const type = el.pass.getAttribute('type') === 'password' ? 'text' : 'password';
+        el.pass.setAttribute('type', type);
+    };
+    
+    el.linkForgot.onclick = () => { el.loginForm.classList.add('hidden'); el.recoveryPanel.classList.remove('hidden'); };
+    el.btnBackLogin.onclick = () => { el.recoveryPanel.classList.add('hidden'); el.loginForm.classList.remove('hidden'); };
+    el.btnSendRecovery.onclick = async () => {
+        if(!el.emailRecovery.value) return alert('Digite seu e-mail');
+        await supabaseClient.auth.resetPasswordForEmail(el.emailRecovery.value, {redirectTo: window.location.href});
+        alert('Link enviado para seu e-mail!');
+    };
+
+    // CHAT LOGIC
     function setupRealtime() {
+        if(channel) return;
         channel = supabaseClient.channel('room1');
         channel.on('presence', { event: 'sync' }, () => {
             const state = channel.presenceState();
@@ -249,7 +330,7 @@
     function enterSelectionMode(id) { if(selectionMode) return; selectionMode = true; el.selBar.classList.add('active'); document.body.classList.add('selection-active'); toggleSelection(id); if(navigator.vibrate) navigator.vibrate(50); }
     function exitSelectionMode() { selectionMode = false; selectedIds.clear(); el.selBar.classList.remove('active'); document.body.classList.remove('selection-active'); document.querySelectorAll('.msg-row').forEach(row => row.classList.remove('selected')); el.selCount.textContent = '0'; }
     function toggleSelection(id) { const row = document.getElementById(`msg-${id}`); if(!row) return; if(selectedIds.has(id)) { selectedIds.delete(id); row.classList.remove('selected'); } else { selectedIds.add(id); row.classList.add('selected'); } el.selCount.textContent = selectedIds.size; if(selectedIds.size === 0) exitSelectionMode(); }
-    async function deleteSelectedMessages() { if(selectedIds.size === 0) return; if(!confirm(`Apagar ${selectedIds.size} mensagens?`)) return; const idsToDelete = Array.from(selectedIds); const { error } = await supabaseClient.from('banco').delete().in('id', idsToDelete); if(error) alert(error.message); else exitSelectionMode(); }
+    async function deleteSelectedMessages() { if(selectedIds.size === 0) return; if(!confirm(`Apagar ${selectedIds.size} mensagens para todos?`)) return; const idsToDelete = Array.from(selectedIds); const { error } = await supabaseClient.from('banco').delete().in('id', idsToDelete); if(error) alert('Erro: ' + error.message); else exitSelectionMode(); }
     function removeMessageFromScreen(id) { const row = document.getElementById(`msg-${id}`); if(row) row.remove(); }
 
     async function sendMessage() {
@@ -288,7 +369,7 @@
     window.filterMessages = () => { const term = document.getElementById('searchInput').value.toLowerCase(); document.querySelectorAll('.msg-row').forEach(row => { row.style.display = row.textContent.toLowerCase().includes(term) ? 'flex' : 'none'; }); };
     window.toggleDarkMode = () => { document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', document.body.classList.contains('dark-mode')?'dark':'light'); toggleMenu(); };
     document.getElementById('wallInput').onchange = e => { const f = e.target.files[0]; if(!f)return; const r = new FileReader(); r.onload=ev=>{ el.wrap.style.backgroundImage=`url(${ev.target.result})`; localStorage.setItem('wall', ev.target.result); }; r.readAsDataURL(f); toggleMenu(); };
-    window.logout = async () => { await supabaseClient.auth.signOut(); window.location.href='/perfil.html'; };
+    window.logout = async () => { await supabaseClient.auth.signOut(); window.location.href='/'; };
     window.shareApp = async () => { if(navigator.share) await navigator.share({url:window.location.href}); else alert(window.location.href); };
     function scrollToBottom(){ setTimeout(()=>el.wrap.scrollTop=el.wrap.scrollHeight, 100); }
     
@@ -300,4 +381,4 @@
     el.send.onclick = sendMessage; el.txt.onkeydown = e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
   </script>
 </body>
-  </html>
+            </html>
