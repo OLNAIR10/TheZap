@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mural de Anúncios - TheZap</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{ --top:#075e54; --bg:#e9f7f2; --card:#fff; --text:#333; }
+  body { font-family: sans-serif; margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  
+  /* TOPO */
+  .header { background: var(--top); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+  .header h1 { margin: 0; font-size: 18px; }
+  .btn-voltar { color: white; text-decoration: none; font-weight: bold; font-size: 20px; }
+
+  /* CONTAINER */
+  .container { max-width: 600px; margin: 0 auto; padding: 15px; padding-bottom: 80px;}
+
+  /* BOTÃO NOVO ANÚNCIO */
+  .fab { position: fixed; bottom: 20px; right: 20px; background: var(--top); color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; border: none; z-index: 90; }
+
+  /* CARD DE ANÚNCIO */
+  .ad-card { background: var(--card); border-radius: 10px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+  .ad-img { width: 100%; height: 200px; object-fit: cover; background: #ddd; }
+  .ad-content { padding: 15px; }
+  .ad-title { font-size: 18px; font-weight: bold; margin: 0 0 5px 0; color: var(--top); }
+  .ad-desc { font-size: 14px; color: #555; margin-bottom: 10px; white-space: pre-wrap; }
+  .ad-meta { font-size: 12px; color: #999; display: flex; justify-content: space-between; align-items: center; }
+  .btn-contato { background: #25d366; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 10px; }
+
+  /* MODAL DE CRIAR */
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
+  .modal.active { display: flex; }
+  .modal-content { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
+  .form-group { margin-bottom: 15px; }
+  input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; outline: none; box-sizing: border-box; }
+  .btn-submit { width: 100%; padding: 12px; background: var(--top); color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+  .btn-close { background: transparent; border: none; float: right; font-size: 20px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <a href="/" class="btn-voltar">⬅</a>
+    <h1>Mural de Anúncios</h1>
+    <div style="width:20px;"></div>
+</div>
+
+<div class="container" id="feed">
+    <p style="text-align:center; color:#999;">Carregando anúncios...</p>
+</div>
+
+<!-- Botão Flutuante -->
+<button class="fab" onclick="openModal()">+</button>
+
+<!-- Modal Novo Anúncio -->
+<div class="modal" id="modalCriar">
+    <div class="modal-content">
+        <button class="btn-close" onclick="closeModal()">✖</button>
+        <h2 style="margin-top:0;">Novo Anúncio</h2>
+        
+        <div class="form-group">
+            <input type="text" id="titulo" placeholder="Título (ex: Vendo Bike)">
+        </div>
+        <div class="form-group">
+            <textarea id="descricao" rows="3" placeholder="Descrição do produto ou serviço..."></textarea>
+        </div>
+        <div class="form-group">
+            <input type="text" id="contato" placeholder="Seu WhatsApp (somente números)">
+        </div>
+        <div class="form-group">
+            <label style="font-size:12px;">Foto do Anúncio:</label>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+        <button class="btn-submit" id="btnPostar" onclick="postarAnuncio()">Publicar</button>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
+    
+    // MUDANÇA IMPORTANTE: Usando o nome corrigido da variável
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let currentUser = null;
+
+    async function init() {
+        const {data} = await supabaseClient.auth.getSession();
+        if(!data.session) { alert("Faça login para ver os anúncios."); window.location.href='/'; return; }
+        currentUser = data.session.user;
+        fetchAnuncios();
+    }
+    init();
+
+    async function fetchAnuncios() {
+        const { data, error } = await supabaseClient.from('anuncios').select('*').order('created_at', { ascending: false });
+        const feed = document.getElementById('feed');
+        feed.innerHTML = '';
+        
+        if(error || !data || data.length === 0) { feed.innerHTML = '<p style="text-align:center; margin-top:20px;">Nenhum anúncio ainda. Seja o primeiro!</p>'; return; }
+
+        data.forEach(ad => {
+            const date = new Date(ad.created_at).toLocaleDateString('pt-BR');
+            const imgHtml = ad.imagem_url ? `<img src="${ad.imagem_url}" class="ad-img" onclick="window.open('${ad.imagem_url}')">` : '';
+            const btnZap = ad.contato ? `<a href="https://wa.me/55${ad.contato}?text=Vi seu anúncio no TheZap: ${ad.titulo}" target="_blank" class="btn-contato">💬 Chamar no Zap</a>` : '';
+            
+            const card = `
+                <div class="ad-card">
+                    ${imgHtml}
+                    <div class="ad-content">
+                        <div class="ad-title">${ad.titulo}</div>
+                        <div class="ad-desc">${ad.descricao}</div>
+                        <div class="ad-meta">
+                            <span>Por: ${ad.autor_nome || 'Anônimo'}</span>
+                            <span>${date}</span>
+                        </div>
+                        ${btnZap}
+                    </div>
+                </div>
+            `;
+            feed.innerHTML += card;
+        });
+    }
+
+    async function postarAnuncio() {
+        const titulo = document.getElementById('titulo').value;
+        const desc = document.getElementById('descricao').value;
+        const contato = document.getElementById('contato').value;
+        const file = document.getElementById('fileInput').files[0];
+        const btn = document.getElementById('btnPostar');
+
+        if(!titulo || !desc) return alert("Preencha título e descrição!");
+
+        btn.textContent = "Enviando...";
+        btn.disabled = true;
+
+        let imgUrl = null;
+        if(file) {
+            const name = `ads/${currentUser.id}_${Date.now()}`;
+            await supabaseClient.storage.from('arquivos').upload(name, file);
+            imgUrl = supabaseClient.storage.from('arquivos').getPublicUrl(name).data.publicUrl;
+        }
+
+        const { error } = await supabaseClient.from('anuncios').insert([{
+            titulo: titulo,
+            descricao: desc,
+            contato: contato,
+            imagem_url: imgUrl,
+            user_id: currentUser.id,
+            autor_nome: currentUser.user_metadata.full_name
+        }]);
+
+        if(error) alert("Erro: " + error.message);
+        else {
+            closeModal();
+            fetchAnuncios();
+            document.getElementById('titulo').value = '';
+            document.getElementById('descricao').value = '';
+            document.getElementById('fileInput').value = '';
+        }
+        btn.textContent = "Publicar";
+        btn.disabled = false;
+    }
+
+    function openModal() { document.getElementById('modalCriar').classList.add('active'); }
+    function closeModal() { document.getElementById('modalCriar').classList.remove('active'); }
+</script>
+</body>
+</html>
