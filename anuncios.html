@@ -2,170 +2,366 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Mural de Anúncios - TheZap</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root{ --top:#075e54; --bg:#e9f7f2; --card:#fff; --text:#333; }
-  body { font-family: sans-serif; margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  /* VARIÁVEIS DE TEMA */
+  :root { 
+    --top:#075e54; 
+    --bg:#e9f7f2; 
+    --card:#fff; 
+    --text:#333; 
+    --muted:#6b6b6b;
+    --accent:#25d366;
+    --shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  body.dark-mode { 
+    --top:#202c33; 
+    --bg:#111b21; 
+    --card:#2a3942; 
+    --text:#e9edef; 
+    --muted:#8696a0;
+    --shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+
+  /* GERAL */
+  body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 0; background: var(--bg); color: var(--text); transition: background 0.3s, color 0.3s; }
+  * { box-sizing: border-box; }
   
   /* TOPO */
   .header { background: var(--top); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-  .header h1 { margin: 0; font-size: 18px; }
-  .btn-voltar { color: white; text-decoration: none; font-weight: bold; font-size: 20px; }
+  .header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  .btn-icon { background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0 5px; }
 
   /* CONTAINER */
   .container { max-width: 600px; margin: 0 auto; padding: 15px; padding-bottom: 80px;}
 
   /* BOTÃO NOVO ANÚNCIO */
-  .fab { position: fixed; bottom: 20px; right: 20px; background: var(--top); color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; border: none; z-index: 90; }
+  .fab { position: fixed; bottom: 20px; right: 20px; background: var(--top); color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; border: none; z-index: 90; transition: background 0.2s; }
+  .fab:hover { background: #004d40; }
 
   /* CARD DE ANÚNCIO */
-  .ad-card { background: var(--card); border-radius: 10px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-  .ad-img { width: 100%; height: 200px; object-fit: cover; background: #ddd; }
+  .ad-card { background: var(--card); border-radius: 10px; overflow: hidden; margin-bottom: 20px; box-shadow: var(--shadow); transition: background 0.3s, box-shadow 0.3s; }
+  .ad-img { 
+    width: 100%; 
+    height: 200px; 
+    object-fit: cover; 
+    background: #ccc; 
+    cursor: pointer;
+    transition: transform 0.3s;
+  }
+  .ad-card:hover .ad-img { transform: scale(1.02); }
+
   .ad-content { padding: 15px; }
-  .ad-title { font-size: 18px; font-weight: bold; margin: 0 0 5px 0; color: var(--top); }
-  .ad-desc { font-size: 14px; color: #555; margin-bottom: 10px; white-space: pre-wrap; }
-  .ad-meta { font-size: 12px; color: #999; display: flex; justify-content: space-between; align-items: center; }
-  .btn-contato { background: #25d366; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 10px; }
+  .ad-title { font-size: 18px; font-weight: bold; margin: 0 0 5px 0; color: var(--accent); }
+  .ad-desc { font-size: 14px; color: var(--text); margin-bottom: 10px; white-space: pre-wrap; line-height: 1.4; }
+  .ad-meta { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; padding-top: 5px; border-top: 1px solid rgba(0,0,0,0.05); }
+  .btn-contato { 
+    background: var(--accent); 
+    color: white; 
+    padding: 8px 15px; 
+    border-radius: 5px; 
+    text-decoration: none; 
+    font-weight: bold; 
+    font-size: 13px; 
+    display: inline-block; 
+    margin-top: 10px; 
+    transition: opacity 0.2s;
+  }
+  .btn-contato:hover { opacity: 0.9; }
 
   /* MODAL DE CRIAR */
-  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
-  .modal.active { display: flex; }
-  .modal-content { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+  .modal.active { display: flex; opacity: 1; pointer-events: auto; }
+  .modal-content { background: var(--card); padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; transform: scale(0.9); transition: transform 0.3s ease-out; color: var(--text); }
+  .modal.active .modal-content { transform: scale(1); }
+
   .form-group { margin-bottom: 15px; }
-  input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; outline: none; box-sizing: border-box; }
-  .btn-submit { width: 100%; padding: 12px; background: var(--top); color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
-  .btn-close { background: transparent; border: none; float: right; font-size: 20px; cursor: pointer; }
+  input, textarea { 
+    width: 100%; 
+    padding: 10px; 
+    border: 1px solid #ccc; 
+    border-radius: 5px; 
+    outline: none; 
+    box-sizing: border-box; 
+    background: var(--bg); 
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+  input:focus, textarea:focus { border-color: var(--top); }
+  
+  /* ESTILOS DO BOTÃO SUBMIT E PREVIEW */
+  .btn-submit { 
+    width: 100%; 
+    padding: 12px; 
+    background: var(--top); 
+    color: white; 
+    border: none; 
+    border-radius: 5px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    transition: background 0.2s; 
+  }
+  .btn-submit:hover:not(:disabled) { background: #004d40; }
+  .btn-submit:disabled { background: #999; cursor: not-allowed; }
+  
+  .btn-close { background: transparent; border: none; float: right; font-size: 20px; cursor: pointer; color: var(--muted); }
+  
+  .image-preview { margin-top: 10px; text-align: center; }
+  .image-preview img { max-width: 100%; height: 80px; object-fit: cover; border-radius: 5px; margin-right: 10px; }
 </style>
 </head>
-<body>
+<body id="body">
 
 <div class="header">
-    <a href="/" class="btn-voltar">⬅</a>
+    <a href="/" class="btn-icon">⬅</a>
     <h1>Mural de Anúncios</h1>
-    <div style="width:20px;"></div>
+    <button class="btn-icon" onclick="toggleDarkMode()">🌙</button>
 </div>
 
 <div class="container" id="feed">
-    <p style="text-align:center; color:#999;">Carregando anúncios...</p>
+    <p style="text-align:center; color:var(--muted); margin-top:20px;" id="loadingStatus">Carregando anúncios...</p>
 </div>
 
-<!-- Botão Flutuante -->
 <button class="fab" onclick="openModal()">+</button>
 
-<!-- Modal Novo Anúncio -->
 <div class="modal" id="modalCriar">
     <div class="modal-content">
         <button class="btn-close" onclick="closeModal()">✖</button>
         <h2 style="margin-top:0;">Novo Anúncio</h2>
         
         <div class="form-group">
-            <input type="text" id="titulo" placeholder="Título (ex: Vendo Bike)">
+            <input type="text" id="titulo" placeholder="Título (ex: Vendo Bike R$ 500)">
         </div>
         <div class="form-group">
-            <textarea id="descricao" rows="3" placeholder="Descrição do produto ou serviço..."></textarea>
+            <textarea id="descricao" rows="4" placeholder="Descrição do produto ou serviço..."></textarea>
         </div>
         <div class="form-group">
-            <input type="text" id="contato" placeholder="Seu WhatsApp (somente números)">
+            <input type="number" id="contato" placeholder="Seu WhatsApp (somente números, ex: 5551988887777)">
         </div>
         <div class="form-group">
-            <label style="font-size:12px;">Foto do Anúncio:</label>
-            <input type="file" id="fileInput" accept="image/*">
+            <label style="font-size:12px; color:var(--muted);">Foto do Anúncio (Opcional):</label>
+            <input type="file" id="fileInput" accept="image/*" onchange="previewImage(event)">
+            <div class="image-preview" id="imagePreview"></div>
         </div>
-        <button class="btn-submit" id="btnPostar" onclick="postarAnuncio()">Publicar</button>
+        <button class="btn-submit" id="btnPostar" onclick="postarAnuncio()">Publicar Anúncio</button>
     </div>
 </div>
 
 <script>
+    // Configurações e Elementos
     const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
-    
-    // MUDANÇA IMPORTANTE: Usando o nome corrigido da variável
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const el = {
+        feed: document.getElementById('feed'),
+        modal: document.getElementById('modalCriar'),
+        btnPostar: document.getElementById('btnPostar'),
+        loadingStatus: document.getElementById('loadingStatus'),
+        fileInput: document.getElementById('fileInput'),
+        imagePreview: document.getElementById('imagePreview'),
+    };
     
     let currentUser = null;
+    let realtimeChannel = null;
+
+    // --- UTILS E UI ---
+
+    function toggleDarkMode() {
+        const isDark = document.body.classList.toggle('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+
+    function openModal() { el.modal.classList.add('active'); }
+    
+    function closeModal() { 
+        el.modal.classList.remove('active'); 
+        // Limpa o formulário ao fechar
+        document.getElementById('titulo').value = '';
+        document.getElementById('descricao').value = '';
+        document.getElementById('contato').value = '';
+        el.fileInput.value = '';
+        el.imagePreview.innerHTML = '';
+        el.btnPostar.disabled = false;
+        el.btnPostar.textContent = "Publicar Anúncio";
+    }
+
+    function previewImage(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                el.imagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            el.imagePreview.innerHTML = '';
+        }
+    }
+
+    // --- AUTHENTICATION & INITIALIZATION ---
 
     async function init() {
-        const {data} = await supabaseClient.auth.getSession();
-        if(!data.session) { alert("Faça login para ver os anúncios."); window.location.href='/'; return; }
-        currentUser = data.session.user;
-        fetchAnuncios();
+        // Aplica o tema salvo
+        if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
+
+        try {
+            const {data: { session }} = await supabaseClient.auth.getSession();
+            
+            if(!session) { 
+                alert("Sua sessão expirou. Faça login para acessar o mural."); 
+                window.location.href='/'; 
+                return; 
+            }
+            currentUser = session.user;
+            
+            setupRealtime(); // Configura o Realtime para atualizações instantâneas
+            fetchAnuncios(); // Carrega os anúncios iniciais
+            
+        } catch(e) {
+            console.error("Erro na inicialização:", e);
+            alert("Falha ao carregar a sessão. Tente novamente.");
+            window.location.href='/';
+        }
     }
     init();
 
-    async function fetchAnuncios() {
-        const { data, error } = await supabaseClient.from('anuncios').select('*').order('created_at', { ascending: false });
-        const feed = document.getElementById('feed');
-        feed.innerHTML = '';
-        
-        if(error || !data || data.length === 0) { feed.innerHTML = '<p style="text-align:center; margin-top:20px;">Nenhum anúncio ainda. Seja o primeiro!</p>'; return; }
+    // --- REALTIME ---
 
-        data.forEach(ad => {
-            const date = new Date(ad.created_at).toLocaleDateString('pt-BR');
-            const imgHtml = ad.imagem_url ? `<img src="${ad.imagem_url}" class="ad-img" onclick="window.open('${ad.imagem_url}')">` : '';
-            const btnZap = ad.contato ? `<a href="https://wa.me/55${ad.contato}?text=Vi seu anúncio no TheZap: ${ad.titulo}" target="_blank" class="btn-contato">💬 Chamar no Zap</a>` : '';
-            
-            const card = `
-                <div class="ad-card">
-                    ${imgHtml}
-                    <div class="ad-content">
-                        <div class="ad-title">${ad.titulo}</div>
-                        <div class="ad-desc">${ad.descricao}</div>
-                        <div class="ad-meta">
-                            <span>Por: ${ad.autor_nome || 'Anônimo'}</span>
-                            <span>${date}</span>
-                        </div>
-                        ${btnZap}
-                    </div>
-                </div>
-            `;
-            feed.innerHTML += card;
-        });
+    function setupRealtime() {
+        if (realtimeChannel) return; // Evita duplicidade
+
+        realtimeChannel = supabaseClient.channel('anuncios_channel');
+        
+        realtimeChannel
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'anuncios' }, payload => {
+                // Adiciona o novo anúncio no topo da lista
+                if (payload.new) renderAnuncio(payload.new, true);
+                el.loadingStatus.style.display = 'none'; // Esconde a mensagem de 'vazio' se o primeiro item chega
+            })
+            // Você pode adicionar eventos UPDATE e DELETE aqui se quiser moderar o feed
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') console.log("Realtime Mural: Subscrito com sucesso.");
+                if (status === 'CHANNEL_ERROR') console.error("Realtime Mural: Erro no canal.");
+            });
     }
+
+    // --- FETCH & RENDER ---
+
+    function renderAnuncio(ad, prepend = false) {
+        const date = new Date(ad.created_at).toLocaleDateString('pt-BR');
+        const imgHtml = ad.imagem_url ? `<img src="${ad.imagem_url}" class="ad-img" onclick="window.open('${ad.imagem_url}')">` : '';
+        
+        // Garante que o contato tenha o prefixo correto para o link do WhatsApp
+        const formattedContato = ad.contato.replace(/\D/g, ''); // Remove caracteres não numéricos
+        const btnZap = formattedContato ? `<a href="https://wa.me/55${formattedContato}?text=Olá! Vi seu anúncio: ${ad.titulo}. Tenho interesse." target="_blank" class="btn-contato">💬 Falar com Vendedor</a>` : '';
+        
+        const card = document.createElement('div');
+        card.className = 'ad-card';
+        card.id = `ad-${ad.id}`;
+
+        card.innerHTML = `
+            ${imgHtml}
+            <div class="ad-content">
+                <div class="ad-title">${ad.titulo}</div>
+                <div class="ad-desc">${ad.descricao}</div>
+                ${btnZap}
+                <div class="ad-meta">
+                    <span>Vendedor: ${ad.autor_nome || 'Usuário TheZap'}</span>
+                    <span>Publicado em: ${date}</span>
+                </div>
+            </div>
+        `;
+        
+        if (prepend) {
+            el.feed.prepend(card); // Adiciona no início (mais novo)
+        } else {
+            el.feed.appendChild(card); // Adiciona no final
+        }
+    }
+
+    async function fetchAnuncios() {
+        el.loadingStatus.textContent = 'Carregando anúncios...';
+        el.loadingStatus.style.display = 'block';
+
+        try {
+            const { data, error } = await supabaseClient.from('anuncios').select('*').order('created_at', { ascending: false });
+            
+            if(error) throw error;
+
+            el.feed.innerHTML = ''; // Limpa o feed
+            
+            if(data.length === 0) {
+                el.loadingStatus.textContent = 'Nenhum anúncio ainda. Seja o primeiro!';
+                el.loadingStatus.style.display = 'block';
+                return;
+            }
+
+            data.forEach(ad => renderAnuncio(ad));
+            el.loadingStatus.style.display = 'none';
+            
+        } catch(e) {
+            console.error("Erro ao buscar anúncios:", e);
+            el.loadingStatus.textContent = '❌ Falha ao carregar os anúncios.';
+            el.loadingStatus.style.display = 'block';
+        }
+    }
+
+    // --- POSTING ---
 
     async function postarAnuncio() {
-        const titulo = document.getElementById('titulo').value;
-        const desc = document.getElementById('descricao').value;
-        const contato = document.getElementById('contato').value;
-        const file = document.getElementById('fileInput').files[0];
-        const btn = document.getElementById('btnPostar');
+        const titulo = document.getElementById('titulo').value.trim();
+        const desc = document.getElementById('descricao').value.trim();
+        const contato = document.getElementById('contato').value.replace(/\D/g, ''); // Limpa o contato
+        const file = el.fileInput.files[0];
 
-        if(!titulo || !desc) return alert("Preencha título e descrição!");
+        if(!titulo || !desc) { alert("Preencha o Título e a Descrição!"); return; }
 
-        btn.textContent = "Enviando...";
-        btn.disabled = true;
+        el.btnPostar.textContent = "Publicando...";
+        el.btnPostar.disabled = true;
 
         let imgUrl = null;
-        if(file) {
-            const name = `ads/${currentUser.id}_${Date.now()}`;
-            await supabaseClient.storage.from('arquivos').upload(name, file);
-            imgUrl = supabaseClient.storage.from('arquivos').getPublicUrl(name).data.publicUrl;
-        }
+        try {
+            if(file) {
+                const extension = file.name.split('.').pop();
+                const name = `ads/${currentUser.id}_${Date.now()}.${extension}`;
+                
+                // Upload do arquivo
+                const { error: uploadError } = await supabaseClient.storage.from('arquivos').upload(name, file, { 
+                    contentType: file.type,
+                    cacheControl: '3600'
+                });
+                
+                if (uploadError) throw uploadError;
+                
+                imgUrl = supabaseClient.storage.from('arquivos').getPublicUrl(name).data.publicUrl;
+            }
 
-        const { error } = await supabaseClient.from('anuncios').insert([{
-            titulo: titulo,
-            descricao: desc,
-            contato: contato,
-            imagem_url: imgUrl,
-            user_id: currentUser.id,
-            autor_nome: currentUser.user_metadata.full_name
-        }]);
+            // Inserção no banco de dados
+            const { error: insertError } = await supabaseClient.from('anuncios').insert([{
+                titulo: titulo,
+                descricao: desc,
+                contato: contato,
+                imagem_url: imgUrl,
+                user_id: currentUser.id,
+                autor_nome: currentUser.user_metadata.full_name
+            }]);
 
-        if(error) alert("Erro: " + error.message);
-        else {
+            if(insertError) throw insertError;
+
+            alert("Anúncio publicado com sucesso!");
             closeModal();
-            fetchAnuncios();
-            document.getElementById('titulo').value = '';
-            document.getElementById('descricao').value = '';
-            document.getElementById('fileInput').value = '';
+            
+        } catch(e) {
+            console.error("Erro no postarAnuncio:", e);
+            alert(`Falha ao publicar. Erro: ${e.message || 'Verifique sua conexão ou permissões.'}`);
+        } finally {
+            el.btnPostar.textContent = "Publicar Anúncio";
+            el.btnPostar.disabled = false;
         }
-        btn.textContent = "Publicar";
-        btn.disabled = false;
     }
-
-    function openModal() { document.getElementById('modalCriar').classList.add('active'); }
-    function closeModal() { document.getElementById('modalCriar').classList.remove('active'); }
 </script>
 </body>
 </html>
