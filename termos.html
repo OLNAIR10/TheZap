@@ -3,461 +3,158 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>TheZap Privado</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>Termos de Uso e Privacidade | TheZap</title>
+<meta name="description" content="Leia os Termos de Uso e a Política de Privacidade do TheZap, incluindo regras de uso e tratamento de dados." />
+<meta name="theme-color" content="#075e54" />
+
 <style>
-  /* CSS GERAL */
+  /* CSS Otimizado e Modernizado */
   :root{ 
-    --bg:#e5ddd5; /* Cor de fundo padrão do WhatsApp */
-    --top:#4a148c; /* Roxo principal */
-    --card-bg:#fff; 
-    --input-bg:#f0f0f0; 
-    --msg-in:#fff; 
-    --msg-out:#e1bee7; /* Lilás (Sua cor) */
-    --mic-btn: #8050a9; /* Cor do botão de microfone (roxo escuro) */
+    --top:#075e54; 
+    --bg:#e9f7f2; 
+    --text-primary: #333;
+    --text-secondary: #555;
+    --shadow: rgba(0,0,0,0.1);
+    --border-color: #eee;
   }
   
-  body { margin:0; font-family:system-ui, -apple-system, sans-serif; background: var(--bg); display:flex; justify-content:center; height: 100dvh; overflow:hidden; }
-  
-  .card { width:100%; max-width:720px; background:var(--card-bg); display:flex; flex-direction:column; height:100%; position: relative; }
-  
-  /* TOPO ROXO */
-  .topbar { background:var(--top); color:white; padding:10px; display:flex; align-items:center; justify-content:space-between; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10; }
-  .btn-back { color:white; text-decoration:none; font-size:24px; margin-right:15px; cursor: pointer; }
-  
-  /* MENSAGENS */
-  .messages-wrap { flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:8px; 
-    background-image: url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAoACgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAD/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAT/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAPwArAAAAAAAAAAAP/Z'); /* Padrão de fundo do WhatsApp */
-    background-repeat: repeat; 
-    background-color: #e5ddd5; 
+  /* Reset Básico e Fontes */
+  body { 
+    font-family: system-ui, -apple-system, sans-serif; 
+    margin: 0; 
+    padding: 0; 
+    background: var(--bg); 
+    color: var(--text-primary); 
+    line-height: 1.6; 
+    min-height: 100dvh; /* Garante altura total em telas móveis */
   }
-  
-  .bubble { 
-    max-width:80%; 
-    padding:8px 12px; 
-    border-radius:8px; 
-    background:var(--msg-in); 
-    align-self:flex-start; 
-    font-size:15px; 
-    box-shadow:0 1px 2px rgba(0,0,0,0.1); 
-    color: #000; 
-    position: relative;
+
+  /* Cabeçalho Fixo */
+  .header { 
+    background: var(--top); 
+    color: white; 
+    padding: 15px 20px;
+    text-align: center; 
+    font-weight: bold; 
+    position: sticky; /* Fixa o cabeçalho no topo */
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 4px var(--shadow);
   }
-  .bubble.me { background:var(--msg-out); align-self:flex-end; }
-  .bubble-autor { font-size:11px; font-weight:bold; color:var(--top); margin-bottom:2px; }
-  .meta { font-size:10px; color:#555; text-align:right; margin-top: 3px; display: block; }
-  
-  /* BARRA DE DIGITAR */
-  .composer { padding:10px; background:var(--input-bg); display:flex; gap:10px; align-items: center; border-top: 1px solid #ddd; flex-shrink: 0; }
-  input { flex:1; padding:12px; border-radius:20px; border:none; outline:none; background: white; font-size: 15px;}
-  .btn-send, .btn-mic { 
-    background:var(--top); 
-    color:white; 
-    border:none; 
-    width: 45px; 
-    height: 45px; 
-    border-radius:50%; 
-    cursor:pointer; 
+
+  /* Container Principal */
+  .container { 
+    max-width: 800px; 
+    margin: 20px auto; 
+    background: white; 
+    padding: 25px; 
+    border-radius: 8px; 
+    box-shadow: 0 4px 12px var(--shadow);
+  }
+
+  /* Estilos de Títulos */
+  h1 { 
+    color: var(--top); 
+    font-size: 24px; 
+    border-bottom: 2px solid var(--border-color); 
+    padding-bottom: 10px; 
+    margin-top: 0; 
+    margin-bottom: 20px;
+  }
+
+  h2 { 
     font-size: 18px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    transition: background 0.2s;
+    margin-top: 25px; 
+    margin-bottom: 10px;
+    color: #075e54; /* Usando a cor primária para subseções */
   }
-  .btn-mic { background: var(--mic-btn); } /* Cor do mic */
-  .btn-mic:hover { background: #6a418d; }
-  .btn-send:hover { background: #3c0c7a; }
-
-  /* MODO DE GRAVAÇÃO */
-  .recording-status { 
-      flex: 1; 
-      display: none; 
-      align-items: center; 
-      gap: 10px; 
-      color: var(--danger, red);
-      font-weight: bold;
-      padding-left: 10px;
+  
+  /* Parágrafos e Listas */
+  p, li { 
+    font-size: 15px; 
+    color: var(--text-secondary); 
+    margin-bottom: 10px;
   }
-  .recording-status.active { display: flex; }
-  .recording-status .dot { 
-      width: 10px; 
-      height: 10px; 
-      background: red; 
-      border-radius: 50%; 
-      animation: pulse 1s infinite; 
-  }
-  @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
+  
+  ul {
+    padding-left: 20px;
   }
 
-  /* ESTILO DO ÁUDIO */
-  .audio-player-wrap { 
-    display: flex; 
-    align-items: center; 
-    gap: 8px; 
-    min-width: 150px; 
-    padding: 2px 0;
+  /* Botão de Navegação */
+  .btn-voltar { 
+    display: block; /* Ocupa a largura total na centralização */
+    width: fit-content;
+    margin: 25px auto 5px; /* Centraliza horizontalmente */
+    padding: 12px 25px; 
+    background: var(--top); 
+    color: white; 
+    text-decoration: none; 
+    border-radius: 25px; /* Borda mais arredondada */
+    font-weight: bold; 
+    transition: background 0.3s, transform 0.1s;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
   }
-  .audio-player-wrap audio { display: none; }
-  .btn-audio-control {
-    background: var(--top);
-    color: white;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    flex-shrink: 0;
+  .btn-voltar:hover { 
+    background: #054f46; 
+    transform: translateY(-1px);
   }
-  .audio-time { 
-    font-size: 11px; 
-    color: var(--text-secondary, #555);
-    flex-grow: 1;
+  
+  /* Responsividade */
+  @media (max-width: 600px) {
+    body { background: white; }
+    .container { 
+      margin: 0; 
+      padding: 20px; 
+      border-radius: 0; 
+      box-shadow: none; 
+    }
+    h1 { font-size: 20px; }
+    h2 { font-size: 17px; }
   }
-
-  /* MODAL DE ENTRADA NA SALA */
-  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-  .modal-box { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-  .modal-box h2 { color: var(--top); margin-top: 0; }
-  .modal-box input { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; text-align: center; }
-  .modal-box input:focus { border-color: var(--top); }
-  .btn-enter { background: var(--top); color: white; padding: 12px; width: 100%; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
-  .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
-<div class="card">
-    <div class="topbar">
-        <div style="display:flex; align-items:center;">
-            <a href="/" class="btn-back">⬅</a>
-            <div>
-                <div style="font-weight:bold; font-size: 16px;" id="roomName">Privado</div>
-                <div style="font-size:12px; opacity: 0.8;">Chat Secreto</div>
-            </div>
-        </div>
-    </div>
+<div class="header">TheZap - Termos e Privacidade</div>
 
-    <div id="messagesWrap" class="messages-wrap"></div>
+<div class="container">
+    <h1>1. Termos de Uso 🤝</h1>
+    <p>Bem-vindo ao **TheZap**. Ao utilizar nosso aplicativo, você concorda com as seguintes regras:</p>
+    
+    <h2>1.1. Uso Aceitável (Regras da Comunidade)</h2>
+    <p>O TheZap é um espaço para comunicação. É **estritamente proibido**:</p>
+    <ul>
+        <li>Enviar conteúdo **ilegal, ofensivo, violento ou pornográfico**.</li>
+        <li>Praticar **spam, assédio ou discurso de ódio**.</li>
+        <li>Tentar invadir, roubar dados ou prejudicar o funcionamento técnico do aplicativo.</li>
+    </ul>
 
-    <div class="composer">
-        <input type="text" id="txt" placeholder="Digite aqui..." autofocus>
-        
-        <div id="recordingStatus" class="recording-status">
-            <div class="dot"></div>
-            <span id="recTimer">0:00</span>
-        </div>
+    <h2>1.2. Conteúdo do Usuário (Sua Responsabilidade)</h2>
+    <p>Você é o **único responsável** pelas mensagens, áudios e imagens que envia. A administração do TheZap reserva-se o direito de **remover conteúdo e banir usuários** que violem estas regras sem aviso prévio.</p>
 
-        <button id="sendBtn" class="btn-send" onclick="send()">➤</button>
-        <button id="micBtn" class="btn-mic" onmousedown="handleMicPress()" onmouseup="handleMicRelease()" ontouchstart="handleMicPress()" ontouchend="handleMicRelease()">🎤</button>
-    </div>
+    <h2>1.3. Isenção de Responsabilidade</h2>
+    <p>Este aplicativo é fornecido **"como está"**. Não garantimos que o serviço será ininterrupto ou livre de erros. O uso é por sua conta e risco.</p>
+
+    <hr style="margin: 30px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+    <h1>2. Política de Privacidade (LGPD) 🛡️</h1>
+    <p>Respeitamos sua privacidade. Veja como tratamos seus dados (em conformidade com a LGPD):</p>
+
+    <h2>2.1. Dados Coletados</h2>
+    <ul>
+        <li><strong>E-mail:</strong> Apenas para autenticação (login) e recuperação de senha.</li>
+        <li><strong>Mensagens e Arquivos:</strong> Armazenados em nosso banco de dados (Supabase) para o funcionamento do chat e em tempo real.</li>
+        <li><strong>Nome e Foto de Perfil:</strong> Armazenados para identificação visual no chat (Mural e Privado).</li>
+    </ul>
+
+    <h2>2.2. Visibilidade e Uso</h2>
+    <p>O TheZap é um chat **público (Mural)** e utiliza salas privadas (Privado). Qualquer conteúdo enviado pode ser visualizado por outros usuários conectados na mesma sala/mural. Seus dados não são compartilhados com terceiros.</p>
+
+    <h2>2.3. Seus Direitos</h2>
+    <p>Você pode, a qualquer momento, solicitar a exclusão da sua conta ou alterar seus dados diretamente no painel de **Perfil** do aplicativo.</p>
+
+    <a href="/" class="btn-voltar">⬅ Voltar para o Chat</a>
 </div>
 
-<div id="loginRoomModal" class="modal-overlay">
-    <div class="modal-box">
-        <h2>🔒 Chat Privado</h2>
-        <p>Crie um nome para a sala ou digite um existente para entrar.</p>
-        <input type="text" id="inputSala" placeholder="Ex: familia123">
-        <button class="btn-enter" onclick="entrarSala()">ENTRAR NA SALA</button>
-        <br><br>
-        <a href="/" style="color: #666; text-decoration: none; font-size: 14px;">Voltar ao Início</a>
-    </div>
-</div>
-
-<script>
-    const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL6NTYkY3dIQ4H8qd4OuGRp6ngFnI';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
-    // Elementos DOM
-    const el = {
-        messagesWrap: document.getElementById('messagesWrap'),
-        txt: document.getElementById('txt'),
-        sendBtn: document.getElementById('sendBtn'),
-        micBtn: document.getElementById('micBtn'),
-        recordingStatus: document.getElementById('recordingStatus'),
-        recTimer: document.getElementById('recTimer'),
-    };
-
-    let currentUser = null;
-    let currentRoom = null;
-    
-    // Variáveis de Gravação
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let isRecording = false;
-    let recordingTimerId = null;
-    let recordingStartTime = 0;
-    let currentStream = null;
-    let currentlyPlayingAudio = null;
-
-    // --- FUNÇÕES DE UTILIADADE ---
-
-    function scrollToBottom() { 
-        setTimeout(() => { el.messagesWrap.scrollTop = el.messagesWrap.scrollHeight; }, 50);
-    }
-    
-    // Formata segundos para MM:SS
-    function formatTime(seconds) {
-        const min = Math.floor(seconds / 60);
-        const sec = Math.floor(seconds % 60);
-        return `${min}:${sec < 10 ? '0' : ''}${sec}`;
-    }
-
-    // --- AUTENTICAÇÃO E ENTRADA NA SALA ---
-
-    async function init() {
-        const {data} = await supabaseClient.auth.getSession();
-        if(!data.session) return window.location.href = '/';
-        currentUser = data.session.user;
-        
-        // Esconde o botão do microfone até que o input de texto esteja vazio
-        updateComposerButtons();
-        
-        // Permite enviar com Enter
-        el.txt.onkeydown = (e) => { if(e.key === 'Enter') send(); };
-        el.txt.oninput = updateComposerButtons;
-    }
-    init();
-
-    function updateComposerButtons() {
-        const isEmpty = el.txt.value.trim() === '';
-        el.sendBtn.style.display = isEmpty ? 'none' : 'flex';
-        el.micBtn.style.display = isEmpty ? 'flex' : 'none';
-    }
-
-    function entrarSala() {
-        const salaInput = document.getElementById('inputSala').value.trim();
-        if(!salaInput) return alert("Digite um nome para a sala!");
-
-        currentRoom = salaInput.toLowerCase().replace(/\s/g, ''); 
-        
-        document.getElementById('roomName').textContent = "Sala: " + currentRoom;
-        document.getElementById('loginRoomModal').classList.add('hidden'); 
-        
-        fetchMessages();
-        setupRealtime();
-    }
-
-    // --- GRAVAÇÃO DE ÁUDIO ---
-
-    async function startRecording() {
-        if (isRecording) return;
-        
-        try {
-            currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(currentStream);
-            audioChunks = [];
-
-            mediaRecorder.ondataavailable = e => {
-                if (e.data.size > 0) audioChunks.push(e.data);
-            };
-
-            mediaRecorder.onstop = uploadAudio;
-
-            mediaRecorder.start();
-            isRecording = true;
-            el.micBtn.disabled = true; // Desabilita o botão durante a gravação
-            
-            // UI de Gravação
-            el.recordingStatus.classList.add('active');
-            el.txt.classList.add('hidden');
-            el.sendBtn.classList.add('hidden');
-            el.micBtn.classList.add('hidden');
-
-            recordingStartTime = Date.now();
-            el.recTimer.textContent = '0:00';
-
-            recordingTimerId = setInterval(() => {
-                const elapsedSeconds = Math.floor((Date.now() - recordingStartTime) / 1000);
-                el.recTimer.textContent = formatTime(elapsedSeconds);
-            }, 1000);
-
-        } catch (e) {
-            alert("Erro ao acessar o microfone: Verifique as permissões. " + e.message);
-            el.micBtn.disabled = false;
-        }
-    }
-
-    function stopRecording() {
-        if (!isRecording) return;
-
-        isRecording = false;
-        clearInterval(recordingTimerId);
-        
-        // UI de Parada
-        el.recordingStatus.classList.remove('active');
-        el.txt.classList.remove('hidden');
-        el.micBtn.disabled = false;
-        updateComposerButtons();
-        
-        // Para a gravação e o stream
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-        }
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop());
-        }
-    }
-
-    // Gerencia o clique/toque longo no microfone
-    let pressTimer;
-    
-    function handleMicPress() {
-        // Previne a abertura do menu de contexto em mobile
-        event.preventDefault(); 
-        // Inicia a gravação após um pequeno delay para diferenciar de um clique acidental
-        pressTimer = setTimeout(startRecording, 300);
-    }
-
-    function handleMicRelease() {
-        clearTimeout(pressTimer);
-        // Se a gravação estava ativa, para
-        if (isRecording) {
-            stopRecording();
-        }
-    }
-
-    async function uploadAudio() {
-        if (audioChunks.length === 0) return;
-
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        
-        // Se o áudio for muito curto, ignora (opcional)
-        if (audioBlob.size < 5000) { alert("Áudio muito curto."); return; }
-
-        const uploadName = `messages/${currentUser.id}_${Date.now()}.webm`;
-        el.recTimer.textContent = 'Enviando...'; // Feedback visual
-
-        try {
-            // 1. Upload para o Storage
-            const { error: uploadError } = await supabaseClient.storage.from('arquivos').upload(uploadName, audioBlob, {
-                contentType: 'audio/webm',
-                cacheControl: '3600'
-            });
-            if (uploadError) throw uploadError;
-
-            // 2. Obter URL Pública
-            const { data: { publicUrl } } = supabaseClient.storage.from('arquivos').getPublicUrl(uploadName);
-
-            // 3. Inserir mensagem com URL de áudio
-            await supabaseClient.from('banco').insert([{
-                texto: publicUrl, // O URL do áudio é salvo no campo 'texto'
-                user_id: currentUser.id,
-                autor_nome: currentUser.user_metadata.full_name,
-                sala_id: currentRoom,
-                tipo: 'audio' // Novo campo opcional no seu banco para identificar tipo
-            }]);
-            
-        } catch (e) {
-            alert("Erro ao enviar áudio: " + e.message);
-        } finally {
-            el.recTimer.textContent = '0:00';
-            updateComposerButtons();
-        }
-    }
-
-    // --- ÁUDIO PLAYBACK ---
-
-    window.playAudio = (btn, url) => {
-        const audio = btn.nextElementSibling; // O elemento <audio> é o próximo
-        
-        // Pausa qualquer áudio tocando atualmente
-        if (currentlyPlayingAudio && currentlyPlayingAudio !== audio) {
-            currentlyPlayingAudio.pause();
-            currentlyPlayingAudio.currentTime = 0;
-            const playingBtn = currentlyPlayingAudio.previousElementSibling;
-            if (playingBtn) playingBtn.innerHTML = '▶';
-        }
-        
-        if (audio.paused) {
-            currentlyPlayingAudio = audio;
-            audio.play();
-            btn.innerHTML = '❚❚';
-        } else {
-            audio.pause();
-            btn.innerHTML = '▶';
-        }
-    }
-    
-    // --- CARREGAMENTO E RENDERIZAÇÃO ---
-
-    async function fetchMessages() {
-        const { data } = await supabaseClient.from('banco')
-            .select('*')
-            .eq('sala_id', currentRoom)
-            .order('created_at', { ascending: true });
-            
-        el.messagesWrap.innerHTML = '';
-        if(data) data.forEach(renderMessage);
-        scrollToBottom();
-    }
-
-    function renderMessage(msg) {
-        const isMe = msg.user_id === currentUser.id;
-        const div = document.createElement('div');
-        div.className = `bubble ${isMe ? 'me' : ''}`;
-        
-        const timestamp = new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        
-        let contentHTML = '';
-        
-        // Verifica se a mensagem é um áudio (assumindo que o campo 'texto' contém o URL do Supabase)
-        const isAudio = msg.texto.startsWith(SUPABASE_URL) || msg.tipo === 'audio';
-        
-        if (isAudio) {
-            // Renderiza o player de áudio
-            contentHTML = `
-                <div class="audio-player-wrap">
-                    <button class="btn-audio-control" onclick="playAudio(this, '${msg.texto}')">▶</button>
-                    <audio src="${msg.texto}" onended="this.previousElementSibling.innerHTML='▶'; this.currentTime=0;"></audio>
-                    <span class="audio-time">Áudio</span>
-                </div>
-            `;
-        } else {
-            // Renderiza o texto normal
-            contentHTML = msg.texto.replace(/\n/g, '<br>');
-        }
-        
-        div.innerHTML = `
-            <div class="bubble-autor">${msg.autor_nome}</div>
-            ${contentHTML}
-            <div class="meta">${timestamp}</div>
-        `;
-        el.messagesWrap.appendChild(div);
-        scrollToBottom();
-    }
-
-    // --- ENVIO DE TEXTO ---
-
-    async function send() {
-        const texto = el.txt.value.trim();
-        if(!texto) return;
-        
-        el.txt.value = ''; 
-        updateComposerButtons();
-        
-        await supabaseClient.from('banco').insert([{
-            texto: texto,
-            user_id: currentUser.id,
-            autor_nome: currentUser.user_metadata.full_name,
-            sala_id: currentRoom
-        }]);
-    }
-
-    // --- TEMPO REAL ---
-    function setupRealtime() {
-        supabaseClient.channel('private-room')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'banco', filter: `sala_id=eq.${currentRoom}` }, payload => {
-            renderMessage(payload.new);
-        }).subscribe();
-    }
-</script>
 </body>
 </html>
