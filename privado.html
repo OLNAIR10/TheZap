@@ -30,7 +30,7 @@
   
   /* MENSAGENS */
   .messages-wrap { flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:8px; 
-    background-image: url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAoACgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAD/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAT/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAPwArAAAAAAAAAAAP/Z');
+    background-image: url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAoACgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAD/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAT/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAPwArAAAAAAAAAAAP/Z');
     background-repeat: repeat; 
     background-color: #e5ddd5; 
   }
@@ -185,9 +185,9 @@
 </div>
 
 <script>
-    // Configurações do Supabase (Mantenha as suas chaves reais)
+    // --- CHAVES SUPABASE CORRIGIDAS ---
     const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL6NTYkY3dIQ4H8qd4OuGRp6ngFnI';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
     // Elementos DOM
@@ -210,8 +210,8 @@
     let recordingStartTime = 0;
     let currentStream = null;
     let currentlyPlayingAudio = null;
-    let fileToSend = null; // Usado para áudio (e futuramente, outros arquivos)
-    let pressTimer; // Timer para long press do microfone
+    let fileToSend = null; 
+    let pressTimer; 
 
     // --- FUNÇÕES DE UTILIADADE ---
 
@@ -237,9 +237,7 @@
         try {
             const {data} = await supabaseClient.auth.getSession();
             
-            // CORREÇÃO: Se não há sessão, redireciona para um caminho de login/home mais específico para evitar o loop/piscamento
             if(!data.session) {
-                // Tenta redirecionar para a URL raiz ou /login, dependendo da sua arquitetura
                 return window.location.href = '/'; 
             }
             
@@ -258,17 +256,19 @@
     init();
 
     function updateComposerButtons() {
-        // Exibe o botão de envio se houver texto
         const hasText = el.txt.value.trim() !== '';
-        el.sendBtn.style.display = hasText ? 'flex' : 'none';
         
-        // Exibe o botão de microfone se não houver texto E não estiver gravando
-        const showMic = !hasText && !isRecording;
-        el.micBtn.style.display = showMic ? 'flex' : 'none';
-        
-        // Garante que o campo de texto e o status de gravação estejam visíveis/ocultos corretamente
-        el.txt.classList.toggle('hidden', isRecording);
-        el.recordingStatus.classList.toggle('active', isRecording);
+        if (isRecording) {
+            el.sendBtn.style.display = 'none';
+            el.micBtn.style.display = 'none';
+            el.txt.classList.add('hidden');
+            el.recordingStatus.classList.add('active');
+        } else {
+            el.sendBtn.style.display = hasText ? 'flex' : 'none';
+            el.micBtn.style.display = hasText ? 'none' : 'flex'; 
+            el.txt.classList.remove('hidden');
+            el.recordingStatus.classList.remove('active');
+        }
     }
 
     function entrarSala() {
@@ -299,41 +299,28 @@
             };
 
             mediaRecorder.onstop = () => {
-                // Limpa o timer e o estado
                 clearInterval(recordingTimerId);
                 isRecording = false;
                 
-                // Limpa a UI de gravação
-                el.micBtn.classList.remove('hidden');
-                el.micBtn.style.display = 'flex';
-                el.recordingStatus.classList.remove('active');
-                el.txt.classList.remove('hidden');
-
-                // Processa o áudio gravado
                 uploadAudio();
                 
-                // Para e limpa o stream
                 if (currentStream) {
                     currentStream.getTracks().forEach(track => track.stop());
                 }
+                updateComposerButtons();
             };
 
             mediaRecorder.start();
             isRecording = true;
             
-            // Atualiza a UI para modo de gravação
-            el.txt.classList.add('hidden');
-            el.sendBtn.style.display = 'none';
-            el.micBtn.classList.add('hidden'); // Esconde o botão de microfone
-            el.recordingStatus.classList.add('active');
-
             recordingStartTime = Date.now();
             el.recTimer.textContent = '0:00';
-
             recordingTimerId = setInterval(() => {
                 const elapsedSeconds = Math.floor((Date.now() - recordingStartTime) / 1000);
                 el.recTimer.textContent = formatTime(elapsedSeconds);
             }, 1000);
+            
+            updateComposerButtons();
 
         } catch (e) {
             alert("Erro ao acessar o microfone: Verifique as permissões. " + e.message);
@@ -346,29 +333,24 @@
         if (!isRecording) return;
         
         if (mediaRecorder && mediaRecorder.state === 'recording') {
-            mediaRecorder.stop(); // O onstop() fará o uploadAudio()
+            mediaRecorder.stop();
         }
     }
     
-    // Pressionar e Segurar (long press) para iniciar a gravação
     function handleMicPress(event) {
         event.preventDefault(); 
-        // Inicia o timer: se o usuário segurar por 300ms, começa a gravação
         pressTimer = setTimeout(startRecording, 300);
     }
 
     function handleMicRelease() {
         clearTimeout(pressTimer);
-        // Se a gravação estiver ativa, parar o toque significa parar a gravação
         if (isRecording) {
             stopRecording();
         }
-        // Se a gravação não foi iniciada (foi um clique rápido), não faz nada.
     }
     
     async function uploadAudio() {
         if (audioChunks.length === 0) {
-            updateComposerButtons();
             return; 
         }
 
@@ -376,12 +358,10 @@
         
         if (audioBlob.size < 5000) { 
             alert("Áudio muito curto."); 
-            updateComposerButtons();
             return; 
         }
         
         fileToSend = audioBlob;
-        // O `send()` agora lida com o upload e a inserção no banco
         send();
     }
 
@@ -391,7 +371,6 @@
         const audio = btn.nextElementSibling;
         const timeEl = audio.nextElementSibling;
         
-        // Pausa e reseta qualquer outro áudio
         if (currentlyPlayingAudio && currentlyPlayingAudio !== audio) {
             currentlyPlayingAudio.pause();
             currentlyPlayingAudio.currentTime = 0;
@@ -411,17 +390,14 @@
             btn.innerHTML = '▶';
         }
 
-        // Evento de atualização de tempo
         audio.ontimeupdate = () => {
              timeEl.textContent = formatTime(audio.currentTime);
         };
         
-        // Evento de fim de reprodução
         audio.onended = () => {
             audio.currentTime = 0;
             currentlyPlayingAudio = null;
             btn.innerHTML = '▶';
-            // Volta a mostrar a duração total
             timeEl.textContent = timeEl.dataset.duration || '0:00'; 
         };
     }
@@ -445,30 +421,35 @@
         let existingElement = document.getElementById(msg.id);
 
         if (isRealtime && isMe && existingElement) {
-            // Confirmação da mensagem (Optimistic UI)
             existingElement.classList.remove('pending');
             existingElement.querySelector('.status-icon').innerHTML = '✔';
             return; 
         }
-
+        
+        if (isRealtime && isMe && !existingElement) {
+            return; 
+        }
+        
         const div = existingElement || document.createElement('div');
-        if (!existingElement) {
+        const isNewMessage = !existingElement;
+        
+        if (isNewMessage) {
             div.className = `bubble ${isMe ? 'me' : ''} ${msg.local ? 'pending' : ''}`;
-            if(msg.local) div.id = msg.id; 
+            div.id = msg.id; 
         }
         
         const timestamp = new Date(msg.created_at || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         
         let contentHTML = '';
-        const isAudio = msg.tipo === 'audio' || (msg.texto && (msg.texto.startsWith('blob:'))); // Se for blob:, é local
+        const isAudio = msg.tipo === 'audio';
         
         if (isAudio) {
+            const url = msg.texto; 
             const initialTime = msg.local ? 'Gravando...' : 'Áudio';
-            // Adiciona data-duration para armazenar a duração real
             contentHTML = `
                 <div class="audio-player-wrap">
-                    <button class="btn-audio-control" onclick="playAudio(this, '${msg.texto}')">▶</button>
-                    <audio src="${msg.texto}"></audio>
+                    <button class="btn-audio-control" onclick="playAudio(this, '${url}')">▶</button>
+                    <audio src="${url}"></audio>
                     <span class="audio-time" data-duration="${initialTime}">${initialTime}</span>
                 </div>
             `;
@@ -487,13 +468,12 @@
             <div class="meta">${timestamp}${statusIcon}</div>
         `;
         
-        if (!existingElement) {
+        if (isNewMessage) {
             el.messagesWrap.appendChild(div);
         }
 
         scrollToBottom();
         
-        // Otimização: Carregar metadata do áudio para mostrar a duração correta
         if (isAudio && !msg.local) {
              const audioEl = div.querySelector('audio');
              const timeEl = div.querySelector('.audio-time');
@@ -505,16 +485,15 @@
         }
     }
 
-    // --- ENVIO (Texto e Áudio Unificados) ---
+    // --- ENVIO (Texto e Áudio Unificados) OTIMIZADO ---
 
     async function send() {
         const texto = el.txt.value.trim();
         const isAudio = fileToSend && fileToSend.type.includes('audio');
         
-        if(!texto && !isAudio || !currentUser) return;
+        if(!texto && !isAudio || !currentUser || !currentRoom) return; 
         
         el.txt.value = ''; 
-        updateComposerButtons();
         setInterfaceEnabled(false); 
 
         const localId = 'local-' + localMessageIdCounter++;
@@ -522,10 +501,10 @@
         let dbText = texto;
         let msgType = 'text';
 
-        // 1. OTIMIZAÇÃO: Renderiza a bolha local (Optimistic UI)
+        // 1. Configuração para a bolha local (Optimistic UI)
         if (isAudio) {
             msgType = 'audio';
-            dbText = URL.createObjectURL(fileToSend); // URL temporária para o preview
+            dbText = URL.createObjectURL(fileToSend); 
         }
         
         const optimisticMsg = {
@@ -549,35 +528,31 @@
                 });
                 if (uploadError) throw uploadError;
 
-                // 3. Obter URL Pública para o banco
                 const { data: { publicUrl } } = supabaseClient.storage.from('arquivos').getPublicUrl(uploadName);
                 url = publicUrl;
                 
-                // Limpa o objeto URL temporário
                 URL.revokeObjectURL(dbText);
             }
 
-            // 4. Inserir mensagem no banco (usando URL se for áudio, ou texto se for texto)
+            // 3. Inserir mensagem no banco
             const { error: insertError } = await supabaseClient.from('banco').insert([{
-                texto: isAudio ? url : texto, // O texto no banco é a URL se for áudio
+                texto: isAudio ? url : texto, 
                 user_id: currentUser.id,
                 autor_nome: currentUser.user_metadata.full_name,
                 sala_id: currentRoom,
                 tipo: msgType 
             }]);
             if (insertError) throw insertError;
-            
-            // O Realtime agora cuidará da confirmação da bolha.
 
         } catch (e) {
             console.error("Falha ao enviar mensagem:", e);
             alert("Erro ao enviar. Verifique sua conexão. " + e.message);
+            
             const localDiv = document.getElementById(localId);
             if (localDiv) {
                 localDiv.querySelector('.status-icon').innerHTML = '❌';
             }
         } finally {
-            // Limpa o estado após o envio
             fileToSend = null; 
             setInterfaceEnabled(true);
             updateComposerButtons();
@@ -586,16 +561,15 @@
 
     // --- TEMPO REAL ---
     function setupRealtime() {
-        supabaseClient.channel('private-room')
+        supabaseClient.channel(`private-room:${currentRoom}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'banco', filter: `sala_id=eq.${currentRoom}` }, payload => {
             
             const isMe = payload.new.user_id === currentUser.id;
             
-            // Tenta encontrar e atualizar a bolha local (Optimistic UI)
             if (isMe) {
                 const pendingBubble = el.messagesWrap.querySelector('.bubble.me.pending');
                 if (pendingBubble) {
-                    payload.new.id = pendingBubble.id; 
+                    pendingBubble.remove();
                 }
             }
 
