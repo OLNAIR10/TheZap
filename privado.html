@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>TheZap Privado</title>
+<title>TheZap Privado + Arquivos</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* CSS GERAL */
@@ -47,6 +47,7 @@
     position: relative;
     opacity: 1;
     white-space: pre-wrap;
+    word-break: break-word; /* Para quebrar links longos */
   }
   .bubble.me { background:var(--msg-out); align-self:flex-end; }
   .bubble.pending { opacity: 0.6; }
@@ -55,12 +56,33 @@
   .meta { font-size:10px; color:#555; text-align:right; margin-top: 3px; display: block; }
   .status-icon { margin-left: 5px; color: var(--status-pending); font-weight: normal; }
 
+  /* MÍDIA (IMAGENS E ARQUIVOS) */
+  .bubble img {
+      max-width: 100%;
+      border-radius: 5px;
+      margin-top: 5px;
+      cursor: pointer;
+  }
+  .file-attachment {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0,0,0,0.05);
+      padding: 10px;
+      border-radius: 5px;
+      text-decoration: none;
+      color: #333;
+      font-weight: 500;
+  }
+  .file-icon { font-size: 24px; }
+
   /* BARRA DE DIGITAR */
   .composer { padding:10px; background:var(--input-bg); display:flex; gap:10px; align-items: center; border-top: 1px solid #ddd; flex-shrink: 0; }
-  input { flex:1; padding:12px; border-radius:20px; border:none; outline:none; background: white; font-size: 15px; transition: all 0.2s; color: var(--text-color); }
+  input[type="text"] { flex:1; padding:12px; border-radius:20px; border:none; outline:none; background: white; font-size: 15px; transition: all 0.2s; color: var(--text-color); }
   input:disabled { background: #e0e0e0; cursor: not-allowed; }
 
-  .btn-send, .btn-mic { 
+  /* BOTOES REDONDOS */
+  .btn-send, .btn-mic, .btn-attach { 
     background:var(--top); 
     color:white; 
     border:none; 
@@ -73,8 +95,11 @@
     align-items: center; 
     justify-content: center; 
     transition: background 0.2s;
+    flex-shrink: 0;
   }
   .btn-mic { background: var(--mic-btn); }
+  .btn-attach { background: transparent; color: #666; font-size: 24px; transform: rotate(45deg); width: 40px; }
+  .btn-attach:hover { background: rgba(0,0,0,0.1); }
 
   /* MODO DE GRAVAÇÃO */
   .recording-status { 
@@ -156,6 +181,12 @@
     <div id="messagesWrap" class="messages-wrap"></div>
 
     <div class="composer">
+        <!-- Input de Arquivo Oculto -->
+        <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelect()">
+        
+        <!-- Botão de Clips -->
+        <button class="btn-attach" onclick="document.getElementById('fileInput').click()">📎</button>
+
         <input type="text" id="txt" placeholder="Digite aqui..." autofocus>
         
         <div id="recordingStatus" class="recording-status">
@@ -185,7 +216,7 @@
 </div>
 
 <script>
-    // --- CHAVES SUPABASE CORRIGIDAS ---
+    // --- CHAVES SUPABASE (MANTIDAS) ---
     const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -198,6 +229,7 @@
         micBtn: document.getElementById('micBtn'),
         recordingStatus: document.getElementById('recordingStatus'),
         recTimer: document.getElementById('recTimer'),
+        fileInput: document.getElementById('fileInput')
     };
 
     let currentUser = null;
@@ -284,7 +316,17 @@
         setupRealtime();
     }
 
-    // --- GRAVAÇÃO DE ÁUDIO REVISADA ---
+    // --- SELEÇÃO DE ARQUIVO ---
+    function handleFileSelect() {
+        const file = el.fileInput.files[0];
+        if (file) {
+            fileToSend = file;
+            send(); // Envia automaticamente ao selecionar
+            el.fileInput.value = ''; // Limpa o input
+        }
+    }
+
+    // --- GRAVAÇÃO DE ÁUDIO ---
     
     async function startRecording() {
         if (isRecording) return;
@@ -350,13 +392,11 @@
     }
     
     async function uploadAudio() {
-        if (audioChunks.length === 0) {
-            return; 
-        }
+        if (audioChunks.length === 0) return; 
 
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
         
-        if (audioBlob.size < 5000) { 
+        if (audioBlob.size < 3000) { // Pequeno filtro de ruído
             alert("Áudio muito curto."); 
             return; 
         }
@@ -423,6 +463,11 @@
         if (isRealtime && isMe && existingElement) {
             existingElement.classList.remove('pending');
             existingElement.querySelector('.status-icon').innerHTML = '✔';
+            // Atualiza link final se necessário
+            if((msg.tipo === 'imagem' || msg.tipo === 'arquivo') && msg.texto.startsWith('http')) {
+                const contentDiv = existingElement.querySelector('.msg-content');
+                if(contentDiv) contentDiv.innerHTML = createContentHTML(msg);
+            }
             return; 
         }
         
@@ -440,22 +485,7 @@
         
         const timestamp = new Date(msg.created_at || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         
-        let contentHTML = '';
-        const isAudio = msg.tipo === 'audio';
-        
-        if (isAudio) {
-            const url = msg.texto; 
-            const initialTime = msg.local ? 'Gravando...' : 'Áudio';
-            contentHTML = `
-                <div class="audio-player-wrap">
-                    <button class="btn-audio-control" onclick="playAudio(this, '${url}')">▶</button>
-                    <audio src="${url}"></audio>
-                    <span class="audio-time" data-duration="${initialTime}">${initialTime}</span>
-                </div>
-            `;
-        } else {
-            contentHTML = msg.texto.replace(/\n/g, '<br>');
-        }
+        const contentHTML = createContentHTML(msg);
         
         let statusIcon = '';
         if (isMe) {
@@ -464,7 +494,7 @@
         
         div.innerHTML = `
             <div class="bubble-autor">${msg.autor_nome}</div>
-            ${contentHTML}
+            <div class="msg-content">${contentHTML}</div>
             <div class="meta">${timestamp}${statusIcon}</div>
         `;
         
@@ -474,24 +504,56 @@
 
         scrollToBottom();
         
-        if (isAudio && !msg.local) {
+        if (msg.tipo === 'audio' && !msg.local) {
              const audioEl = div.querySelector('audio');
              const timeEl = div.querySelector('.audio-time');
-             audioEl.onloadedmetadata = () => {
-                 const duration = formatTime(audioEl.duration);
-                 timeEl.textContent = duration;
-                 timeEl.dataset.duration = duration;
-             };
+             if(audioEl) {
+                 audioEl.onloadedmetadata = () => {
+                     const duration = formatTime(audioEl.duration);
+                     timeEl.textContent = duration;
+                     timeEl.dataset.duration = duration;
+                 };
+             }
         }
     }
 
-    // --- ENVIO (Texto e Áudio Unificados) OTIMIZADO ---
+    function createContentHTML(msg) {
+        if (msg.tipo === 'audio') {
+            const url = msg.texto; 
+            const initialTime = msg.local ? 'Gravando...' : 'Áudio';
+            return `
+                <div class="audio-player-wrap">
+                    <button class="btn-audio-control" onclick="playAudio(this, '${url}')">▶</button>
+                    <audio src="${url}"></audio>
+                    <span class="audio-time" data-duration="${initialTime}">${initialTime}</span>
+                </div>
+            `;
+        } else if (msg.tipo === 'imagem') {
+            return `<a href="${msg.texto}" target="_blank"><img src="${msg.texto}" alt="Imagem"></a>`;
+        } else if (msg.tipo === 'arquivo') {
+            // Tenta extrair o nome do arquivo da URL ou usa genérico
+            let fileName = 'Arquivo Anexo';
+            try { fileName = decodeURIComponent(msg.texto.split('/').pop().split('?')[0]).split('_').slice(1).join('_'); } catch(e){}
+            if(msg.local) fileName = "Enviando arquivo...";
+
+            return `
+                <a href="${msg.texto}" target="_blank" class="file-attachment">
+                    <span class="file-icon">📄</span>
+                    <span>${fileName.substring(0,25)}...</span>
+                </a>
+            `;
+        } else {
+            return msg.texto.replace(/\n/g, '<br>');
+        }
+    }
+
+    // --- ENVIO (Texto, Áudio e Arquivos) ---
 
     async function send() {
         const texto = el.txt.value.trim();
-        const isAudio = fileToSend && fileToSend.type.includes('audio');
+        const hasFile = !!fileToSend;
         
-        if(!texto && !isAudio || !currentUser || !currentRoom) return; 
+        if(!texto && !hasFile || !currentUser || !currentRoom) return; 
         
         el.txt.value = ''; 
         setInterfaceEnabled(false); 
@@ -500,13 +562,24 @@
         let url = null;
         let dbText = texto;
         let msgType = 'text';
+        let uploadFolder = 'private_files';
 
-        // 1. Configuração para a bolha local (Optimistic UI)
-        if (isAudio) {
-            msgType = 'audio';
-            dbText = URL.createObjectURL(fileToSend); 
+        // 1. Definição do Tipo
+        if (hasFile) {
+            if (fileToSend.type.includes('audio')) {
+                msgType = 'audio';
+                uploadFolder = 'private_audio';
+                dbText = URL.createObjectURL(fileToSend); 
+            } else if (fileToSend.type.includes('image')) {
+                msgType = 'imagem';
+                dbText = URL.createObjectURL(fileToSend); 
+            } else {
+                msgType = 'arquivo';
+                dbText = '#'; // Placeholder local
+            }
         }
         
+        // Renderiza bolha local (Optimistic)
         const optimisticMsg = {
             id: localId,
             texto: dbText,
@@ -519,9 +592,12 @@
         renderMessage(optimisticMsg);
         
         try {
-            // 2. Upload do Arquivo (se for áudio)
-            if (isAudio) {
-                const uploadName = `private_audio/${currentRoom}/${currentUser.id}_${Date.now()}.webm`;
+            // 2. Upload do Arquivo (Se houver)
+            if (hasFile) {
+                const ext = fileToSend.name ? fileToSend.name.split('.').pop() : 'webm';
+                const fileNameClean = fileToSend.name ? fileToSend.name.replace(/[^a-zA-Z0-9.]/g, '_') : 'audio';
+                const uploadName = `${uploadFolder}/${currentRoom}/${currentUser.id}_${Date.now()}_${fileNameClean}`;
+                
                 const { error: uploadError } = await supabaseClient.storage.from('arquivos').upload(uploadName, fileToSend, {
                     contentType: fileToSend.type,
                     cacheControl: '3600'
@@ -531,12 +607,12 @@
                 const { data: { publicUrl } } = supabaseClient.storage.from('arquivos').getPublicUrl(uploadName);
                 url = publicUrl;
                 
-                URL.revokeObjectURL(dbText);
+                if(dbText.startsWith('blob:')) URL.revokeObjectURL(dbText);
             }
 
             // 3. Inserir mensagem no banco
             const { error: insertError } = await supabaseClient.from('banco').insert([{
-                texto: isAudio ? url : texto, 
+                texto: hasFile ? url : texto, 
                 user_id: currentUser.id,
                 autor_nome: currentUser.user_metadata.full_name,
                 sala_id: currentRoom,
@@ -546,7 +622,7 @@
 
         } catch (e) {
             console.error("Falha ao enviar mensagem:", e);
-            alert("Erro ao enviar. Verifique sua conexão. " + e.message);
+            alert("Erro ao enviar. " + e.message);
             
             const localDiv = document.getElementById(localId);
             if (localDiv) {
@@ -569,6 +645,7 @@
             if (isMe) {
                 const pendingBubble = el.messagesWrap.querySelector('.bubble.me.pending');
                 if (pendingBubble) {
+                    // Otimização: remove o pendente para substituir pelo oficial
                     pendingBubble.remove();
                 }
             }
@@ -579,4 +656,4 @@
     }
 </script>
 </body>
-</html>
+  </html>
