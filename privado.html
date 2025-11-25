@@ -7,9 +7,20 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* CSS GERAL */
-  :root{ --bg:#e9f7f2; --top:#4a148c; --card-bg:#fff; --input-bg:#f0f0f0; --msg-in:#fff; --msg-out:#e1bee7; }
+  :root{ 
+    --bg:#e5ddd5; 
+    --top:#4a148c; 
+    --card-bg:#fff; 
+    --input-bg:#f0f0f0; 
+    --msg-in:#fff; 
+    --msg-out:#e1bee7; 
+    --mic-btn: #8050a9; 
+    --status-pending: #888; 
+    --status-sent: #008000; 
+    --text-color: #000;
+  }
   
-  body { margin:0; font-family:sans-serif; background: var(--bg); display:flex; justify-content:center; height: 100dvh; overflow:hidden; }
+  body { margin:0; font-family:system-ui, -apple-system, sans-serif; background: var(--bg); display:flex; justify-content:center; height: 100dvh; overflow:hidden; }
   
   .card { width:100%; max-width:720px; background:var(--card-bg); display:flex; flex-direction:column; height:100%; position: relative; }
   
@@ -18,19 +29,108 @@
   .btn-back { color:white; text-decoration:none; font-size:24px; margin-right:15px; cursor: pointer; }
   
   /* MENSAGENS */
-  .messages-wrap { flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:8px; background-image: linear-gradient(#e5ddd5 2px, transparent 2px), linear-gradient(90deg, #e5ddd5 2px, transparent 2px); background-size: 20px 20px; background-color: #e5ddd5; }
+  .messages-wrap { flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:8px; 
+    background-image: url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAoACgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAD/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAT/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAPwArAAAAAAAAAAAP/Z');
+    background-repeat: repeat; 
+    background-color: #e5ddd5; 
+  }
   
-  .bubble { max-width:80%; padding:8px 12px; border-radius:8px; background:var(--msg-in); align-self:flex-start; font-size:15px; box-shadow:0 1px 2px rgba(0,0,0,0.1); color: #000; }
+  .bubble { 
+    max-width:80%; 
+    padding:8px 12px; 
+    border-radius:8px; 
+    background:var(--msg-in); 
+    align-self:flex-start; 
+    font-size:15px; 
+    box-shadow:0 1px 2px rgba(0,0,0,0.1); 
+    color: var(--text-color); 
+    position: relative;
+    opacity: 1;
+    white-space: pre-wrap;
+  }
   .bubble.me { background:var(--msg-out); align-self:flex-end; }
+  .bubble.pending { opacity: 0.6; }
+  
   .bubble-autor { font-size:11px; font-weight:bold; color:var(--top); margin-bottom:2px; }
-  .meta { font-size:10px; color:#555; text-align:right; margin-top: 3px;}
+  .meta { font-size:10px; color:#555; text-align:right; margin-top: 3px; display: block; }
+  .status-icon { margin-left: 5px; color: var(--status-pending); font-weight: normal; }
 
   /* BARRA DE DIGITAR */
   .composer { padding:10px; background:var(--input-bg); display:flex; gap:10px; align-items: center; border-top: 1px solid #ddd; flex-shrink: 0; }
-  input { flex:1; padding:12px; border-radius:20px; border:none; outline:none; background: white; font-size: 15px;}
-  .btn-send { background:var(--top); color:white; border:none; width: 45px; height: 45px; border-radius:50%; cursor:pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+  input { flex:1; padding:12px; border-radius:20px; border:none; outline:none; background: white; font-size: 15px; transition: all 0.2s; color: var(--text-color); }
+  input:disabled { background: #e0e0e0; cursor: not-allowed; }
 
-  /* MODAL DE ENTRADA NA SALA (NOVO) */
+  .btn-send, .btn-mic { 
+    background:var(--top); 
+    color:white; 
+    border:none; 
+    width: 45px; 
+    height: 45px; 
+    border-radius:50%; 
+    cursor:pointer; 
+    font-size: 18px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    transition: background 0.2s;
+  }
+  .btn-mic { background: var(--mic-btn); }
+
+  /* MODO DE GRAVAÇÃO */
+  .recording-status { 
+      flex: 1; 
+      display: none; 
+      align-items: center; 
+      gap: 10px; 
+      color: var(--top);
+      font-weight: bold;
+      padding-left: 10px;
+  }
+  .recording-status.active { display: flex; }
+  .recording-status .dot { 
+      width: 10px; 
+      height: 10px; 
+      background: red; 
+      border-radius: 50%; 
+      animation: pulse 1s infinite; 
+  }
+  @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+  }
+  
+  /* ESTILO DO ÁUDIO */
+  .audio-player-wrap { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    min-width: 150px; 
+    padding: 2px 0;
+  }
+  .audio-player-wrap audio { display: none; }
+  .btn-audio-control {
+    background: var(--top);
+    color: white;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .audio-time { 
+    font-size: 12px; 
+    color: var(--text-secondary, #555);
+    flex-grow: 1;
+    margin-right: 5px;
+  }
+
+  /* MODAL DE ENTRADA NA SALA */
   .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
   .modal-box { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
   .modal-box h2 { color: var(--top); margin-top: 0; }
@@ -43,10 +143,9 @@
 <body>
 
 <div class="card">
-    <!-- TOPO -->
     <div class="topbar">
         <div style="display:flex; align-items:center;">
-            <a href="/" class="btn-back">⬅</a>
+            <a href="/" class="btn-back">⬅</a> 
             <div>
                 <div style="font-weight:bold; font-size: 16px;" id="roomName">Privado</div>
                 <div style="font-size:12px; opacity: 0.8;">Chat Secreto</div>
@@ -54,17 +153,26 @@
         </div>
     </div>
 
-    <!-- ÁREA DE MENSAGENS -->
     <div id="messagesWrap" class="messages-wrap"></div>
 
-    <!-- BARRA DE DIGITAR -->
     <div class="composer">
-        <input type="text" id="txt" placeholder="Digite aqui...">
-        <button class="btn-send" onclick="send()">➤</button>
+        <input type="text" id="txt" placeholder="Digite aqui..." autofocus>
+        
+        <div id="recordingStatus" class="recording-status">
+            <div class="dot"></div>
+            <span id="recTimer">0:00</span>
+        </div>
+        <button id="sendBtn" class="btn-send" onclick="send()">➤</button>
+        <button 
+            id="micBtn" 
+            class="btn-mic" 
+            onmousedown="handleMicPress(event)" 
+            onmouseup="handleMicRelease()" 
+            ontouchstart="handleMicPress(event)" 
+            ontouchend="handleMicRelease()">🎤</button>
     </div>
 </div>
 
-<!-- MODAL DE ENTRADA (Aparece ao abrir) -->
 <div id="loginRoomModal" class="modal-overlay">
     <div class="modal-box">
         <h2>🔒 Chat Privado</h2>
@@ -77,98 +185,424 @@
 </div>
 
 <script>
+    // Configurações do Supabase (Mantenha as suas chaves reais)
     const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL6NTYkY3dIQ4H8qd4OuGRp6ngFnI';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
+    // Elementos DOM
+    const el = {
+        messagesWrap: document.getElementById('messagesWrap'),
+        txt: document.getElementById('txt'),
+        sendBtn: document.getElementById('sendBtn'),
+        micBtn: document.getElementById('micBtn'),
+        recordingStatus: document.getElementById('recordingStatus'),
+        recTimer: document.getElementById('recTimer'),
+    };
+
     let currentUser = null;
     let currentRoom = null;
+    let localMessageIdCounter = 0; 
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    let recordingTimerId = null;
+    let recordingStartTime = 0;
+    let currentStream = null;
+    let currentlyPlayingAudio = null;
+    let fileToSend = null; // Usado para áudio (e futuramente, outros arquivos)
+    let pressTimer; // Timer para long press do microfone
 
-    // 1. VERIFICA LOGIN
+    // --- FUNÇÕES DE UTILIADADE ---
+
+    function scrollToBottom() { 
+        setTimeout(() => { el.messagesWrap.scrollTop = el.messagesWrap.scrollHeight; }, 50);
+    }
+    
+    function formatTime(seconds) {
+        const min = Math.floor(seconds / 60);
+        const sec = Math.floor(seconds % 60);
+        return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+    }
+    
+    function setInterfaceEnabled(enabled) {
+        el.txt.disabled = !enabled;
+        el.sendBtn.disabled = !enabled;
+        el.micBtn.disabled = !enabled;
+    }
+
+    // --- AUTENTICAÇÃO E ENTRADA NA SALA ---
+
     async function init() {
-        const {data} = await supabaseClient.auth.getSession();
-        if(!data.session) return window.location.href = '/';
-        currentUser = data.session.user;
-        // Modal já está aberto, esperando usuário digitar
+        try {
+            const {data} = await supabaseClient.auth.getSession();
+            
+            // CORREÇÃO: Se não há sessão, redireciona para um caminho de login/home mais específico para evitar o loop/piscamento
+            if(!data.session) {
+                // Tenta redirecionar para a URL raiz ou /login, dependendo da sua arquitetura
+                return window.location.href = '/'; 
+            }
+            
+            currentUser = data.session.user;
+            
+            updateComposerButtons();
+            
+            el.txt.onkeydown = (e) => { if(e.key === 'Enter') send(); };
+            el.txt.oninput = updateComposerButtons;
+
+        } catch (e) {
+            console.error("Erro na inicialização da sessão:", e);
+            window.location.href = '/';
+        }
     }
     init();
 
-    // 2. ENTRAR NA SALA
+    function updateComposerButtons() {
+        // Exibe o botão de envio se houver texto
+        const hasText = el.txt.value.trim() !== '';
+        el.sendBtn.style.display = hasText ? 'flex' : 'none';
+        
+        // Exibe o botão de microfone se não houver texto E não estiver gravando
+        const showMic = !hasText && !isRecording;
+        el.micBtn.style.display = showMic ? 'flex' : 'none';
+        
+        // Garante que o campo de texto e o status de gravação estejam visíveis/ocultos corretamente
+        el.txt.classList.toggle('hidden', isRecording);
+        el.recordingStatus.classList.toggle('active', isRecording);
+    }
+
     function entrarSala() {
         const salaInput = document.getElementById('inputSala').value.trim();
         if(!salaInput) return alert("Digite um nome para a sala!");
 
-        currentRoom = salaInput.toLowerCase().replace(/\s/g, ''); // Remove espaços e minúsculas
+        currentRoom = salaInput.toLowerCase().replace(/\s/g, ''); 
         
-        // Atualiza visual
         document.getElementById('roomName').textContent = "Sala: " + currentRoom;
-        document.getElementById('loginRoomModal').classList.add('hidden'); // Esconde modal
+        document.getElementById('loginRoomModal').classList.add('hidden'); 
         
-        // Carrega dados
         fetchMessages();
         setupRealtime();
     }
 
-    // 3. CARREGAR MENSAGENS
+    // --- GRAVAÇÃO DE ÁUDIO REVISADA ---
+    
+    async function startRecording() {
+        if (isRecording) return;
+        
+        try {
+            currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(currentStream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = e => {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                // Limpa o timer e o estado
+                clearInterval(recordingTimerId);
+                isRecording = false;
+                
+                // Limpa a UI de gravação
+                el.micBtn.classList.remove('hidden');
+                el.micBtn.style.display = 'flex';
+                el.recordingStatus.classList.remove('active');
+                el.txt.classList.remove('hidden');
+
+                // Processa o áudio gravado
+                uploadAudio();
+                
+                // Para e limpa o stream
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            
+            // Atualiza a UI para modo de gravação
+            el.txt.classList.add('hidden');
+            el.sendBtn.style.display = 'none';
+            el.micBtn.classList.add('hidden'); // Esconde o botão de microfone
+            el.recordingStatus.classList.add('active');
+
+            recordingStartTime = Date.now();
+            el.recTimer.textContent = '0:00';
+
+            recordingTimerId = setInterval(() => {
+                const elapsedSeconds = Math.floor((Date.now() - recordingStartTime) / 1000);
+                el.recTimer.textContent = formatTime(elapsedSeconds);
+            }, 1000);
+
+        } catch (e) {
+            alert("Erro ao acessar o microfone: Verifique as permissões. " + e.message);
+            isRecording = false;
+            updateComposerButtons();
+        }
+    }
+
+    function stopRecording() {
+        if (!isRecording) return;
+        
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop(); // O onstop() fará o uploadAudio()
+        }
+    }
+    
+    // Pressionar e Segurar (long press) para iniciar a gravação
+    function handleMicPress(event) {
+        event.preventDefault(); 
+        // Inicia o timer: se o usuário segurar por 300ms, começa a gravação
+        pressTimer = setTimeout(startRecording, 300);
+    }
+
+    function handleMicRelease() {
+        clearTimeout(pressTimer);
+        // Se a gravação estiver ativa, parar o toque significa parar a gravação
+        if (isRecording) {
+            stopRecording();
+        }
+        // Se a gravação não foi iniciada (foi um clique rápido), não faz nada.
+    }
+    
+    async function uploadAudio() {
+        if (audioChunks.length === 0) {
+            updateComposerButtons();
+            return; 
+        }
+
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        
+        if (audioBlob.size < 5000) { 
+            alert("Áudio muito curto."); 
+            updateComposerButtons();
+            return; 
+        }
+        
+        fileToSend = audioBlob;
+        // O `send()` agora lida com o upload e a inserção no banco
+        send();
+    }
+
+    // --- ÁUDIO PLAYBACK ---
+
+    window.playAudio = (btn, url) => {
+        const audio = btn.nextElementSibling;
+        const timeEl = audio.nextElementSibling;
+        
+        // Pausa e reseta qualquer outro áudio
+        if (currentlyPlayingAudio && currentlyPlayingAudio !== audio) {
+            currentlyPlayingAudio.pause();
+            currentlyPlayingAudio.currentTime = 0;
+            const playingBtn = currentlyPlayingAudio.previousElementSibling;
+            if (playingBtn) playingBtn.innerHTML = '▶';
+            const playingTimeEl = currentlyPlayingAudio.nextElementSibling;
+            if (playingTimeEl) playingTimeEl.textContent = playingTimeEl.dataset.duration || '0:00';
+        }
+        
+        if (audio.paused) {
+            currentlyPlayingAudio = audio;
+            audio.play();
+            btn.innerHTML = '❚❚';
+        } else {
+            audio.pause();
+            currentlyPlayingAudio = null;
+            btn.innerHTML = '▶';
+        }
+
+        // Evento de atualização de tempo
+        audio.ontimeupdate = () => {
+             timeEl.textContent = formatTime(audio.currentTime);
+        };
+        
+        // Evento de fim de reprodução
+        audio.onended = () => {
+            audio.currentTime = 0;
+            currentlyPlayingAudio = null;
+            btn.innerHTML = '▶';
+            // Volta a mostrar a duração total
+            timeEl.textContent = timeEl.dataset.duration || '0:00'; 
+        };
+    }
+    
+    // --- CARREGAMENTO E RENDERIZAÇÃO ---
+
     async function fetchMessages() {
         const { data } = await supabaseClient.from('banco')
             .select('*')
             .eq('sala_id', currentRoom)
             .order('created_at', { ascending: true });
             
-        const div = document.getElementById('messagesWrap');
-        div.innerHTML = '';
-        if(data) data.forEach(renderMessage);
+        el.messagesWrap.innerHTML = '';
+        if(data) data.forEach(msg => renderMessage(msg, false)); 
         scrollToBottom();
     }
 
-    // 4. RENDERIZAR NA TELA
-    function renderMessage(msg) {
+    function renderMessage(msg, isRealtime = false) {
+        
         const isMe = msg.user_id === currentUser.id;
-        const div = document.createElement('div');
-        div.className = `bubble ${isMe ? 'me' : ''}`;
+        let existingElement = document.getElementById(msg.id);
+
+        if (isRealtime && isMe && existingElement) {
+            // Confirmação da mensagem (Optimistic UI)
+            existingElement.classList.remove('pending');
+            existingElement.querySelector('.status-icon').innerHTML = '✔';
+            return; 
+        }
+
+        const div = existingElement || document.createElement('div');
+        if (!existingElement) {
+            div.className = `bubble ${isMe ? 'me' : ''} ${msg.local ? 'pending' : ''}`;
+            if(msg.local) div.id = msg.id; 
+        }
+        
+        const timestamp = new Date(msg.created_at || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        
+        let contentHTML = '';
+        const isAudio = msg.tipo === 'audio' || (msg.texto && (msg.texto.startsWith('blob:'))); // Se for blob:, é local
+        
+        if (isAudio) {
+            const initialTime = msg.local ? 'Gravando...' : 'Áudio';
+            // Adiciona data-duration para armazenar a duração real
+            contentHTML = `
+                <div class="audio-player-wrap">
+                    <button class="btn-audio-control" onclick="playAudio(this, '${msg.texto}')">▶</button>
+                    <audio src="${msg.texto}"></audio>
+                    <span class="audio-time" data-duration="${initialTime}">${initialTime}</span>
+                </div>
+            `;
+        } else {
+            contentHTML = msg.texto.replace(/\n/g, '<br>');
+        }
+        
+        let statusIcon = '';
+        if (isMe) {
+            statusIcon = msg.local ? '<span class="status-icon">🕒</span>' : '<span class="status-icon" style="color:var(--status-sent, #008000);">✔</span>'; 
+        }
+        
         div.innerHTML = `
             <div class="bubble-autor">${msg.autor_nome}</div>
-            ${msg.texto}
-            <div class="meta">${new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+            ${contentHTML}
+            <div class="meta">${timestamp}${statusIcon}</div>
         `;
-        document.getElementById('messagesWrap').appendChild(div);
+        
+        if (!existingElement) {
+            el.messagesWrap.appendChild(div);
+        }
+
         scrollToBottom();
+        
+        // Otimização: Carregar metadata do áudio para mostrar a duração correta
+        if (isAudio && !msg.local) {
+             const audioEl = div.querySelector('audio');
+             const timeEl = div.querySelector('.audio-time');
+             audioEl.onloadedmetadata = () => {
+                 const duration = formatTime(audioEl.duration);
+                 timeEl.textContent = duration;
+                 timeEl.dataset.duration = duration;
+             };
+        }
     }
 
-    // 5. ENVIAR
+    // --- ENVIO (Texto e Áudio Unificados) ---
+
     async function send() {
-        const txt = document.getElementById('txt');
-        if(!txt.value.trim()) return;
+        const texto = el.txt.value.trim();
+        const isAudio = fileToSend && fileToSend.type.includes('audio');
         
-        const texto = txt.value;
-        txt.value = ''; 
+        if(!texto && !isAudio || !currentUser) return;
         
-        await supabaseClient.from('banco').insert([{
-            texto: texto,
+        el.txt.value = ''; 
+        updateComposerButtons();
+        setInterfaceEnabled(false); 
+
+        const localId = 'local-' + localMessageIdCounter++;
+        let url = null;
+        let dbText = texto;
+        let msgType = 'text';
+
+        // 1. OTIMIZAÇÃO: Renderiza a bolha local (Optimistic UI)
+        if (isAudio) {
+            msgType = 'audio';
+            dbText = URL.createObjectURL(fileToSend); // URL temporária para o preview
+        }
+        
+        const optimisticMsg = {
+            id: localId,
+            texto: dbText,
             user_id: currentUser.id,
             autor_nome: currentUser.user_metadata.full_name,
-            sala_id: currentRoom
-        }]);
+            created_at: new Date().toISOString(),
+            tipo: msgType,
+            local: true
+        };
+        renderMessage(optimisticMsg);
+        
+        try {
+            // 2. Upload do Arquivo (se for áudio)
+            if (isAudio) {
+                const uploadName = `private_audio/${currentRoom}/${currentUser.id}_${Date.now()}.webm`;
+                const { error: uploadError } = await supabaseClient.storage.from('arquivos').upload(uploadName, fileToSend, {
+                    contentType: fileToSend.type,
+                    cacheControl: '3600'
+                });
+                if (uploadError) throw uploadError;
+
+                // 3. Obter URL Pública para o banco
+                const { data: { publicUrl } } = supabaseClient.storage.from('arquivos').getPublicUrl(uploadName);
+                url = publicUrl;
+                
+                // Limpa o objeto URL temporário
+                URL.revokeObjectURL(dbText);
+            }
+
+            // 4. Inserir mensagem no banco (usando URL se for áudio, ou texto se for texto)
+            const { error: insertError } = await supabaseClient.from('banco').insert([{
+                texto: isAudio ? url : texto, // O texto no banco é a URL se for áudio
+                user_id: currentUser.id,
+                autor_nome: currentUser.user_metadata.full_name,
+                sala_id: currentRoom,
+                tipo: msgType 
+            }]);
+            if (insertError) throw insertError;
+            
+            // O Realtime agora cuidará da confirmação da bolha.
+
+        } catch (e) {
+            console.error("Falha ao enviar mensagem:", e);
+            alert("Erro ao enviar. Verifique sua conexão. " + e.message);
+            const localDiv = document.getElementById(localId);
+            if (localDiv) {
+                localDiv.querySelector('.status-icon').innerHTML = '❌';
+            }
+        } finally {
+            // Limpa o estado após o envio
+            fileToSend = null; 
+            setInterfaceEnabled(true);
+            updateComposerButtons();
+        }
     }
 
-    // 6. TEMPO REAL
+    // --- TEMPO REAL ---
     function setupRealtime() {
         supabaseClient.channel('private-room')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'banco', filter: `sala_id=eq.${currentRoom}` }, payload => {
-            renderMessage(payload.new);
+            
+            const isMe = payload.new.user_id === currentUser.id;
+            
+            // Tenta encontrar e atualizar a bolha local (Optimistic UI)
+            if (isMe) {
+                const pendingBubble = el.messagesWrap.querySelector('.bubble.me.pending');
+                if (pendingBubble) {
+                    payload.new.id = pendingBubble.id; 
+                }
+            }
+
+            renderMessage(payload.new, true);
+
         }).subscribe();
     }
-
-    function scrollToBottom() { 
-        setTimeout(() => {
-            const w = document.getElementById('messagesWrap'); 
-            w.scrollTop = w.scrollHeight; 
-        }, 50);
-    }
-    
-    // Enviar com Enter
-    document.getElementById('txt').onkeydown = (e) => { if(e.key === 'Enter') send(); };
 </script>
 </body>
 </html>
