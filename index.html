@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>ZapChat</title> <!-- NOME DO PROJETO ALTERADO -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>ZapChat</title> <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* CSS GERAL */
   :root{ --bg:#e9f7f2; --top:#075e54; --accent:#25d366; --muted:#6b6b6b; --card-bg:#fff; --input-bg:#f0f0f0; --input-text:#000; --msg-in:#fff; --msg-out:#d9fdd3; --msg-text:#000; --recording:#e53935; --select-bg: #b3e5fc; }
@@ -133,7 +132,15 @@
   .reactions.show{display:block;}
   .bubble-autor{font-size:11px;font-weight:800;color:var(--top);margin-bottom:2px;}
   .bubble.me .bubble-autor{display:none;}
-  .bubble-text{white-space:pre-wrap;line-height:1.4;}
+  
+  /* CORREÇÃO APLICADA AQUI: Permite quebra de palavras/URLs longas */
+  .bubble-text{
+      white-space:pre-wrap;
+      line-height:1.4;
+      word-break: break-word; /* Solução principal para URLs/Textos longos */
+      overflow-wrap: break-word; /* Alternativa moderna */
+  }
+  
   .meta{font-size:10px;color:var(--muted);text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:2px;}
   .ticks{font-size:14px;} .ticks.blue{color:#34b7f1;}
   .msg-actions { display: inline-flex; gap: 5px; margin-left: 5px; }
@@ -173,13 +180,11 @@
 <body>
   <div class="frame">
     <div class="card">
-      <!-- TOPO -->
       <div class="topbar" id="topBar">
         <div class="top-left">
           <svg class="brand-logo" viewBox="0 0 100 100"><path d="M20,20 Q80,10 80,50 Q80,90 50,90 L20,95 L25,75 Q10,60 20,20 Z" fill="#25d366"/><path d="M45,25 L65,25 L50,50 L70,50 L35,80 L45,50 L25,50 Z" fill="white"/></svg>
           <div class="info">
-            <div class="title">ZapChat</div> <!-- NOME DO PROJETO ALTERADO -->
-            <div class="subtitle" id="statusText">Conectando...</div>
+            <div class="title">ZapChat</div> <div class="subtitle" id="statusText">Conectando...</div>
             <div class="typing-indicator" id="typingInd"></div>
           </div>
         </div>
@@ -189,7 +194,6 @@
         </div>
       </div>
 
-      <!-- SELEÇÃO -->
       <div class="selection-bar" id="selectionBar">
           <div style="display:flex; align-items:center; gap:15px;">
               <div class="btn-icon" onclick="exitSelectionMode()">⬅</div>
@@ -198,29 +202,23 @@
           <div class="btn-icon" onclick="deleteSelectedMessages()" style="color:red;">🗑</div>
       </div>
       
-      <!-- BUSCA -->
       <div class="search-box" id="searchBox"><input type="text" id="searchInput" placeholder="Buscar mensagem..." onkeyup="filterMessages()"></div>
 
-      <!-- MENU -->
       <div id="myDropdown" class="dropdown-content">
         <a href="/perfil.html">👤 Meu Perfil</a>
         <a href="/privado.html" style="color: #6a1b9a; font-weight: bold;">🔒 Chat Privado</a>
         <a href="/anuncios.html" style="color: #075e54; font-weight: bold;">📢 Anúncios</a>
         <button onclick="toggleDarkMode()">🌙 Tema Escuro/Claro</button>
         <button onclick="document.getElementById('wallInput').click()">🖼️ Papel de Parede</button>
-        <button onclick="removeWallpaper()">✖ Remover Papel de Parede</button> <!-- NOVO BOTÃO -->
-        <a href="/termos.html">📄 Termos</a>
+        <button onclick="removeWallpaper()">✖ Remover Papel de Parede</button> <a href="/termos.html">📄 Termos</a>
         <button onclick="shareApp()">🔗 Compartilhar</button>
-        <button onclick="clearChat()" style="color:red; font-weight:bold;">🗑 Limpar Conversa</button> <!-- NOVO BOTÃO -->
-        <button onclick="logout()" style="color:red;">✖ Sair</button>
+        <button onclick="clearChat()" style="color:red; font-weight:bold;">🗑 Limpar Conversa</button> <button onclick="logout()" style="color:red;">✖ Sair</button>
       </div>
       <input type="file" id="wallInput" hidden accept="image/*">
 
-      <!-- LOGIN -->
       <div id="authPanel" class="auth-panel">
           <div id="loginForm">
-            <h2 style="margin-top:0;">Entrar no ZapChat</h2> <!-- NOME DO PROJETO ALTERADO -->
-            <div class="auth-inputs">
+            <h2 style="margin-top:0;">Entrar no ZapChat</h2> <div class="auth-inputs">
               <input type="email" id="email" placeholder="E-mail">
               <div class="password-container"><input type="password" id="password" placeholder="Senha"><span id="btnTogglePass" class="toggle-eye">👁️</span></div>
               <span id="linkForgot" style="text-align:right; font-size:12px; color:blue; cursor:pointer;">Esqueci a senha</span>
@@ -237,7 +235,6 @@
           </div>
       </div>
 
-      <!-- ÁREA PRINCIPAL -->
       <div class="main hidden" id="mainAppArea">
         <div id="messagesWrap" class="messages-wrap"><div id="mensagens" style="display:flex;flex-direction:column;gap:4px;"></div></div>
         
@@ -264,7 +261,7 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI'; // ⬅️ SUBSTITUA
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const ADMIN_EMAILS = ['olnair10pereira@gmail.com']; // Altere para o seu email principal de admin
+    const ADMIN_EMAILS = ['[SEU_EMAIL_ADMINISTRADOR]']; // Altere para o seu email principal de admin
     
     const el={
         authPanel: document.getElementById('authPanel'), mainAppArea: document.getElementById('mainAppArea'),
@@ -358,7 +355,16 @@
         let content = '';
         if(msg.reply_to) content += `<div class="reply-preview">↪ ${msg.reply_to.texto || 'Mídia'}</div>`;
         if(!isMe) content += `<div class="bubble-autor">${msg.autor_nome}</div>`;
-        if(msg.texto) content += `<div class="bubble-text">${msg.texto}</div>`;
+        
+        // CORREÇÃO JS: Transforma URLs em links clicáveis e usa a regex para quebrar o link
+        if(msg.texto) {
+            const linkRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+            const linkedText = msg.texto.replace(linkRegex, (url) => {
+                // Aplica estilo e target="_blank" para abrir em nova aba
+                return `<a href="${url}" target="_blank" style="color:var(--top); text-decoration:underline;">${url}</a>`;
+            });
+            content += `<div class="bubble-text">${linkedText}</div>`;
+        }
         
         // ÁUDIO, IMAGEM, VÍDEO E PDF PADRONIZADOS
         if(msg.url_arquivo) {
@@ -540,4 +546,4 @@
     el.send.onclick = sendMessage; el.txt.onkeydown = e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
   </script>
 </body>
-  </html>
+</html>
