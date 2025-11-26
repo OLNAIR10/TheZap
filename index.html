@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>TheZap Ultimate</title>
+<title>ZapChat</title> <!-- NOME DO PROJETO ALTERADO -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* CSS GERAL */
@@ -41,19 +41,17 @@
   .search-box.active{display:block;}
   .search-box input{width:100%;padding:6px;border-radius:5px;border:none;outline:none;}
 
-  /* --- ESTRUTURA PRINCIPAL (CORREÇÃO APLICADA AQUI) --- */
+  /* --- ESTRUTURA PRINCIPAL (GARANTIR COMPOSER NA BASE) --- */
   .main { 
-      flex: 1; /* Ocupa o restante do card */
+      flex: 1; /* Ocupa todo o espaço restante */
       display: flex; 
       flex-direction: column; 
       overflow: hidden; 
       position: relative; 
-      height: 100%; /* Força altura total */
   }
 
   .messages-wrap {
-      flex: 1; /* Ocupa todo o espaço vertical disponível */
-      min-height: 0; /* Impede colapso quando vazio */
+      flex: 1; /* Cresce para empurrar o composer pra baixo */
       overflow-y: auto; 
       padding: 14px; 
       background-color: var(--bg);
@@ -64,18 +62,16 @@
   }
   
   .composer {
-      flex-shrink: 0; /* Impede que o composer encolha */
+      flex-shrink: 0; /* Não encolhe - MANTÉM NA BASE */
       padding: 6px; 
       background: var(--input-bg); 
       display: flex; 
       gap: 6px; 
       align-items: flex-end; 
       border-top: 1px solid #ddd; 
-      position: relative;
-      width: 100%;
-      z-index: 10;
+      position: relative; 
   }
-  /* ---------------------------------------------------- */
+  /* ----------------------------------------------------- */
 
   /* MENSAGENS */
   .msg-row{display:flex;gap:8px;margin-bottom:2px;width:100%; transition: background 0.2s;}
@@ -92,13 +88,52 @@
   .audio-icon { font-size: 20px; }
   .audio-txt { font-size: 13px; font-weight: bold; }
 
+  /* MÍDIA PADRONIZADA (IMAGENS/VÍDEOS/PDF) */
+  .media-preview {
+      width: 150px; /* Largura padrão para a prévia */
+      height: 100px; /* Altura padrão para a prévia */
+      overflow: hidden;
+      border-radius: 6px;
+      margin-top: 4px;
+      position: relative;
+      cursor: pointer;
+      background-color: #f0f0f0; /* Fundo cinza para PDFs/Vídeos sem miniatura */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(0,0,0,0.1);
+  }
+  .media-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover; /* Recorta a imagem para preencher o container */
+  }
+  /* Ícone de overlay para arquivos não-imagem (PDF/Vídeo) */
+  .media-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 5px;
+      text-align: center;
+  }
+  .media-overlay-icon {
+      font-size: 24px;
+      margin-bottom: 5px;
+  }
+  
   .reply-preview{background:rgba(0,0,0,0.05);border-left:4px solid var(--accent);padding:4px;border-radius:4px;font-size:11px;margin-bottom:4px;cursor:pointer;}
   .reactions{position:absolute;bottom:-10px;right:10px;background:#fff;border-radius:10px;padding:2px 6px;font-size:10px;box-shadow:0 1px 2px rgba(0,0,0,0.2);display:none;color:#000;}
   .reactions.show{display:block;}
   .bubble-autor{font-size:11px;font-weight:800;color:var(--top);margin-bottom:2px;}
   .bubble.me .bubble-autor{display:none;}
   .bubble-text{white-space:pre-wrap;line-height:1.4;}
-  .bubble-img{max-width:100%;border-radius:6px;margin-top:4px;}
   .meta{font-size:10px;color:var(--muted);text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:2px;}
   .ticks{font-size:14px;} .ticks.blue{color:#34b7f1;}
   .msg-actions { display: inline-flex; gap: 5px; margin-left: 5px; }
@@ -143,7 +178,7 @@
         <div class="top-left">
           <svg class="brand-logo" viewBox="0 0 100 100"><path d="M20,20 Q80,10 80,50 Q80,90 50,90 L20,95 L25,75 Q10,60 20,20 Z" fill="#25d366"/><path d="M45,25 L65,25 L50,50 L70,50 L35,80 L45,50 L25,50 Z" fill="white"/></svg>
           <div class="info">
-            <div class="title">TheZap</div>
+            <div class="title">ZapChat</div> <!-- NOME DO PROJETO ALTERADO -->
             <div class="subtitle" id="statusText">Conectando...</div>
             <div class="typing-indicator" id="typingInd"></div>
           </div>
@@ -173,8 +208,10 @@
         <a href="/anuncios.html" style="color: #075e54; font-weight: bold;">📢 Anúncios</a>
         <button onclick="toggleDarkMode()">🌙 Tema Escuro/Claro</button>
         <button onclick="document.getElementById('wallInput').click()">🖼️ Papel de Parede</button>
+        <button onclick="removeWallpaper()">✖ Remover Papel de Parede</button> <!-- NOVO BOTÃO -->
         <a href="/termos.html">📄 Termos</a>
         <button onclick="shareApp()">🔗 Compartilhar</button>
+        <button onclick="clearChat()" style="color:red; font-weight:bold;">🗑 Limpar Conversa</button> <!-- NOVO BOTÃO -->
         <button onclick="logout()" style="color:red;">✖ Sair</button>
       </div>
       <input type="file" id="wallInput" hidden accept="image/*">
@@ -182,7 +219,7 @@
       <!-- LOGIN -->
       <div id="authPanel" class="auth-panel">
           <div id="loginForm">
-            <h2 style="margin-top:0;">Entrar no TheZap</h2>
+            <h2 style="margin-top:0;">Entrar no ZapChat</h2> <!-- NOME DO PROJETO ALTERADO -->
             <div class="auth-inputs">
               <input type="email" id="email" placeholder="E-mail">
               <div class="password-container"><input type="password" id="password" placeholder="Senha"><span id="btnTogglePass" class="toggle-eye">👁️</span></div>
@@ -220,12 +257,15 @@
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://zlppiyhqlhppbhkurisr.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpscHBpeWhxbGhwcGJoa3VyaXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NjA0MzYsImV4cCI6MjA3OTQzNjQzNn0.ybVSaBl18pz8OQbtL65Fqn3dIQ4H8qd4OuGRp6ngFnI';
+    // --------------------------------------------------------------------------------------------------
+    // ** ATENÇÃO: SUBSTITUA ESSES PLACEHOLDERS PELAS CHAVES REAIS DO SEU PROJETO ZAPCHAT NO SUPABASE **
+    // --------------------------------------------------------------------------------------------------
+    const SUPABASE_URL = 'https://[SEU_NOVO_ID_DO_PROJETO].supabase.co'; // ⬅️ SUBSTITUA
+    const SUPABASE_KEY = '[SUA_NOVA_CHAVE_ANON_JWT]'; // ⬅️ SUBSTITUA
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const ADMIN_EMAILS = ['olnair10pereira@gmail.com']; 
-
+    const ADMIN_EMAILS = ['[SEU_EMAIL_ADMINISTRADOR]']; // Altere para o seu email principal de admin
+    
     const el={
         authPanel: document.getElementById('authPanel'), mainAppArea: document.getElementById('mainAppArea'),
         msgDiv:document.getElementById('mensagens'),wrap:document.getElementById('messagesWrap'),txt:document.getElementById('campoTexto'),replyBar:document.getElementById('replyBar'),replyTxt:document.getElementById('replyText'),preview:document.getElementById('previewArea'),imgPrev:document.getElementById('imgPreview'),fileIn:document.getElementById('fileInput'),mic:document.getElementById('btnMic'),send:document.getElementById('btnEnviar'),status:document.getElementById('statusText'),typing:document.getElementById('typingInd'), selBar:document.getElementById('selectionBar'), selCount:document.getElementById('selCount'),
@@ -294,6 +334,7 @@
         el.msgDiv.innerHTML = '';
         data.forEach(appendMessage);
         scrollToBottom();
+        // Marca como lido (Otimização: envia o comando de update, mas não espera)
         data.forEach(msg => { if(msg.user_id !== currentUser.id && !msg.lido) supabaseClient.from('banco').update({lido:true}).eq('id',msg.id).then(); });
     }
 
@@ -319,19 +360,49 @@
         if(!isMe) content += `<div class="bubble-autor">${msg.autor_nome}</div>`;
         if(msg.texto) content += `<div class="bubble-text">${msg.texto}</div>`;
         
-        // ÁUDIO
+        // ÁUDIO, IMAGEM, VÍDEO E PDF PADRONIZADOS
         if(msg.url_arquivo) {
-            if(msg.url_arquivo.includes('.webm')) {
-                content += `
+            const url = msg.url_arquivo;
+            let mediaHtml = '';
+            let fileType = 'Arquivo';
+            let overlayIcon = '📎';
+
+            if (url.includes('.webm') || url.includes('mp3')) {
+                // MÍDIA DE ÁUDIO (MANTIDA)
+                mediaHtml = `
                 <div class="audio-custom" onclick="playAudio(this)">
-                    <audio src="${msg.url_arquivo}"></audio>
+                    <audio src="${url}"></audio>
                     <div class="audio-icon">🔊</div>
                     <div class="audio-txt">Ouvir Áudio</div>
                 </div>`;
             } else {
-                content += `<img src="${msg.url_arquivo}" class="bubble-img" onclick="if(!selectionMode) window.open('${msg.url_arquivo}')">`;
+                // IMAGENS, VÍDEOS E PDFS (PADRONIZADOS)
+                if (/\.(jpe?g|png|gif|webp)$/i.test(url)) {
+                    fileType = 'Imagem';
+                    overlayIcon = '🖼️';
+                    mediaHtml = `<img src="${url}" alt="${fileType}">`; // Usamos o URL como fonte
+                } else if (/\.pdf$/i.test(url)) {
+                    fileType = 'PDF';
+                    overlayIcon = '📄';
+                } else if (/\.(mp4|mov|avi)$/i.test(url)) {
+                    fileType = 'Vídeo';
+                    overlayIcon = '🎬';
+                }
+
+                // Wrapper de visualização padronizada para todos os não-áudios
+                let overlayContent = '';
+                if (fileType !== 'Imagem') {
+                    overlayContent = `<div class="media-overlay"><span class="media-overlay-icon">${overlayIcon}</span>${fileType}</div>`;
+                }
+
+                content += `
+                    <div class="media-preview" onclick="if(!selectionMode) window.open('${url}')">
+                        ${mediaHtml}
+                        ${overlayContent}
+                    </div>`;
             }
         }
+        // FIM DA TRATAMENTO DE MÍDIA
 
         const reactions = msg.reacoes && Object.keys(msg.reacoes).length ? `<div class="reactions show">❤️ ${Object.keys(msg.reacoes).length}</div>` : '';
         const trashBtn = (isMe || isAdmin) ? `<span class="msg-actions"><button class="btn-trash" onclick="delMsg(${msg.id})">🗑</button></span>` : '';
@@ -368,24 +439,47 @@
     async function deleteSelectedMessages() { if(selectedIds.size === 0) return; if(!confirm(`Apagar ${selectedIds.size} mensagens para todos?`)) return; const idsToDelete = Array.from(selectedIds); const { error } = await supabaseClient.from('banco').delete().in('id', idsToDelete); if(error) alert('Erro: ' + error.message); else exitSelectionMode(); }
     function removeMessageFromScreen(id) { const row = document.getElementById(`msg-${id}`); if(row) row.remove(); }
 
+    // --- FUNÇÃO OTIMIZADA PARA ENVIO RÁPIDO ---
     async function sendMessage() {
         const text = el.txt.value.trim();
         if(!text && !fileToSend) return;
         el.send.disabled = true;
+
+        // 1. Otimização: Limpa a UI Imediatamente (melhora a percepção de velocidade)
+        el.txt.value = ''; 
+        cancelImg(); 
+        cancelReply(); 
+        playSwoosh(); 
+        el.send.disabled = false; // Re-habilita para que o usuário possa digitar outra coisa
+
+        // 2. Processamento da Mídia (pode ser lento)
         let url = null;
-        if(fileToSend) {
+        const currentFile = fileToSend;
+        fileToSend = null; // Zera a variável de arquivo
+
+        if(currentFile) {
             const name = `${currentUser.id}/${Date.now()}`;
-            await supabaseClient.storage.from('arquivos').upload(name, fileToSend);
+            // Esta operação é a que leva mais tempo. O 'await' é necessário.
+            const { data, error } = await supabaseClient.storage.from('arquivos').upload(name, currentFile); 
+            
+            if (error) {
+                console.error("Erro no upload:", error);
+                alert("Erro ao enviar arquivo: " + error.message);
+                return;
+            }
             url = supabaseClient.storage.from('arquivos').getPublicUrl(name).data.publicUrl;
         }
+        
+        // 3. Inserção no Banco de Dados (rápido)
         await supabaseClient.from('banco').insert([{
             texto: text, url_arquivo: url, user_id: currentUser.id,
             autor_nome: currentUser.user_metadata.full_name,
             autor_avatar: currentUser.user_metadata.avatar_url,
             reply_to: replyTo ? { id: replyTo.id, texto: replyTo.texto || 'Mídia' } : null
         }]);
-        el.txt.value = ''; cancelImg(); cancelReply(); el.send.disabled = false; playSwoosh();
+        // A mensagem aparecerá via Realtime (Listener)
     }
+    // ----------------------------------------------------
 
     window.setReply = (msg) => { replyTo = msg; el.replyBar.style.display='flex'; el.replyTxt.textContent = `Resp: ${msg.autor_nome}`; el.txt.focus(); };
     window.cancelReply = () => { replyTo = null; el.replyBar.style.display='none'; };
@@ -403,6 +497,36 @@
     window.toggleSearch = () => { document.getElementById('searchBox').classList.toggle('active'); document.getElementById('searchInput').focus(); };
     window.filterMessages = () => { const term = document.getElementById('searchInput').value.toLowerCase(); document.querySelectorAll('.msg-row').forEach(row => { row.style.display = row.textContent.toLowerCase().includes(term) ? 'flex' : 'none'; }); };
     window.toggleDarkMode = () => { document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', document.body.classList.contains('dark-mode')?'dark':'light'); toggleMenu(); };
+    
+    // NOVO: REMOVER PAPEL DE PAREDE
+    window.removeWallpaper = () => {
+        el.wrap.style.backgroundImage = 'none'; 
+        localStorage.removeItem('wall');
+        toggleMenu(); 
+        alert('Papel de parede removido. Voltando ao padrão.');
+    };
+    
+    // NOVO: LIMPAR CONVERSA
+    window.clearChat = async () => {
+        if (!confirm('ATENÇÃO! Você tem certeza que deseja APAGAR TODAS as mensagens permanentemente para todos os usuários?')) {
+            toggleMenu();
+            return;
+        }
+
+        toggleMenu(); 
+        const { error } = await supabaseClient
+            .from('banco')
+            .delete()
+            .neq('id', 0); // Deleta todos que não são ID=0
+
+        if (error) {
+            alert('Falha ao limpar a conversa. Verifique suas permissões de RLS: ' + error.message);
+        } else {
+            el.msgDiv.innerHTML = '';
+            alert('A conversa foi limpa com sucesso!');
+        }
+    };
+    
     document.getElementById('wallInput').onchange = e => { const f = e.target.files[0]; if(!f)return; const r = new FileReader(); r.onload=ev=>{ el.wrap.style.backgroundImage=`url(${ev.target.result})`; localStorage.setItem('wall', ev.target.result); }; r.readAsDataURL(f); toggleMenu(); };
     window.logout = async () => { await supabaseClient.auth.signOut(); window.location.href='/'; };
     window.shareApp = async () => { if(navigator.share) await navigator.share({url:window.location.href}); else alert(window.location.href); };
@@ -412,8 +536,8 @@
     function playPop() { if(ctx.state === 'suspended') ctx.resume(); const o=ctx.createOscillator(), g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value=800; g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime+0.1); o.start(); o.stop(ctx.currentTime+0.1); }
     function playSwoosh() { if(ctx.state === 'suspended') ctx.resume(); const o=ctx.createOscillator(), g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.type='triangle'; o.frequency.setValueAtTime(300, ctx.currentTime); o.frequency.exponentialRampToValueAtTime(600, ctx.currentTime+0.2); g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime+0.2); o.start(); o.stop(ctx.currentTime+0.2); }
 
-    el.mic.onclick=async()=>{if(!isRec){try{const s=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(s);audioChunks=[];mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=async()=>{let b=new Blob(audioChunks,{type:'audio/webm'});fileToSend=b;sendMessage();fileToSend=null;};mediaRecorder.start();isRec=true;el.mic.classList.add('rec');el.recStatus.style.display='block';}catch(e){alert(e)}}else{mediaRecorder.stop();isRec=false;el.mic.classList.remove('rec');el.recStatus.style.display='none';}};
+    el.mic.onclick=async()=>{if(!isRec){try{const s=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(s);audioChunks=[];mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=async()=>{let b=new Blob(audioChunks,{type:'audio/webm'});fileToSend=b;sendMessage();/* A função sendMessage agora reseta fileToSend */};mediaRecorder.start();isRec=true;el.mic.classList.add('rec');el.recStatus.style.display='block';}catch(e){alert(e)}}else{mediaRecorder.stop();isRec=false;el.mic.classList.remove('rec');el.recStatus.style.display='none';}};
     el.send.onclick = sendMessage; el.txt.onkeydown = e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
   </script>
 </body>
-</html> 
+  </html>
