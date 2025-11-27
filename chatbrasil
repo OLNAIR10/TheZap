@@ -1,4 +1,4 @@
-<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -299,7 +299,8 @@
 </head>
 <body>
   <div class="frame">
-    <div class="card" role="main" aria-live="polite">
+    <!-- Removido role="main" e aria-live="polite" do .card -->
+    <div class="card"> 
       <div class="topbar">
         <div class="logo">OGP</div>
         <div>
@@ -345,11 +346,12 @@
           </div>
           <!-- Fim do Painel de Senha e Login/Cadastro -->
 
-          <div id="authStatus" class="status-message muted-text">Faça login ou cadastre-se. Após cadastro, verifique seu e-mail.</div>
+          <!-- Adicionado aria-live para acessibilidade -->
+          <div id="authStatus" class="status-message muted-text" aria-live="polite" aria-atomic="true">Faça login ou cadastre-se. Após cadastro, verifique seu e-mail.</div>
         </div>
 
         <!-- App (mural) -->
-        <div class="app hidden" id="appArea"> 
+        <div class="app hidden" id="appArea" role="main"> <!-- Adicionado role="main" aqui -->
           <div id="messagesWrap" class="messages-wrap">
             <ul id="list" class="list"></ul>
           </div>
@@ -528,6 +530,31 @@
           // $('loginPanel').classList.add('hidden'); 
       }
   };
+  
+  /**
+   * Tenta reenviar o email de confirmação. (CORRIGIDO)
+   */
+  const handleResendConfirmation = async () => {
+      const email = $('email').value.trim();
+      if (!email) {
+          showError('authStatus', 'Preencha o e-mail para reenviar a confirmação.', true);
+          return;
+      }
+      
+      showError('authStatus', `Reenviando confirmação para ${email}...`, false);
+      
+      // O Supabase usa a função 'resend' para reenviar e-mails de confirmação.
+      const { error } = await SUPABASE_CLIENT.auth.resend({ 
+          type: 'signup', 
+          email: email 
+      });
+
+      if (error) {
+          showError('authStatus', `Erro ao reenviar: ${error.message}`, true);
+      } else {
+          showError('authStatus', `E-mail de confirmação reenviado para ${email}!`, false);
+      }
+  };
 
   /**
    * Realiza o Logoff no Supabase.
@@ -611,7 +638,8 @@
       // 1. Monta o Conteúdo da Mensagem
       let messageContent = text.replace(/\n/g, '<br>');
       if (previewContent) {
-          messageContent += `<p style="margin-top: ${text ? '10px' : '0'};">[ANEXO/ÁUDIO: ${previewContent}]</p>`;
+          // Usa textContent para garantir que o preview não quebre o HTML
+          messageContent += `<p style="margin-top: ${text ? '10px' : '0'};">[ANEXO/ÁUDIO: ${$('previewArea').textContent}]</p>`;
       }
 
       // 2. Cria e Prepend (adiciona no topo) a mensagem
@@ -667,14 +695,14 @@
       $('btnSignup').addEventListener('click', handleSignup);
       $('btnLogout').addEventListener('click', handleLogout);
       $('btnSendMagic').addEventListener('click', handleSendMagic);
-      $('btnForgotPw').addEventListener('click', handleForgotPassword); // Novo
+      $('btnForgotPw').addEventListener('click', handleForgotPassword);
+      $('btnResend').addEventListener('click', handleResendConfirmation); // CORRIGIDO AQUI
 
       // Outros Utilitários
       $('password').addEventListener('input', (e) => {
           const pwError = validatePassword(e.target.value);
           showError('pwHelp', pwError, true);
       });
-      $('btnResend').addEventListener('click', () => showError('authStatus', 'Função "Reenviar confirmação" ainda precisa ser implementada no código (geralmente via API customizada do Supabase).', true));
       $('btnPermTest').addEventListener('click', () => {
           navigator.mediaDevices.getUserMedia({ audio: true })
               .then(() => showError('authStatus', 'Microfone Acessível. Gravação pronta.', false))
