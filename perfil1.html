@@ -305,7 +305,7 @@ async function handleImageUpload(file) {
     
     // 3. Atualiza ou insere o URL na tabela 'profiles'
     const { error: dbError } = await sb.from('profiles').upsert({
-        user_id: user.id,
+        id: user.id,
         email: user.email,
         avatar_url: newAvatarUrl
     }, { 
