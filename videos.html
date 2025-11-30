@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Chat Brasil Vídeo - WhatsApp Style</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* -----------------------------------------------------------
+   ESTILO GERAL (WhatsApp Mobile Android)
+-----------------------------------------------------------*/
+:root{
+  --bg:#e5ddd5;
+  --panel:#fff;
+  --chat-bg:#f0f0f0;
+  --my:#dcf8c6;
+  --accent:#25d366;
+  --header:#075e54;
+  --dark:#111;
+}
+
+/* CORREÇÃO DE LAYOUT PARA MOBILE (Resolvendo o problema do 100vh) */
+html, body {
+  /* Garante que o corpo ocupe 100% do espaço disponível pelo pai (viewport) */
+  height: 100%; 
+  /* Remove margem padrão */
+  margin: 0;
+}
+
+body{
+  background:var(--bg);
+  font-family:Arial, sans-serif;
+  display:flex;
+  flex-direction:column;
+  overflow: hidden; /* Impede o scroll do corpo principal */
+}
+/* FIM DA CORREÇÃO DE LAYOUT */
+
+
+/* HEADER */
+#topbar{
+  height:56px;
+  background:var(--header);
+  display:flex;
+  align-items:center;
+  padding:0 12px;
+  color:#fff;
+  font-size:18px;
+  font-weight:bold;
+  justify-content: space-between;
+  position: relative;
+  flex-shrink: 0; /* Garante que não encolhe */
+}
+#topbar-left {
+    display: flex;
+    align-items: center;
+}
+#kebabBtn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    margin-left: 10px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 5px;
+}
+
+/* MENU SUSPENSO */
+#kebabMenu {
+    position: absolute;
+    top: 50px; 
+    right: 5px;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    min-width: 200px;
+    z-index: 1000;
+    display: none;
+}
+.menu-item {
+    padding: 12px 16px;
+    font-size: 15px;
+    color: var(--dark);
+    text-decoration: none;
+    display: block;
+    font-weight: normal;
+    cursor: pointer;
+}
+.menu-item:hover {
+    background: #f1f1f1;
+}
+
+/* LISTA DE MENSAGENS E VIDEO PLAYER */
+#messages-container {
+    flex: 1; /* Permite que este container ocupe todo o espaço restante */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    /* Adiciona overflow para garantir que a lista de mensagens interna possa rolar */
+    overflow: hidden; 
+}
+
+/* Player de Vídeo Chamada (simulado) */
+#videoCallArea {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    z-index: 10;
+    display: none; /* Inicia oculto */
+    justify-content: center;
+    align-items: center;
+}
+#localVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+#hangupBtn {
+    position: absolute;
+    bottom: 20px;
+    background: red;
+    color: white;
+    font-size: 24px;
+}
+#hangupBtn:hover {
+    background: darkred;
+}
+
+
+/* LISTA DE MENSAGENS */
+#messages{
+  flex:1;
+  overflow-y:auto; /* Permite rolar apenas a área de mensagens */
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  scroll-behavior: smooth;
+  background-color: var(--bg); 
+}
+.msg{
+  max-width:80%; 
+  padding:8px 12px;
+  margin-bottom:6px;
+  border-radius:8px;
+  font-size:15px;
+  line-height:1.3;
+}
+/* Adapta a largura para conteúdo de mídia que é maior */
+.msg[data-media="true"] {
+    max-width: 280px; 
+}
+.me{
+  align-self:flex-end;
+  background:var(--my);
+}
+.other{
+  align-self:flex-start;
+  background:#fff;
+}
+/* Estilo para vídeos e arquivos */
+.msg .file-content {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 250px;
+}
+.msg video {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+}
+.msg img {
+    max-width: 200px;
+    height: auto;
+    border-radius: 6px;
+}
+.msg a {
+    color: var(--header);
+    text-decoration: none;
+    font-weight: bold;
+}
+.msg .file-icon {
+    margin-right: 5px;
+}
+
+
+/* INPUT AREA */
+#inputArea{
+  height:60px; /* Altura fixa */
+  background:#fff;
+  display:flex;
+  align-items:center;
+  padding:0 6px;
+  gap:6px;
+  flex-shrink: 0; /* Garante que não encolhe */
+}
+#textInput{
+  flex:1;
+  height:40px;
+  border:1px solid #ccc;
+  border-radius:20px;
+  padding:0 14px;
+  font-size:15px;
+}
+.btn{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--accent);
+  border:none;
+  color:#fff;
+  cursor: pointer;
+}
+/* Estilo específico para o botão de Vídeo Chamada */
+#videoCallBtn {
+    background: var(--header); /* Azul/Verde escuro para destacar */
+}
+
+/* LOGIN MODAL */
+#loginModal{
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:#fff;
+  z-index:9999;
+  padding:20px;
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#loginModal div {
+    width: 100%;
+    max-width: 300px;
+}
+#loginModal input{
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  border-radius:6px;
+  border:1px solid #ccc;
+  box-sizing: border-box;
+}
+#loginModal button {
+    width: 100%;
+    max-width: 300px;
+    padding: 10px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 6px;
+    background: var(--accent);
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+#loginModal button:hover {
+    opacity: 0.9;
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+    <div id="topbar-left">
+        <span id="chatTitle">Chat Brasil Vídeo</span>
+    </div>
+    <button id="kebabBtn">⋮</button>
+    
+    <div id="kebabMenu">
+        <!-- LINK PARA VOLTAR AO CHAT PRINCIPAL -->
+        <a href="https://chatbrasil.netlify.app/" class="menu-item">Voltar ao Chat Principal 💬</a>
+        
+        <a href="https://chatsbrasilperfil.netlify.app/" target="_blank" class="menu-item">Página de Perfil (Vídeo)</a>
+        <a href="https://chatsbrasiltermos.netlify.app/" target="_blank" class="menu-item">Termos e Condições</a>
+        <a class="menu-item" onclick="logout()">Sair</a>
+    </div>
+</div>
+
+<div id="messages-container">
+    <!-- Área que aparece sobre o chat quando a videochamada é iniciada -->
+    <div id="videoCallArea">
+        <!-- O 'muted' é essencial para que o navegador não bloqueie o autoplay -->
+        <video id="localVideo" autoplay playsinline muted></video> 
+        <button id="hangupBtn" class="btn" onclick="hangUpCall()">📞</button>
+        <p style="position: absolute; top: 10px; color: white; font-weight: bold;">Simulação de Videochamada</p>
+    </div>
+    <div id="messages"></div>
+</div>
+
+<div id="inputArea">
+  <button id="fileBtn" class="btn">📎</button>
+  <!-- Aceita primariamente Vídeo e Imagem -->
+  <input type="file" id="fileInput" accept="video/*,image/*,application/*" style="display: none;" onchange="uploadFile(this.files[0])">
+  <button id="videoCallBtn" class="btn" title="Iniciar Videochamada">📹</button>
+  <input id="textInput" placeholder="Mensagem">
+  <button id="sendBtn" class="btn">➤</button>
+</div>
+
+<div id="loginModal">
+  <div>
+    <h2>Entrar</h2>
+    <input id="email" placeholder="Email">
+    <input id="pass" placeholder="Senha" type="password">
+    <button onclick="login()">Entrar</button>
+    <button onclick="register()">Registrar</button>
+    <button onclick="reset()">Esqueci a senha</button>
+  </div>
+</div>
+
+<script>
+/* -----------------------------------------------------------
+   CONFIGURAÇÃO SUPABASE
+-----------------------------------------------------------*/
+// Chaves do Supabase (reutilizadas)
+const SUPABASE_URL = "https://qytxdewvwpfdulsiweyi.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5dHhkZXd2d3BmZHVsc2l3ZXlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0NjI5NzYsImV4cCI6MjA4MDAzODk3Nn0.fPquiaUntC89YT6tqvB0lqg8oRdwSN0kN-CnhCPOu_Q";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let user = null;
+let localStream = null;
+
+// Elementos DOM
+const messagesDiv = document.getElementById("messages");
+const loginModal = document.getElementById("loginModal");
+const emailInput = document.getElementById("email");
+const passInput = document.getElementById("pass");
+const textInput = document.getElementById("textInput");
+const sendBtn = document.getElementById("sendBtn");
+const chatTitle = document.getElementById("chatTitle");
+const kebabBtn = document.getElementById("kebabBtn");
+const kebabMenu = document.getElementById("kebabMenu");
+const fileBtn = document.getElementById("fileBtn");
+const fileInput = document.getElementById("fileInput");
+const videoCallBtn = document.getElementById("videoCallBtn");
+const videoCallArea = document.getElementById("videoCallArea");
+const localVideo = document.getElementById("localVideo");
+
+
+// Eventos
+fileBtn.onclick = () => {
+    if (!user) { alert("Você deve estar logado."); return; }
+    fileInput.click();
+};
+videoCallBtn.onclick = startVideoCall; // Botão de chamada de vídeo
+sendBtn.onclick = sendMessage;
+textInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { sendMessage(); } });
+
+
+/* -----------------------------------------------------------
+   AUTENTICAÇÃO
+-----------------------------------------------------------*/
+async function login(){
+    const emailValue = emailInput.value.trim();
+    const passValue = passInput.value;
+    if (!emailValue || !passValue) { alert("Preencha email e senha."); return; }
+
+    const {data, error} = await sb.auth.signInWithPassword({ email: emailValue, password: passValue });
+    if(error){ alert("Erro ao fazer login: " + error.message); return; }
+
+    user = data.user;
+    initializeChat();
+}
+
+async function register(){
+    const emailValue = emailInput.value.trim();
+    const passValue = passInput.value;
+    if (!emailValue.includes('@') || !emailValue.includes('.')) {
+        alert("Erro ao registrar: O formato do email parece inválido.");
+        return;
+    }
+    const {error} = await sb.auth.signUp({ email: emailValue, password: passValue });
+    if(error) alert("Registrado! Confirme o email e tente fazer login.");
+    else alert("Registrado! Confirme o email e tente fazer login.");
+}
+
+async function reset(){
+    const emailValue = emailInput.value.trim();
+    if (!emailValue || !emailValue.includes('@')) { alert("Preencha um email válido."); return; }
+    const {error} = await sb.auth.resetPasswordForEmail(emailValue);
+    if(error) alert("Email de recuperação enviado!");
+    else alert("Email de recuperação enviado!");
+}
+
+async function logout(){
+    const { error } = await sb.auth.signOut();
+    if (error) {
+        alert("Erro ao sair: " + error.message);
+    } else {
+        user = null;
+        messagesDiv.innerHTML = "";
+        loginModal.style.display = "flex";
+        chatTitle.textContent = "Chat Brasil Vídeo";
+        window.location.reload(); 
+    }
+}
+
+
+/* -----------------------------------------------------------
+   CHAT — ENVIAR / RENDERIZAR / RECEBER
+-----------------------------------------------------------*/
+async function sendMessage(){
+  const text = textInput.value.trim();
+  if(!text || !user) return;
+
+  const { error } = await sb.from("messages").insert({
+    user_id: user.id,
+    text: text
+  });
+
+  if (error) {
+      alert("Erro ao enviar mensagem: " + error.message);
+  } else {
+      textInput.value = "";
+  }
+}
+
+// ** FUNÇÃO RENDERIZAR MENSAGEM (SUPORTE MULTI-MÍDIA OTIMIZADO) **
+function renderMessage(msg){
+  const div = document.createElement("div");
+  div.className = "msg " + (msg.user_id === user.id ? "me" : "other");
+  div.removeAttribute('data-media');
+
+  let contentHTML = msg.text;
+  const mediaPrefixes = {
+    '[Áudio]:': 'audio', 
+    '[Imagem]:': 'image',
+    '[Vídeo]:': 'video', 
+    '[Arquivo]:': 'file' 
+  };
+
+  for (const prefix in mediaPrefixes) {
+    if (msg.text.startsWith(prefix)) {
+        const type = mediaPrefixes[prefix];
+        const storagePath = msg.text.substring(prefix.length).trim();
+        const { data: publicUrlData } = sb.storage.from('chat-media').getPublicUrl(storagePath);
+        const fileUrl = publicUrlData.publicUrl;
+        const fileExt = storagePath.split('.').pop().toLowerCase();
+        
+        div.setAttribute('data-media', 'true');
+
+        if (type === 'audio') {
+            const mimeType = fileExt === 'mp3' ? 'audio/mpeg' : 'audio/webm';
+            contentHTML = `
+                <div class="file-content">
+                    🎤 **Áudio**
+                    <audio controls style="width: 100%; max-width: 250px;">
+                        <source src="${fileUrl}" type="${mimeType}">
+                    </audio>
+                </div>
+            `;
+        } else if (type === 'image') {
+             contentHTML = `
+                <div class="file-content">
+                    🖼️ **Imagem**
+                    <a href="${fileUrl}" target="_blank">
+                        <img src="${fileUrl}" alt="Imagem do Chat" />
+                    </a>
+                </div>
+            `;
+        } else if (type === 'video') {
+             const mimeType = fileExt === 'mp4' ? 'video/mp4' : (fileExt === 'webm' ? 'video/webm' : 'video/ogg');
+             contentHTML = `
+                <div class="file-content">
+                    📹 **Vídeo**
+                    <video controls style="width: 100%; max-width: 250px;">
+                        <source src="${fileUrl}" type="${mimeType}">
+                        Seu navegador não suporta vídeos.
+                    </video>
+                </div>
+            `;
+        } else if (type === 'file') {
+                 // Arquivo genérico
+                 const fileName = storagePath.substring(storagePath.lastIndexOf('/') + 1);
+                 contentHTML = `
+                    <div class="file-content">
+                        📦 **Arquivo**
+                        <a href="${fileUrl}" target="_blank" download>
+                            <span class="file-icon">↓</span> ${fileName}
+                        </a>
+                    </div>
+                `;
+        }
+        break; 
+    }
+  }
+
+  div.innerHTML = contentHTML;
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+
+function subscribeToMessages() {
+    if (window.chatChannel) sb.removeChannel(window.chatChannel);
+
+    window.chatChannel = sb.channel("msgs")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" },
+        payload => {
+            if (user) {
+                renderMessage(payload.new);
+            }
+        }
+      )
+      .subscribe();
+}
+
+async function loadHistory(){
+  let {data, error} = await sb.from("messages")
+    .select("*").order("created_at",{ascending:true});
+
+  if (error) {
+      alert("Erro ao carregar histórico: " + error.message);
+      return;
+  }
+  
+  messagesDiv.innerHTML = "";
+  data.forEach(renderMessage);
+}
+
+/* -----------------------------------------------------------
+   UPLOAD DE ARQUIVOS (VÍDEO/IMAGEM)
+-----------------------------------------------------------*/
+async function uploadFile(file) {
+    if (!file || !user) return;
+
+    const mimeType = file.type;
+    
+    let messagePrefix;
+    if (mimeType.startsWith('video/')) {
+        messagePrefix = '[Vídeo]: '; // Prefixo explícito para vídeo
+    } else if (mimeType.startsWith('image/')) {
+        messagePrefix = '[Imagem]: ';
+    } else {
+        messagePrefix = '[Arquivo]: ';
+    }
+    
+    // Cria um caminho de arquivo único
+    const fileName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase(); 
+    const filePath = `${user.id}/${Date.now()}_${fileName}`; 
+
+    const { data: uploadData, error: uploadError } = await sb.storage
+        .from('chat-media') 
+        .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: mimeType
+        });
+
+    if (uploadError) {
+        console.error("Erro no upload de arquivo:", uploadError);
+        alert("ERRO: Falha ao enviar o arquivo. " + uploadError.message);
+    } else {
+        const storagePath = uploadData.path;
+
+        const { error: dbError } = await sb.from("messages").insert({
+            user_id: user.id,
+            text: `${messagePrefix}${storagePath}` // Armazena o caminho real
+        });
+
+        if (dbError) {
+            alert("ERRO: Falha ao registrar mensagem no DB: " + dbError.message);
+        } else {
+            console.log(`Upload de arquivo bem-sucedido: ${storagePath}`);
+        }
+    }
+    
+    fileInput.value = '';
+}
+
+/* -----------------------------------------------------------
+   VIDEIOCHAMADA (WebRTC Local - Simulação)
+-----------------------------------------------------------*/
+async function startVideoCall() {
+    if (!user) {
+        alert("Você deve estar logado para iniciar uma chamada.");
+        return;
+    }
+    
+    if (localStream) {
+        alert("Chamada de vídeo já ativa. Clique no 📞 para desligar.");
+        return;
+    }
+
+    try {
+        // Acessa câmera e microfone
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+        // Exibe o stream no elemento de vídeo
+        localVideo.srcObject = localStream;
+        
+        // Exibe a área de chamada sobre o chat
+        videoCallArea.style.display = 'flex';
+        
+        console.log("Stream de vídeo local iniciado.");
+
+    } catch (e) {
+        console.error("Erro ao iniciar mídia:", e);
+        alert("ERRO: Não foi possível acessar sua câmera e microfone. Verifique as permissões do navegador.");
+    }
+}
+
+function hangUpCall() {
+    if (localStream) {
+        // Para todas as trilhas (câmera e microfone)
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+        localVideo.srcObject = null;
+    }
+    videoCallArea.style.display = 'none';
+    alert("Chamada encerrada.");
+}
+
+
+/* -----------------------------------------------------------
+   MENU E INICIALIZAÇÃO
+-----------------------------------------------------------*/
+kebabBtn.onclick = () => {
+    kebabMenu.style.display = kebabMenu.style.display === 'block' ? 'none' : 'block';
+};
+
+document.addEventListener('click', (e) => {
+    if (e.target !== kebabBtn && !kebabMenu.contains(e.target)) {
+        kebabMenu.style.display = 'none';
+    }
+});
+
+function initializeChat() {
+    if (user) {
+        loginModal.style.display = "none";
+        chatTitle.textContent = "Chat Brasil Vídeo (" + user.email + ")";
+        loadHistory();
+        subscribeToMessages();
+    } else {
+        loginModal.style.display = "flex";
+    }
+}
+
+sb.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+        user = session.user;
+    }
+    initializeChat();
+});
+
+
+/* -----------------------------------------------------------
+   EXPOSE FUNCTIONS TO WINDOW
+-----------------------------------------------------------*/
+window.login = login;
+window.register = register;
+window.reset = reset;
+window.logout = logout;
+window.uploadFile = uploadFile;
+window.hangUpCall = hangUpCall; 
+</script>
+
+</body>
+</html>
+

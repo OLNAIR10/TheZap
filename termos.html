@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Termos e Condições</title>
+
+<style>
+/* -----------------------------------------------------------
+   ESTILO GERAL (WhatsApp-like colors and Mobile focus)
+-----------------------------------------------------------*/
+:root{
+  --bg:#f0f0f0;
+  --panel:#fff;
+  --accent:#25d366;
+  --header:#075e54;
+  --dark:#111;
+  --text-secondary: #666;
+}
+
+html, body {
+  height: 100%; 
+  margin: 0;
+  background: var(--bg);
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HEADER */
+#topbar{
+  height:56px;
+  background:var(--header);
+  display:flex;
+  align-items:center;
+  padding:0 12px;
+  color:#fff;
+  font-size:18px;
+  font-weight:bold;
+  flex-shrink: 0;
+}
+#backBtn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    margin-right: 15px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+/* CONTEÚDO PRINCIPAL (ROLÁVEL) */
+#mainContent {
+    flex: 1;
+    overflow-y: auto; /* Permite rolagem no conteúdo dos termos */
+    padding: 20px;
+}
+
+/* CARD DE CONTEÚDO */
+#termsCard {
+    background: var(--panel);
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+h1 {
+    color: var(--header);
+    font-size: 22px;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 5px;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+h2 {
+    color: var(--dark);
+    font-size: 18px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--dark);
+    margin-bottom: 15px;
+}
+
+ul {
+    padding-left: 20px;
+    font-size: 14px;
+    color: var(--dark);
+    margin-bottom: 15px;
+}
+li {
+    margin-bottom: 8px;
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+    <!-- Botão de voltar configurado para ir para o link principal do Netlify -->
+    <button id="backBtn" onclick="window.location.href='https://chatbrasil.netlify.app/'">❮</button>
+    <span>Termos e Condições</span>
+</div>
+
+<div id="mainContent">
+    <div id="termsCard">
+        
+        <h1>Termos de Serviço</h1>
+        
+        <p>
+            Bem-vindo ao Chat Brasil (o "Serviço"). Estes Termos de Serviço ("Termos") regem o seu uso do nosso aplicativo de chat. Ao acessar ou usar o Serviço, você concorda em ficar vinculado a estes Termos.
+        </p>
+
+        <h2>1. Uso Aceitável</h2>
+        <p>
+            Você concorda em usar o Serviço apenas para fins lícitos e de maneira que não infrinja os direitos de, nem restrinja ou iniba o uso e o prazer deste Serviço por terceiros.
+        </p>
+        <ul>
+            <li>É estritamente proibido enviar ou transmitir material ilegal, ameaçador, difamatório ou obsceno.</li>
+            <li>Você é o único responsável pelo conteúdo das suas mensagens e uploads.</li>
+            <li>Não é permitido o uso do Serviço para spam, phishing ou atividades maliciosas.</li>
+        </ul>
+
+        <h2>2. Contas de Usuário</h2>
+        <p>
+            Para usar o Serviço, você deve se registrar para uma conta. Você é responsável por manter a confidencialidade da sua senha e é totalmente responsável por todas as atividades que ocorram sob sua conta.
+        </p>
+        
+        <h2>3. Privacidade</h2>
+        <p>
+            Sua privacidade é importante para nós. As informações de registro, como seu e-mail, são usadas apenas para autenticação e não serão compartilhadas, exceto conforme exigido por lei. As mensagens de chat são armazenadas no banco de dados Supabase para fins de histórico e funcionalidade do serviço.
+        </p>
+
+        <h2>4. Propriedade Intelectual</h2>
+        <p>
+            Os direitos autorais, marcas registradas e outros direitos de propriedade intelectual no Serviço e em seu conteúdo pertencem aos desenvolvedores do Chat Brasil. Qualquer uso do material do Serviço que não seja para uso pessoal e não comercial é estritamente proibido.
+        </p>
+
+        <h2>5. Rescisão</h2>
+        <p>
+            Reservamo-nos o direito de rescindir ou suspender seu acesso ao Serviço imediatamente, sem aviso prévio, se você violar estes Termos.
+        </p>
+
+        <h2>6. Contato</h2>
+        <p>
+            Se você tiver alguma dúvida sobre estes Termos, entre em contato conosco através do canal de suporte do aplicativo ou envie um e-mail para um endereço de suporte (ex: suporte@chatbrasil.com).
+        </p>
+        
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 30px;">
+            Última atualização: Dezembro de 2025.
+        </p>
+        
+    </div>
+</div>
+
+</body>
+</html>
+
+

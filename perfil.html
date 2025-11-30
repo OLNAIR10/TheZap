@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Meu Perfil</title>
+
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* -----------------------------------------------------------
+   ESTILO GERAL (WhatsApp-like colors and Mobile focus)
+-----------------------------------------------------------*/
+:root{
+  --bg:#f0f0f0;
+  --panel:#fff;
+  --accent:#25d366;
+  --header:#075e54;
+  --dark:#111;
+  --text-secondary: #666;
+}
+
+html, body {
+  height: 100%; 
+  margin: 0;
+  background: var(--bg);
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HEADER */
+#topbar{
+  height:56px;
+  background:var(--header);
+  display:flex;
+  align-items:center;
+  padding:0 12px;
+  color:#fff;
+  font-size:18px;
+  font-weight:bold;
+  flex-shrink: 0;
+}
+#backBtn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    margin-right: 15px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+/* CONTEÚDO PRINCIPAL */
+#mainContent {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Alinha o conteúdo ao topo */
+}
+
+/* CARD DE PERFIL */
+#profileCard {
+    background: var(--panel);
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 30px 20px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+/* IMAGEM DE PERFIL */
+#profileImageContainer {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    margin: 0 auto 20px;
+}
+#profileImage {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--accent);
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+#uploadOverlay {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: var(--accent);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+}
+#uploadInput {
+    display: none; /* Esconde o input de arquivo nativo */
+}
+
+/* INFORMAÇÕES DO USUÁRIO */
+.info-row {
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+.info-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    display: block;
+    text-align: left;
+    margin-bottom: 3px;
+    font-weight: 500;
+}
+.info-value {
+    font-size: 16px;
+    color: var(--dark);
+    text-align: left;
+    word-break: break-all;
+}
+
+/* BOTÃO DE SAIR */
+#logoutBtn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 20px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+#logoutBtn:hover {
+    background: #c0392b;
+}
+
+/* MODAL DE LOGIN (Caso não esteja logado) */
+#loginModal{
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:#fff;
+  z-index:9999;
+  padding:20px;
+  display:none; /* Inicia escondido */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+#loginModal h2 { color: var(--header); }
+#loginModal p { color: var(--text-secondary); }
+#loginModal button {
+    padding: 10px 20px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 6px;
+    background: var(--accent);
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+    <button id="backBtn" onclick="window.history.back()">❮</button>
+    <span>Meu Perfil</span>
+</div>
+
+<div id="mainContent">
+    <div id="profileCard" style="display: none;">
+        
+        <div id="profileImageContainer">
+            <img id="profileImage" src="https://placehold.co/150x150/075e54/FFFFFF?text=Foto" alt="Foto de Perfil">
+            <!-- Camada para clicar e fazer upload -->
+            <label for="uploadInput" id="uploadOverlay">
+                📷
+            </label>
+            <input type="file" id="uploadInput" accept="image/*" onchange="handleImageUpload(this.files[0])">
+        </div>
+
+        <div class="info-row">
+            <span class="info-label">ID do Usuário (UID)</span>
+            <span id="userIdDisplay" class="info-value" style="font-size: 10px; color: #aaa;">Carregando...</span>
+        </div>
+
+        <div class="info-row">
+            <span class="info-label">Email</span>
+            <span id="userEmail" class="info-value">Carregando...</span>
+        </div>
+        
+        <button id="logoutBtn" onclick="logout()">Sair da Conta</button>
+    </div>
+</div>
+
+<div id="loginModal">
+    <div>
+        <h2>Acesso Negado</h2>
+        <p>Você precisa estar logado para visualizar a página de perfil.</p>
+        <button onclick="window.history.back()">Voltar para o Chat</button>
+    </div>
+</div>
+
+<script>
+/* -----------------------------------------------------------
+   CONFIGURAÇÃO SUPABASE
+-----------------------------------------------------------*/
+// Chaves do Supabase (reutilizadas do chat)
+const SUPABASE_URL = "https://qytxdewvwpfdulsiweyi.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5dHhkZXd2d3BmZHVsc2l3ZXlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0NjI5NzYsImV4cCI6MjA4MDAzODk3Nn0.fPquiaUntC89YT6tqvB0lqg8oRdwSN0kN-CnhCPOu_Q";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let user = null;
+
+// Elementos DOM
+const profileCard = document.getElementById("profileCard");
+const loginModal = document.getElementById("loginModal");
+const userEmailDisplay = document.getElementById("userEmail");
+const userIdDisplay = document.getElementById("userIdDisplay");
+const profileImage = document.getElementById("profileImage");
+
+// Caminho padrão para a foto de perfil caso não haja nenhuma
+const DEFAULT_AVATAR_URL = "https://placehold.co/150x150/075e54/FFFFFF?text=Foto";
+
+
+/* -----------------------------------------------------------
+   SUPABASE - FUNÇÕES DE PERFIL E UPLOAD
+-----------------------------------------------------------*/
+
+/**
+ * Carrega os dados do perfil (email e URL da foto) do banco de dados.
+ * Assume que existe uma tabela 'profiles' com 'user_id' e 'avatar_url'.
+ */
+async function loadProfile() {
+    userEmailDisplay.textContent = user.email;
+    userIdDisplay.textContent = user.id;
+
+    // 1. Tenta buscar o perfil na tabela 'profiles'
+    let { data: profileData, error } = await sb.from('profiles')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 é "não encontrado"
+        console.error("Erro ao carregar perfil:", error.message);
+    }
+
+    const avatarUrl = profileData?.avatar_url;
+
+    if (avatarUrl) {
+        profileImage.src = avatarUrl;
+    } else {
+        profileImage.src = DEFAULT_AVATAR_URL;
+    }
+
+    profileCard.style.display = 'block';
+}
+
+/**
+ * Lida com o upload do arquivo de imagem do usuário.
+ * @param {File} file - O arquivo de imagem selecionado.
+ */
+async function handleImageUpload(file) {
+    if (!file || !user) return;
+
+    // Define o caminho no Supabase Storage: user_id/avatar.ext
+    const fileExtension = file.name.split('.').pop();
+    const filePath = `${user.id}/avatar.${fileExtension}`; 
+    const mimeType = file.type;
+
+    // 1. Upload do arquivo para o bucket 'chat-media'
+    const { data: uploadData, error: uploadError } = await sb.storage
+        .from('chat-media') 
+        .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true, // Permite sobrescrever a imagem existente
+            contentType: mimeType
+        });
+
+    if (uploadError) {
+        console.error("Erro no upload de foto:", uploadError);
+        alert("ERRO: Falha ao enviar a foto. " + uploadError.message);
+        return;
+    }
+
+    // 2. Obtém o URL público
+    const { data: publicUrlData } = sb.storage.from('chat-media').getPublicUrl(filePath);
+    const newAvatarUrl = publicUrlData.publicUrl;
+    
+    // 3. Atualiza ou insere o URL na tabela 'profiles'
+    const { error: dbError } = await sb.from('profiles').upsert({
+        user_id: user.id,
+        email: user.email,
+        avatar_url: newAvatarUrl
+    }, { 
+        onConflict: 'user_id' // Usa o user_id para decidir se atualiza ou insere
+    });
+
+    if (dbError) {
+        console.error("Erro ao salvar URL no DB:", dbError.message);
+        alert("ERRO: Foto enviada, mas não foi possível salvar o link no perfil.");
+    } else {
+        profileImage.src = newAvatarUrl; // Atualiza a imagem na tela
+        alert("Foto de perfil atualizada com sucesso!");
+    }
+}
+
+/**
+ * Função de Logout
+ */
+async function logout(){
+    const { error } = await sb.auth.signOut();
+    if (error) {
+        alert("Erro ao sair: " + error.message);
+    } else {
+        // Redireciona para o chat principal ou mostra a mensagem de login
+        window.history.back(); 
+    }
+}
+
+/* -----------------------------------------------------------
+   INICIALIZAÇÃO
+-----------------------------------------------------------*/
+function initializeProfile() {
+    if (user) {
+        // Usuário logado: Carrega dados
+        loginModal.style.display = "none";
+        loadProfile();
+    } else {
+        // Usuário não logado: Mostra modal de login/acesso negado
+        profileCard.style.display = 'none';
+        loginModal.style.display = "flex";
+    }
+}
+
+// Verifica o estado da sessão ao carregar a página
+sb.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+        user = session.user;
+    }
+    initializeProfile();
+});
+
+// Expõe funções ao escopo global (para uso no HTML)
+window.handleImageUpload = handleImageUpload;
+window.logout = logout;
+</script>
+
+</body>
+</html>
+
+
