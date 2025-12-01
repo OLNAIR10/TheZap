@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>Meu Perfil </title>
 
-<!-- Supabase CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -147,6 +146,30 @@ html, body {
     background: #c0392b;
 }
 
+/* FOOTER COM BOTÃO DE VOLTAR */
+#footer {
+    padding: 15px 20px;
+    background: var(--panel);
+    border-top: 1px solid #ddd;
+    flex-shrink: 0;
+    text-align: center;
+}
+#backToChatBtn {
+    width: 100%;
+    padding: 12px;
+    background: var(--header);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+#backToChatBtn:hover {
+    background: #054f46;
+}
+
 /* MODAL DE LOGIN (Caso não esteja logado) */
 #loginModal{
   position:fixed;
@@ -187,7 +210,6 @@ html, body {
         
         <div id="profileImageContainer">
             <img id="profileImage" src="https://placehold.co/150x150/075e54/FFFFFF?text=Foto" alt="Foto de Perfil">
-            <!-- Camada para clicar e fazer upload -->
             <label for="uploadInput" id="uploadOverlay">
                 📷
             </label>
@@ -206,6 +228,10 @@ html, body {
         
         <button id="logoutBtn" onclick="logout()">Sair da Conta</button>
     </div>
+</div>
+
+<div id="footer">
+    <button id="backToChatBtn" onclick="goToMainChat()">Voltar ao Chat Principal</button>
 </div>
 
 <div id="loginModal">
@@ -240,21 +266,20 @@ const DEFAULT_AVATAR_URL = "https://placehold.co/150x150/075e54/FFFFFF?text=Foto
 
 
 /* -----------------------------------------------------------
-   SUPABASE - FUNÇÕES DE PERFIL E UPLOAD
+   SUPABASE - FUNÇÕES DE PERFIL E UPLOAD (RLS CORRIGIDO)
 -----------------------------------------------------------*/
 
 /**
  * Carrega os dados do perfil (email e URL da foto) do banco de dados.
- * Assume que existe uma tabela 'profiles' com 'user_id' e 'avatar_url'.
  */
 async function loadProfile() {
     userEmailDisplay.textContent = user.email;
     userIdDisplay.textContent = user.id;
 
-    // 1. Tenta buscar o perfil na tabela 'profiles'
+    // 1. Tenta buscar o perfil na tabela 'profiles', USANDO A CHAVE CORRETA 'id'
     let { data: profileData, error } = await sb.from('profiles')
         .select('avatar_url')
-        .eq('user_id', user.id)
+        .eq('id', user.id) // ✅ CORRIGIDO: Usa 'id' para buscar o perfil
         .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 é "não encontrado"
@@ -295,7 +320,7 @@ async function handleImageUpload(file) {
 
     if (uploadError) {
         console.error("Erro no upload de foto:", uploadError);
-        alert("ERRO: Falha ao enviar a foto. " + uploadError.message);
+        alert("ERRO: Falha ao enviar a foto. Verifique as políticas de Storage. " + uploadError.message); 
         return;
     }
 
@@ -303,18 +328,18 @@ async function handleImageUpload(file) {
     const { data: publicUrlData } = sb.storage.from('chat-media').getPublicUrl(filePath);
     const newAvatarUrl = publicUrlData.publicUrl;
     
-    // 3. Atualiza ou insere o URL na tabela 'profiles'
+    // 3. Atualiza ou insere o URL na tabela 'profiles', USANDO A CHAVE CORRETA 'id'
     const { error: dbError } = await sb.from('profiles').upsert({
-        id:
+        id: user.id, // ✅ CORRIGIDO: Usa 'id' como chave primária
         email: user.email,
         avatar_url: newAvatarUrl
     }, { 
-        onConflict: 'id' // Usa o user_id para decidir se atualiza ou insere
+        onConflict: 'id' // ✅ CORRIGIDO: Usa 'id' para decidir se atualiza ou insere
     });
 
     if (dbError) {
         console.error("Erro ao salvar URL no DB:", dbError.message);
-        alert("ERRO: Foto enviada, mas não foi possível salvar o link no perfil.");
+        alert("ERRO: Foto enviada, mas não foi possível salvar o link no perfil. " + dbError.message);
     } else {
         profileImage.src = newAvatarUrl; // Atualiza a imagem na tela
         alert("Foto de perfil atualizada com sucesso!");
@@ -330,9 +355,18 @@ async function logout(){
         alert("Erro ao sair: " + error.message);
     } else {
         // Redireciona para o chat principal ou mostra a mensagem de login
-        window.history.back(); 
+        goToMainChat(); 
     }
 }
+
+/**
+ * Função para retornar à página principal (index.html ou similar).
+ */
+function goToMainChat() {
+    // Redireciona para a página principal do seu projeto no Vercel
+    window.location.href = "https://the-zap.vercel.app/";
+}
+
 
 /* -----------------------------------------------------------
    INICIALIZAÇÃO
@@ -360,9 +394,8 @@ sb.auth.getSession().then(({ data: { session } }) => {
 // Expõe funções ao escopo global (para uso no HTML)
 window.handleImageUpload = handleImageUpload;
 window.logout = logout;
+window.goToMainChat = goToMainChat;
 </script>
 
 </body>
 </html>
-
-
