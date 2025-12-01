@@ -77,7 +77,7 @@ body{
     background: white;
     border-radius: 4px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    min-width: 200px;
+    min-width: 250px; /* Aumentado para caber o novo item */
     z-index: 1000;
     display: none;
 }
@@ -93,6 +93,11 @@ body{
 .menu-item:hover {
     background: #f1f1f1;
 }
+.danger-item {
+    color: #e74c3c; /* Cor vermelha para destacar a ação destrutiva */
+    font-weight: bold;
+}
+
 
 /* LISTA DE MENSAGENS */
 #messages{
@@ -247,7 +252,13 @@ body{
         <a href="videos1.html" class="menu-item">Ir para Chat de Videos 📹 </a>
         
         <input type="file" id="bgFile" accept="image/*" style="display: none;" onchange="setBackground(this.files[0])">
-        <a class="menu-item" onclick="document.getElementById('bgFile').click()">Trocar Fundo de Tela</a>
+        <a class="menu-item" onclick="document.getElementById('bgFile').click()">🖼️ Trocar Fundo de Tela</a>
+        
+        <!-- NOVO ITEM: APAGAR MENSAGENS -->
+        <a class="menu-item danger-item" onclick="confirmClearChat()">
+            🗑️ Apagar Todas as Mensagens
+        </a>
+        
         <a href="perfil1.html" target="_blank" class="menu-item">Página de Perfil</a>
         <a href="termos1.html" target="_blank" class="menu-item">Termos e Condições</a>
         <a class="menu-item" onclick="logout()">Sair</a>
@@ -490,6 +501,42 @@ async function loadHistory(){
 }
 
 /* -----------------------------------------------------------
+   FUNÇÃO: APAGAR TODAS AS MENSAGENS (DO USUÁRIO LOGADO)
+-----------------------------------------------------------*/
+async function confirmClearChat() {
+    kebabMenu.style.display = 'none'; // Fecha o menu
+    
+    if (!user) {
+        alert("Você deve estar logado para apagar mensagens.");
+        return;
+    }
+
+    // Usamos window.prompt() para simular o alerta/confirmação
+    const confirmation = prompt("ATENÇÃO: Você está prestes a apagar TODAS as suas mensagens (apenas as suas). Digite 'CONFIRMAR' para continuar:");
+
+    if (confirmation !== 'CONFIRMAR') {
+        alert("Ação cancelada.");
+        return;
+    }
+
+    // 1. Apagar todas as linhas da tabela 'messages'
+    const { error: deleteError } = await sb.from('messages')
+        .delete()
+        .eq('user_id', user.id); // Filtra apenas as mensagens do usuário logado
+
+    if (deleteError) {
+        console.error("Erro ao apagar mensagens:", deleteError.message);
+        alert("ERRO: Falha ao apagar mensagens. Verifique as políticas de RLS para DELETE na tabela 'messages'.");
+    } else {
+        alert("Todas as suas mensagens foram apagadas com sucesso!");
+        // Limpa a tela e recarrega o histórico (que agora deve estar vazio)
+        messagesDiv.innerHTML = "";
+        loadHistory();
+    }
+}
+
+
+/* -----------------------------------------------------------
    MENU E FUNDO DE TELA
 -----------------------------------------------------------*/
 kebabBtn.onclick = () => {
@@ -682,9 +729,9 @@ window.reset = reset;
 window.logout = logout;
 window.setBackground = setBackground;
 window.uploadFile = uploadFile; 
+window.confirmClearChat = confirmClearChat;
 </script>
 
 </body>
 </html>
-
 
