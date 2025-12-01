@@ -76,7 +76,7 @@ body{
     background: white;
     border-radius: 4px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    min-width: 200px;
+    min-width: 250px; /* Aumentado para caber o novo item */
     z-index: 1000;
     display: none;
 }
@@ -91,6 +91,10 @@ body{
 }
 .menu-item:hover {
     background: #f1f1f1;
+}
+.danger-item {
+    color: #e74c3c; /* Cor vermelha para destacar a ação destrutiva */
+    font-weight: bold;
 }
 
 /* LISTA DE MENSAGENS E VIDEO PLAYER */
@@ -279,7 +283,13 @@ body{
         <a href="index.html" class="menu-item">Voltar ao Chat Principal 💬</a>
         
         <a href="perfil1.html" target="_blank" class="menu-item">Página de Perfil (Vídeo)</a>
-        <a href="termos1" target="_blank" class="menu-item">Termos e Condições</a>
+        <a href="termos1.html" target="_blank" class="menu-item">Termos e Condições</a>
+        
+        <!-- NOVO ITEM: APAGAR MENSAGENS -->
+        <a class="menu-item danger-item" onclick="confirmClearChat()">
+            🗑️ Apagar Todas as Mensagens
+        </a>
+        
         <a class="menu-item" onclick="logout()">Sair</a>
     </div>
 </div>
@@ -526,6 +536,42 @@ async function loadHistory(){
   data.forEach(renderMessage);
 }
 
+// ** NOVA FUNÇÃO: APAGAR TODAS AS MENSAGENS **
+async function confirmClearChat() {
+    kebabMenu.style.display = 'none'; // Fecha o menu
+    
+    if (!user) {
+        alert("Você deve estar logado para apagar mensagens.");
+        return;
+    }
+
+    // Usamos window.prompt() para simular o alerta/confirmação
+    const confirmation = prompt("ATENÇÃO: Você está prestes a apagar TODAS as suas mensagens (apenas as suas). Digite 'CONFIRMAR' para continuar:");
+
+    if (confirmation !== 'CONFIRMAR') {
+        alert("Ação cancelada.");
+        return;
+    }
+
+    // 1. Apagar todas as linhas da tabela 'messages'
+    // IMPORTANTE: Isso só funcionará se houver uma política RLS no Supabase
+    // que permita ao usuário deletar as linhas onde 'user_id' é igual ao seu ID.
+    const { error: deleteError } = await sb.from('messages')
+        .delete()
+        .eq('user_id', user.id); // Filtra apenas as mensagens do usuário logado
+
+    if (deleteError) {
+        console.error("Erro ao apagar mensagens:", deleteError.message);
+        alert("ERRO: Falha ao apagar mensagens. Verifique as políticas de RLS para DELETE na tabela 'messages' e se você tem permissão.");
+    } else {
+        alert("Todas as suas mensagens foram apagadas com sucesso!");
+        // Limpa a tela e recarrega o histórico (que agora deve estar vazio)
+        messagesDiv.innerHTML = "";
+        loadHistory();
+    }
+}
+
+
 /* -----------------------------------------------------------
    UPLOAD DE ARQUIVOS (VÍDEO/IMAGEM)
 -----------------------------------------------------------*/
@@ -661,6 +707,7 @@ window.reset = reset;
 window.logout = logout;
 window.uploadFile = uploadFile;
 window.hangUpCall = hangUpCall; 
+window.confirmClearChat = confirmClearChat; /* Nova função exposta */
 </script>
 
 </body>
