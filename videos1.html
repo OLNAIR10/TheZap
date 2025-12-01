@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>Chat Brasil Video</title>
 
-<!-- Supabase CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- PeerJS CDN para Videoconferência -->
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
 <style>
@@ -316,13 +314,11 @@ body{
     <button id="kebabBtn">⋮</button>
     
     <div id="kebabMenu">
-        <!-- LINK PARA VOLTAR AO CHAT PRINCIPAL -->
         <a href="index.html" class="menu-item">Ir para Chat Principal 💬</a>
         
         <input type="file" id="bgFile" accept="image/*" style="display: none;" onchange="setBackground(this.files[0])">
         <a class="menu-item" onclick="document.getElementById('bgFile').click()">🖼️ Trocar Fundo de Tela</a>
         
-        <!-- NOVO ITEM: APAGAR MENSAGENS -->
         <a class="menu-item danger-item" onclick="confirmClearChat()">
             🗑️ Apagar Todas as Mensagens
         </a>
@@ -334,20 +330,16 @@ body{
 </div>
 
 <div id="messages-container">
-    <!-- Área que aparece sobre o chat quando a videochamada está ativa -->
     <div id="videoCallArea">
         <video id="remoteVideo" autoplay playsinline></video>
-        <!-- O 'muted' é essencial para que o navegador não bloqueie o autoplay da câmera local -->
         <video id="localVideo" autoplay playsinline muted></video>
         <button id="hangUpBtn" onclick="hangUpCall()">📞</button>
-        <!-- Esta é a única linha que mostra status, NUNCA 'Simulação de Videochamada' -->
         <p style="position: absolute; top: 10px; color: white; font-weight: bold;" id="callStatus"></p>
     </div>
     <div id="messages"></div>
 </div>
 
 <div id="inputArea">
-  <!-- Botões adaptados para mídia no chat de vídeo -->
   <button id="fileBtn" class="btn">📎</button>
   <input type="file" id="fileInput" accept="image/*,video/*,application/*" style="display: none;" onchange="uploadFile(this.files[0])">
   <button id="videoCallBtn" class="btn" title="Iniciar Videochamada">🎥</button>
@@ -866,7 +858,7 @@ async function startCall() {
 
         call.on('error', (err) => {
             console.error("Call Error:", err);
-            // Verifica o tipo de erro para dar um feedback melhor
+            // Verifica o tipo de erro PeerJS
             if (err.type === 'peer-unavailable') {
                 alert(`Erro na chamada: O usuário ${targetId} não está online ou o ID está incorreto.`);
             } else {
@@ -876,9 +868,25 @@ async function startCall() {
         });
 
     } catch (e) {
-        console.error("Erro ao acessar câmera/microfone:", e);
-        alert("ERRO: Permissão de câmera/microfone negada ou não disponível.");
+        // --- INÍCIO DA CORREÇÃO (Tratamento de erro de Permissão/Mídia) ---
+        console.error("Erro ao acessar câmera/microfone:", e.name, e);
+        
+        let errorMessage = "ERRO: Ocorreu uma falha ao iniciar a câmera.";
+
+        if (e.name === "NotAllowedError" || e.name === "PermissionDeniedError") {
+            // Este é o erro de 'Bloqueio'
+            errorMessage = "Acesso negado. Por favor, **permita a câmera/microfone** nas configurações do seu navegador e do sistema operacional.";
+        } else if (e.name === "NotFoundError" || e.name === "DevicesNotFoundError") {
+            // Nenhuma câmera/microfone encontrado
+            errorMessage = "Nenhum dispositivo de câmera ou microfone encontrado.";
+        } else if (e.name === "NotReadableError" || e.name === "TrackStartError") {
+            // Câmera em uso por outro aplicativo
+            errorMessage = "A câmera já está em uso por outro aplicativo. Feche-o e tente novamente.";
+        }
+
+        alert(errorMessage);
         endCallUI();
+        // --- FIM DA CORREÇÃO ---
     }
 }
 
@@ -929,10 +937,26 @@ async function handleIncomingCall(call) {
         });
 
     } catch (e) {
-        console.error("Erro ao acessar câmera/microfone:", e);
-        alert("ERRO: Permissão de câmera/microfone negada para atender.");
+        // --- INÍCIO DA CORREÇÃO (Tratamento de erro de Permissão/Mídia) ---
+        console.error("Erro ao acessar câmera/microfone:", e.name, e);
+        
+        let errorMessage = "ERRO: Ocorreu uma falha ao atender a chamada.";
+
+        if (e.name === "NotAllowedError" || e.name === "PermissionDeniedError") {
+            // Este é o erro de 'Bloqueio'
+            errorMessage = "Acesso negado. Por favor, **permita a câmera/microfone** nas configurações do seu navegador e do sistema operacional.";
+        } else if (e.name === "NotFoundError" || e.name === "DevicesNotFoundError") {
+            // Nenhuma câmera/microfone encontrado
+            errorMessage = "Nenhum dispositivo de câmera ou microfone encontrado para atender.";
+        } else if (e.name === "NotReadableError" || e.name === "TrackStartError") {
+            // Câmera em uso por outro aplicativo
+            errorMessage = "A câmera já está em uso por outro aplicativo. Feche-o e tente novamente.";
+        }
+
+        alert(errorMessage);
         call.close();
         endCallUI();
+        // --- FIM DA CORREÇÃO ---
     }
 }
 
@@ -1001,4 +1025,3 @@ window.confirmClearChat = confirmClearChat;
 
 </body>
 </html>
-
