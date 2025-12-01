@@ -305,11 +305,11 @@ async function handleImageUpload(file) {
     
     // 3. Atualiza ou insere o URL na tabela 'profiles'
     const { error: dbError } = await sb.from('profiles').upsert({
-        id: user.id,
+        id:
         email: user.email,
         avatar_url: newAvatarUrl
     }, { 
-        onConflict: 'user_id' // Usa o user_id para decidir se atualiza ou insere
+        onConflict: 'id' // Usa o user_id para decidir se atualiza ou insere
     });
 
     if (dbError) {
