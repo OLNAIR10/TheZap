@@ -98,13 +98,45 @@ ul {
 li {
     margin-bottom: 8px;
 }
+
+/* FOOTER COM BOTÃO DE VOLTAR */
+#footer {
+    padding: 15px 20px;
+    background: var(--panel);
+    border-top: 1px solid #ddd;
+    flex-shrink: 0;
+    text-align: center;
+}
+#backToChatBtn {
+    width: 100%;
+    max-width: 400px;
+    padding: 12px;
+    background: var(--header);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+#backToChatBtn:hover {
+    background: #054f46;
+}
+
+/* Alinhamento do botão no centro do rodapé em telas maiores */
+@media (min-width: 600px) {
+    #backToChatBtn {
+        max-width: 400px;
+    }
+}
 </style>
 </head>
 <body>
 
 <div id="topbar">
-    <!-- Botão de voltar configurado para ir para o link principal do Netlify -->
-    <button id="backBtn" onclick="window.location.href='https://chatbrasil.netlify.app/'">❮</button>
+    <!-- O botão 'Voltar' do topo irá simplesmente retornar no histórico -->
+    <button id="backBtn" onclick="window.history.back()">❮</button>
     <span>Termos e Condições</span>
 </div>
 
@@ -134,7 +166,7 @@ li {
         
         <h2>3. Privacidade</h2>
         <p>
-            Sua privacidade é importante para nós. As informações de registro, como seu e-mail, são usadas apenas para autenticação e não serão compartilhadas, exceto conforme exigido por lei. As mensagens de chat são armazenadas no banco de dados Supabase para fins de histórico e funcionalidade do serviço.
+            Sua privacidade é importante para nós. As informações de registro, como seu e-mail, são usadas apenas para autenticação e não serão compartilhadas, exceto conforme exigido por lei. As mensagens de chat e mídias são armazenadas no banco de dados Supabase para fins de histórico e funcionalidade do serviço.
         </p>
 
         <h2>4. Propriedade Intelectual</h2>
@@ -159,7 +191,13 @@ li {
     </div>
 </div>
 
+<!-- NOVO FOOTER COM BOTÃO DE VOLTAR -->
+<div id="footer">
+    <button id="backToChatBtn" onclick="window.location.href='https://the-zap.vercel.app/'">
+        Voltar para o Chat Principal
+    </button>
+</div>
+
 </body>
 </html>
-
 
