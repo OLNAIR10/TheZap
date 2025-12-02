@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+<title>Chat de Vídeos - WhatsApp Style (WebRTC via Supabase)</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* (copie seu CSS existente — mantive os principais estilos) */
+:root{ --bg:#e5ddd5; --panel:#fff; --my:#dcf8c6; --accent:#25d366; --header:#075e54; --dark:#111; }
+body{ 
+    margin:0; 
+    background:var(--bg); 
+    font-family:Arial, sans-serif; 
+    height: 100vh;
+    height: 100dvh; 
+    display:flex; 
+    flex-direction:column; 
+    overflow:hidden; 
+}
+#topbar{ height:56px; background:var(--header); display:flex; align-items:center; padding:0 12px; color:#fff; font-size:18px; font-weight:bold; justify-content: space-between; position: relative; }
+
+/* FIX: Garante que o container de mensagens use o espaço restante */
+#messages-container{ 
+    flex:1; 
+    position: relative; 
+    display:flex; 
+    flex-direction:column; 
+}
+
+/* FIX: Faz com que a área de mensagens role e use o espaço do container */
+#messages{ 
+    flex:1; 
+    overflow-y:auto; 
+    padding:0 10px 10px 10px; 
+    display:flex; 
+    flex-direction:column; 
+    scroll-behavior:smooth; 
+    background-color:var(--bg); 
+    padding-top: 10px;
+    background-size: cover; 
+    background-position: center; 
+}
+/* Estilo para o grupo de mensagem e nome do perfil */
+.msg-group {
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+    margin-bottom: 8px; 
+}
+.msg-group.me {
+    align-self: flex-end;
+}
+.msg-group.other {
+    align-self: flex-start;
+}
+/* Estilo para o nome do perfil (e-mail) */
+.profile-name {
+    font-size: 12px;
+    color: #075e54; 
+    margin-bottom: 2px;
+    align-self: flex-start;
+    padding-left: 8px;
+    font-weight: bold;
+}
+.msg-group.me .profile-name {
+    color: #128C7E;
+    align-self: flex-end;
+    padding-right: 8px;
+    padding-left: 0;
+}
+.msg{ 
+    max-width:100%; 
+    padding:8px 12px; 
+    margin-bottom:2px; 
+    border-radius:8px; 
+    font-size:15px; 
+    line-height:1.3; 
+    position: relative;
+    padding-right: 50px; 
+    cursor: pointer; 
+}
+.me{ align-self:flex-end; background:var(--my); 
+    border-bottom-right-radius: 0; 
+}
+.other{ align-self:flex-start; background:#fff; 
+    border-bottom-left-radius: 0; 
+}
+/* Estilo do horário */
+.timestamp {
+    position: absolute;
+    bottom: 2px;
+    right: 8px;
+    font-size: 10px;
+    color: rgba(0, 0, 0, 0.4);
+}
+/* FIX: Garante rodapé fixo no mobile e considera barra de gesto */
+#inputArea{ 
+    height:60px; 
+    background:#fff; 
+    display:flex; 
+    align-items:center; 
+    padding:0 6px; 
+    gap:6px; 
+    width: 100%;
+    box-sizing: border-box; 
+    padding-bottom: env(safe-area-inset-bottom); 
+}
+#textInput{ flex:1; height:40px; border:1px solid #ccc; border-radius:20px; padding:0 14px; font-size:15px; }
+.btn{ width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--accent); border:none; color:#fff; cursor:pointer; 
+    font-size: 18px; 
+}
+.menu-item {
+    display: block;
+    padding: 10px 15px;
+    text-decoration: none;
+    color: var(--dark);
+}
+.menu-item:hover {
+    background-color: #f0f0f0;
+}
+#videoCallArea{ 
+    position:absolute; top:0; left:0; width:100%; height:100%; 
+    background:rgba(0,0,0,0.9); z-index:10; 
+    display:none; flex-direction: column; justify-content:center; align-items:center; 
+}
+#localVideo{ 
+    width:100%; height:100%; object-fit:cover; 
+}
+#hangupBtn{ 
+    position:absolute; bottom:20px; background:red; color:white; 
+    font-size:24px; border-radius:30px; padding:8px 24px; border:none; cursor:pointer; 
+}
+#loginModal{ position:fixed; top:0; left:0; width:100%; height:100%; background:#fff; z-index:9999; padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.file-content {
+    margin: 4px 0;
+}
+.file-content img, .file-content video {
+    display: block;
+    max-width: 100%; 
+    height: auto;
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div id="topbar-left"><span id="chatTitle">Chat Vídeos</span></div>
+  <button id="kebabBtn">⋮</button>
+  <div id="kebabMenu" style="display:none; position:absolute; top:50px; right:5px; background:white; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.2); min-width:200px; z-index:1000;">
+    <a href="#" class="menu-item" onclick="chooseWallpaper()">🖼️ Trocar Fundo de Tela</a>
+    <a href="#" class="menu-item" onclick="logout()">Sair</a>
+  </div>
+</div>
+
+<div id="messages-container">
+  <div id="videoCallArea">
+    <video id="localVideo" autoplay playsinline muted></video>
+    <button id="hangupBtn" onclick="hangUpCall()">📞 Desligar</button>
+    <p style="position:absolute; top:10px; color:white; font-weight:bold;">Videochamada WebRTC</p>
+  </div>
+  <div id="messages"></div>
+</div>
+
+<div id="inputArea">
+  <button id="fileBtn" class="btn">📎</button>
+  <input type="file" id="wallpaperInput" accept="image/*" style="display:none"> 
+  <input type="file" id="fileInput" accept="video/*,image/*" style="display:none">
+  <button id="videoCallBtn" class="btn" title="Iniciar Videochamada">📹</button>
+  <input id="textInput" placeholder="Mensagem">
+  <button id="micBtn" class="btn">🎤</button>
+  <button id="sendBtn" class="btn">➤</button>
+</div>
+
+<div id="loginModal">
+  <div style="width:100%;max-width:320px;">
+    <h2>Entrar</h2>
+    <input id="email" placeholder="Email (seu nome de perfil)" style="width:100%;padding:10px;margin:6px 0;border-radius:6px;border:1px solid #ccc;">
+    <input id="pass" placeholder="Senha" type="password" style="width:100%;padding:10px;margin:6px 0;border-radius:6px;border:1px solid #ccc;">
+    <button onclick="login()">Entrar</button>
+    <button onclick="register()">Registrar</button>
+    <button onclick="reset()">Esqueci a senha</button>
+    <p style="font-size:13px;color:#666;margin-top:10px;">Observação: teste em <strong>localhost</strong> ou via <em>HTTPS</em>. Chrome bloqueia câmera/microfone em contexto inseguro.</p>
+  </div>
+</div>
+
+<script>
+/* ---------- CONFIGURAÇÃO SUPABASE (substitua pelas suas chaves) ---------- */
+const SUPABASE_URL = "https://oggzsjqwxqlqejcyakli.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nZ3pzanF3eHFscWVqY3lha2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2NzA3NDQsImV4cCI6MjA4MDI0Njc0NH0.LPdgQmoN-gE8EWxwEd4NBufbzrp1uQTYq2KicwDlgaQ";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true }
+});
+
+/* ---------- Variáveis Globais de Estado e WebRTC ---------- */
+let user = null;
+let localStream = null;
+let messagesDiv = document.getElementById('messages');
+const loginModal = document.getElementById('loginModal');
+const emailInput = document.getElementById('email');
+const passInput = document.getElementById('pass');
+const textInput = document.getElementById('textInput');
+const fileInput = document.getElementById('fileInput');
+const wallpaperInput = document.getElementById('wallpaperInput'); 
+const videoCallArea = document.getElementById('videoCallArea');
+const localVideo = document.getElementById('localVideo');
+
+let peerConnection = null; // Objeto RTCPeerConnection
+let remoteVideo = null; // Elemento para o vídeo do outro par
+let callChannel = null; // Canal Supabase para a sinalização
+
+// Servidores STUN (necessários para encontrar endereços de rede)
+const iceServers = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        // Em produção, você pode precisar de um servidor TURN (retransmissão)
+    ]
+};
+
+// ... (Adiciona funcionalidade aos botões)
+document.getElementById('fileBtn').onclick = () => { if(!user){ alert('Faça login primeiro'); return; } fileInput.click(); };
+document.getElementById('micBtn').onclick = () => { if(!user){ alert('Faça login primeiro'); return; } alert('Simulação de gravação de áudio...'); };
+fileInput.onchange = (e) => { if(e.target.files[0]) uploadFile(e.target.files[0]); };
+document.getElementById('sendBtn').onclick = sendMessage;
+textInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
+document.getElementById('videoCallBtn').onclick = startVideoCall;
+document.getElementById('kebabBtn').onclick = () => { const m = document.getElementById('kebabMenu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; };
+document.addEventListener('click', (e)=>{ const m=document.getElementById('kebabMenu'); if(e.target.id!=='kebabBtn' && !m.contains(e.target)) m.style.display='none'; });
+
+
+/* ---------- FUNÇÕES AUXILIARES DE VIDEOCHAMADA ---------- */
+
+// Lida com a chegada do stream de vídeo/áudio do par remoto
+function handleTrackEvent(event) {
+    if (remoteVideo && event.streams && event.streams[0]) {
+        remoteVideo.srcObject = event.streams[0];
+        remoteVideo.style.display = 'block';
+        console.log('Stream remoto recebido.');
+    }
+}
+
+// Lida com a descoberta de candidatos ICE (endereços de rede)
+async function handleIceCandidateEvent(event) {
+    // ⚠️ LÓGICA DE TESTE: USE O ID DO PAR AQUI PARA O TESTE
+    const targetPeerId = 'chat_partner_id_for_demo'; 
+    if (user.email === 'user1@example.com') targetPeerId = 'user2@example.com';
+    if (user.email === 'user2@example.com') targetPeerId = 'user1@example.com';
+
+    if (event.candidate) {
+        console.log('Enviando candidato ICE:', event.candidate);
+        
+        // Envia o candidato ICE (endereço de rede) para o outro par via Broadcast
+        await sb.channel('call_room_' + targetPeerId).send({
+            type: 'broadcast',
+            event: 'signal',
+            payload: {
+                senderId: user.id,
+                targetId: targetPeerId,
+                type: 'ice-candidate',
+                candidate: event.candidate
+            }
+        });
+    }
+}
+
+// Lida com mensagens de sinalização recebidas via Supabase Broadcast
+async function handleSignalMessage(payload) {
+    const signal = payload.payload;
+    
+    // Ignora sinais que não são relevantes
+    if (signal.targetId !== user.id) return; 
+
+    console.log('Sinal recebido:', signal.type, signal);
+
+    if (signal.type === 'offer') {
+        // Se for uma oferta (o par está chamando)
+        await initializePeerConnection(); // Inicializa o PC
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+
+        // Envia a resposta de volta para o chamador
+        await sb.channel('call_room_' + signal.senderId).send({
+            type: 'broadcast',
+            event: 'signal',
+            payload: {
+                senderId: user.id,
+                targetId: signal.senderId,
+                type: 'answer',
+                sdp: peerConnection.localDescription
+            }
+        });
+
+    } else if (signal.type === 'answer') {
+        // Se for a resposta, define como descrição remota
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+
+    } else if (signal.type === 'ice-candidate') {
+        // Adiciona o candidato ICE
+        try {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        } catch (e) {
+            console.error('Erro ao adicionar candidato ICE:', e);
+        }
+    }
+}
+
+// Função para inicializar o PeerConnection e obter mídia
+async function initializePeerConnection() {
+    if (peerConnection) return;
+    
+    // 1. Configurar PeerConnection
+    peerConnection = new RTCPeerConnection(iceServers);
+    
+    // 2. Configurar eventos
+    peerConnection.ontrack = handleTrackEvent;
+    peerConnection.onicecandidate = handleIceCandidateEvent;
+
+    // 3. Obter mídia local e adicionar tracks (se ainda não tiver)
+    if (!localStream) {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    }
+    localVideo.srcObject = localStream;
+    localVideo.muted = true; 
+    videoCallArea.style.display = 'flex';
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+    
+    // 4. Adiciona elemento de vídeo remoto se não existir
+    if(!remoteVideo){
+        remoteVideo = document.createElement('video');
+        remoteVideo.autoplay = true;
+        remoteVideo.playsinline = true;
+        remoteVideo.style.cssText = 'width: 100px; height: 100px; position: absolute; top: 10px; right: 10px; z-index: 100; border-radius: 8px; border: 2px solid white;';
+        videoCallArea.appendChild(remoteVideo);
+    }
+}
+
+
+/* ---------- VIDEOCHAMADA (WebRTC) - FUNÇÃO PRINCIPAL ---------- */
+async function startVideoCall(){
+    if(!user){ alert('Faça login.'); return; }
+
+    if(!isSecureContext()){
+        alert('O WebRTC requer HTTPS. Teste em localhost ou por HTTPS (ex: deploy no Netlify/Vercel ou use ngrok).');
+        return;
+    }
+
+    // ⚠️ LÓGICA DE TESTE: USE O ID DO PAR AQUI PARA O TESTE
+    const targetPeerId = 'chat_partner_id_for_demo'; 
+    if (user.email === 'user1@example.com') targetPeerId = 'user2@example.com';
+    if (user.email === 'user2@example.com') targetPeerId = 'user1@example.com';
+
+
+    try{
+        // 1. Inicializa o PeerConnection e obtém a mídia
+        await initializePeerConnection();
+        
+        // 2. Configurar o canal Supabase para receber a resposta
+        // O canal de sinalização é baseado no ID do *seu* usuário, pois é para onde o outro enviará a resposta.
+        if(!callChannel){
+            callChannel = sb.channel('call_room_' + user.id);
+            callChannel.on('broadcast', { event: 'signal' }, handleSignalMessage).subscribe();
+        }
+
+
+        // 3. Criar e enviar a Oferta SDP (apenas o iniciador faz isso)
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        
+        // Envia a oferta para o canal do usuário que você está ligando
+        await sb.channel('call_room_' + targetPeerId).send({
+            type: 'broadcast',
+            event: 'signal',
+            payload: {
+                senderId: user.id,
+                targetId: targetPeerId,
+                type: 'offer',
+                sdp: peerConnection.localDescription
+            }
+        });
+
+        alert(`Chamada iniciada. Tentando conectar com ${targetPeerId}...`);
+
+    }catch(err){
+        console.error('Erro ao acessar mídia ou iniciar WebRTC:', err);
+        alert('Erro ao iniciar câmera/chamada: ' + (err.message || err.name));
+        hangUpCall();
+    }
+}
+
+function hangUpCall(){
+    // Fecha a conexão P2P
+    if(peerConnection){
+        peerConnection.close();
+        peerConnection = null;
+    }
+    // Fecha o canal de sinalização Supabase
+    if(callChannel){
+        sb.removeChannel(callChannel);
+        callChannel = null;
+    }
+    
+    if(localStream){
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+        localVideo.srcObject = null;
+    }
+    if(remoteVideo){
+        remoteVideo.srcObject = null;
+        remoteVideo.remove();
+        remoteVideo = null;
+    }
+    videoCallArea.style.display = 'none';
+    console.log('Chamada encerrada.');
+}
+
+/* ---------- OUTRAS FUNÇÕES (Não relacionadas a WebRTC) ---------- */
+function chooseWallpaper() {
+    if(!user){ alert('Faça login primeiro'); return; }
+    wallpaperInput.click();
+}
+wallpaperInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            messagesDiv.style.backgroundImage = `url('${e.target.result}')`;
+            alert('Fundo de tela alterado!');
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+/* ---------- UTIL: checar se estamos em contexto seguro ---------- */
+function isSecureContext() {
+  return window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+}
+
+/* ---------- AUTENTICAÇÃO ---------- */
+async function login(){
+  const email = emailInput.value.trim();
+  const pass = passInput.value;
+  if(!email || !pass){ alert('Preencha email e senha.'); return; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if(error){ alert('Erro: ' + (error.message || JSON.stringify(error))); return; }
+  user = data.user;
+  initializeChat();
+}
+
+async function register(){
+  const email = emailInput.value.trim();
+  const pass = passInput.value;
+  if(!email.includes('@')){ alert('Email inválido'); return; }
+  const { data, error } = await sb.auth.signUp({ email, password: pass });
+  if(error){ alert('Erro no registro: ' + (error.message || JSON.stringify(error))); }
+  else { alert('Registrado! Confirme o email e faça login.'); }
+}
+
+async function reset(){
+  const email = emailInput.value.trim();
+  if(!email.includes('@')){ alert('Email inválido'); return; }
+  const { data, error } = await sb.auth.resetPasswordForEmail(email);
+  if(error) alert('Erro: ' + (error.message || JSON.stringify(error)));
+  else alert('Email de recuperação enviado!');
+}
+
+async function logout(){
+  const { error } = await sb.auth.signOut();
+  if(error) alert('Erro ao sair: ' + error.message);
+  user = null;
+  messagesDiv.innerHTML = '';
+  loginModal.style.display = 'flex';
+  document.getElementById('chatTitle').textContent = 'Chat Vídeos';
+  messagesDiv.style.backgroundImage = ''; // Limpa o fundo ao sair
+}
+
+/* ---------- EXCLUSÃO DE MENSAGENS ---------- */
+window.openMessageMenu = function(e, msg) {
+    if(!user || msg.user_id !== user.id) return; 
+
+    const confirmed = confirm(`Deseja apagar esta mensagem (ID: ${msg.id})?`);
+    if (confirmed) {
+        deleteMessage(msg.id);
+    }
+    e.stopPropagation(); 
+};
+
+async function deleteMessage(messageId){
+    if(!user) return;
+
+    const { error } = await sb.from('messages')
+        .delete()
+        .eq('id', messageId)
+        .eq('user_id', user.id); 
+
+    if(error){ 
+        alert('Erro ao apagar mensagem: ' + error.message);
+        console.error(error);
+    } else {
+        const el = document.querySelector(`[data-message-id="${messageId}"]`);
+        if(el) {
+            const groupEl = el.closest('.msg-group');
+            if(groupEl) groupEl.remove();
+        }
+        alert('Mensagem apagada com sucesso!');
+    }
+}
+window.deleteMessage = deleteMessage;
+
+
+/* ---------- RENDER MENSAGENS ---------- */
+function renderMessage(msg){
+  const date = new Date(msg.created_at);
+  const timeString = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const profileName = msg.user_id === user.id ? 'Você' : (msg.email || msg.user_id); 
+  
+  const groupDiv = document.createElement('div');
+  groupDiv.className = 'msg-group ' + ((user && msg.user_id === user.id) ? 'me':'other');
+
+  if(msg.user_id !== user.id) {
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'profile-name';
+    nameSpan.textContent = profileName; 
+    groupDiv.appendChild(nameSpan);
+  }
+
+  const div = document.createElement('div');
+  div.className = 'msg ' + ((user && msg.user_id === user.id) ? 'me':'other');
+  
+  div.dataset.messageId = msg.id; 
+  div.onclick = (e) => openMessageMenu(e, msg);
+
+
+  let content = msg.text || '';
+  const prefixes = { '[Áudio]:':'audio', '[Imagem]:':'image', '[Vídeo]:':'video', '[Arquivo]:':'file' };
+  for(const p in prefixes){
+    if(content.startsWith(p)){
+      const type = prefixes[p];
+      const path = content.substring(p.length).trim();
+      const { data: urlData } = sb.storage.from('chat-media').getPublicUrl(path);
+      const fileUrl = urlData.publicUrl;
+      if(type === 'image') {
+        content = `<div class="file-content">🖼️ <a href="${fileUrl}" target="_blank"><img src="${fileUrl}" alt="imagem" style="max-width:220px;border-radius:6px"></a></div>`;
+      } else if(type === 'video') {
+        content = `<div class="file-content">📹<video controls style="max-width:240px;border-radius:6px"><source src="${fileUrl}">Seu navegador não suporta.</video></div>`;
+      } else if(type === 'audio') {
+        content = `<div class="file-content">🎤<audio controls src="${fileUrl}" style="max-width:240px"></audio></div>`;
+      } else {
+        const fileName = path.split('/').pop();
+        content = `<div class="file-content">📦 <a href="${fileUrl}" target="_blank" download>${fileName}</a></div>`;
+      }
+      break;
+    }
+  }
+
+  div.innerHTML = `${content}<span class="timestamp">${timeString}</span>`;
+  groupDiv.appendChild(div);
+  
+  messagesDiv.appendChild(groupDiv);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+/* ---------- INSERIR E CARREGAR HISTÓRICO ---------- */
+async function sendMessage(){
+  const text = textInput.value.trim();
+  if(!text || !user) return;
+  const { error } = await sb.from('messages').insert({ user_id: user.id, text, email: user.email }); 
+  if(error) alert('Erro ao enviar: ' + error.message);
+  else textInput.value = '';
+}
+
+async function loadHistory(){
+  const { data, error } = await sb.from('messages').select('*').order('created_at', { ascending: true });
+  if(error){ console.error(error); alert('Erro ao carregar histórico'); return; }
+  messagesDiv.innerHTML = '';
+  data.forEach(renderMessage);
+}
+
+/* ---------- SUBSCRIBE (Realtime) ---------- */
+function subscribeToMessages(){
+  if(window.chatChannel) sb.removeChannel(window.chatChannel);
+  window.chatChannel = sb.channel('public:messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+      if(payload && payload.new) renderMessage(payload.new);
+    })
+    .subscribe();
+}
+
+/* ---------- UPLOAD ---------- */
+async function uploadFile(file){
+  if(!file || !user) return;
+  const mimeType = file.type || '';
+  let prefix = '[Arquivo]: ';
+  if(mimeType.startsWith('video/')) prefix = '[Vídeo]: ';
+  else if(mimeType.startsWith('image/')) prefix = '[Imagem]: ';
+  
+  const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+  const path = `${user.id}/${Date.now()}_${safeName}`;
+  const { data: uploadData, error: uploadError } = await sb.storage.from('chat-media').upload(path, file, { cacheControl: '3600', upsert: false, contentType: mimeType });
+  if(uploadError){ console.error(uploadError); alert('Erro no upload: ' + uploadError.message); return; }
+  
+  const { error: dbError } = await sb.from('messages').insert({ user_id: user.id, text: `${prefix}${uploadData.path}`, email: user.email }); 
+  if(dbError) alert('Erro ao gravar mensagem: ' + dbError.message);
+  fileInput.value = '';
+}
+
+
+/* ---------- INICIALIZAÇÃO ---------- */
+function initializeChat(){
+  sb.auth.getSession().then(({ data: { session } }) => {
+    if(session) user = session.user;
+    if(user){
+      loginModal.style.display = 'none';
+      document.getElementById('chatTitle').textContent = user.email.split('@')[0];
+      loadHistory();
+      subscribeToMessages();
+      
+      // NOVO: Assina o canal de sinalização do próprio usuário assim que loga, para receber chamadas
+      if(!callChannel){
+          callChannel = sb.channel('call_room_' + user.id);
+          callChannel.on('broadcast', { event: 'signal' }, handleSignalMessage).subscribe();
+          console.log(`Pronto para receber chamadas no canal: call_room_${user.id}`);
+      }
+
+    } else {
+      loginModal.style.display = 'flex';
+    }
+  });
+}
+
+sb.auth.onAuthStateChange((event, session) => {
+  user = session?.user || null;
+  if(user) initializeChat();
+  else loginModal.style.display = 'flex';
+});
+
+// inicia quando a página carrega
+initializeChat();
+
+window.login = login; window.register = register; window.reset = reset; window.logout = logout;
+window.chooseWallpaper = chooseWallpaper;
+</script>
+
+</body>
+</html>
