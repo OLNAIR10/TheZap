@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+<title>TheZap/Contatos Online</title>
+<!-- Carrega a biblioteca do Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* Estilos WhatsApp-like */
+:root{ --bg:#e5ddd5; --panel:#fff; --accent:#25d366; --header:#075e54; --dark:#111; }
+body{ 
+    margin:0; 
+    background:var(--bg); 
+    font-family:Arial, sans-serif; 
+    height: 100vh;
+    height: 100dvh; 
+    display:flex; 
+    flex-direction:column; 
+    overflow:hidden; 
+}
+#topbar{ 
+    height:56px; 
+    background:var(--header); 
+    display:flex; 
+    align-items:center; 
+    padding:0 12px; 
+    color:#fff; 
+    font-size:18px; 
+    font-weight:bold; 
+    justify-content: space-between; 
+    position: relative; 
+}
+#main-content {
+    flex: 1;
+    overflow-y: auto;
+    background-color: var(--panel);
+}
+.contact-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    justify-content: space-between;
+    cursor: pointer;
+    background: white;
+    transition: background-color 0.1s;
+}
+.contact-item:hover {
+    background-color: #f5f5f5;
+}
+.contact-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+.contact-name {
+    font-weight: 600;
+    color: var(--dark);
+    font-size: 16px;
+    /* Limita o nome para não quebrar a linha */
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80%;
+}
+.contact-id {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 250px;
+}
+.video-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    cursor: pointer; 
+    font-size: 18px; 
+    text-decoration: none; /* Remove underline para a tag <a> */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: background-color 0.2s;
+    flex-shrink: 0; /* Impede que o botão encolha */
+}
+.video-btn:active {
+    background-color: #128C7E; 
+    box-shadow: none;
+}
+#back-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #ff4d4d; /* Vermelho: Voltar */
+    color: white;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none; 
+    z-index: 100;
+}
+#back-button:active {
+    background-color: #cc0000;
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <!-- O span para o nome do usuário logado -->
+  <span>Contatos Online</span>
+</div>
+
+<div id="main-content">
+  <div id="contact-list">
+    <!-- Feedback inicial ao usuário -->
+    <p style="text-align:center; padding:20px; color:#666;">Verificando login e carregando contatos...</p>
+  </div>
+</div>
+
+<!-- Botão flutuante para voltar à página principal de chat -->
+<a href="index.html" id="back-button" title="Voltar ao Chat">←</a>
+
+<script>
+/* ---------- CONFIGURAÇÃO SUPABASE (COLOQUE SUAS CHAVES AQUI) ---------- */
+// MANTENHA AS MESMAS CHAVES QUE ESTÃO NO SEU index.html
+const SUPABASE_URL = "https://oggzsjqwxqlqejcyakli.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nZ3pzanF3eHFscWVqY3lha2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2NzA3NDQsImV4cCI6MjA4MDI0Njc0NH0.LPdgQmoN-gE8EWxwEd4NBufbzrp1uQTYq2KicwDlgaQ";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const contactListDiv = document.getElementById('contact-list');
+let currentUser = null; // O objeto do usuário logado
+
+// Renderiza um único item de contato na lista
+function renderContact(contact) {
+    const item = document.createElement('div');
+    item.className = 'contact-item';
+    
+    // Informações do Contato
+    const info = document.createElement('div');
+    info.className = 'contact-info';
+    
+    const name = document.createElement('span');
+    name.className = 'contact-name';
+    // Usa a parte do e-mail antes do @ como nome, ou 'Desconhecido'
+    const displayName = contact.email ? contact.email.split('@')[0] : 'Usuário Desconhecido';
+    name.textContent = displayName;
+    
+    const idSpan = document.createElement('span');
+    idSpan.className = 'contact-id';
+    // Mostra o ID completo
+    idSpan.textContent = `ID: ${contact.id}`; 
+    
+    info.appendChild(name);
+    info.appendChild(idSpan);
+    item.appendChild(info);
+    
+    // Botão de Vídeo-chamada (link para index.html com o target ID)
+    // O index.html agora lerá este parâmetro e iniciará a chamada automaticamente
+    const callButton = document.createElement('a');
+    callButton.href = `index.html?target=${contact.id}`;
+    callButton.className = 'video-btn';
+    callButton.title = `Ligar para ${displayName}`;
+    callButton.innerHTML = '📹'; // Câmera
+    
+    item.appendChild(callButton);
+    contactListDiv.appendChild(item);
+}
+
+
+/* ---------- FUNÇÃO PRINCIPAL: CARREGAR CONTATOS DO SUPABASE ---------- */
+async function loadContacts() {
+    contactListDiv.innerHTML = ''; 
+    
+    if (!currentUser) {
+        contactListDiv.innerHTML = '<p style="text-align:center; padding:20px; color:red; font-weight:bold;">Você precisa estar logado na página principal (index.html) primeiro.</p>';
+        return;
+    }
+    
+    // Mensagem de carregamento
+    contactListDiv.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">Buscando usuários registrados...</p>';
+    
+    // 💡 CONSULTA REAL NA TABELA 'profiles'
+    // Busca todos os perfis EXCLUINDO o perfil do usuário logado (.neq('id', currentUser.id))
+    const { data: contacts, error } = await sb.from('profiles')
+        .select('id, email')
+        .neq('id', currentUser.id); 
+    
+    if (error) {
+        console.error("Erro ao carregar contatos:", error);
+        contactListDiv.innerHTML = `<p style="text-align:center; padding:20px; color:red;">Erro ao buscar contatos. Verifique se o SQL foi executado: ${error.message}</p>`;
+        return;
+    }
+    
+    if (contacts.length === 0) {
+        contactListDiv.innerHTML = '<p style="text-align:center; padding:20px; color:#666; font-style:italic;">Nenhum outro usuário registrado para ligar.</p>';
+    } else {
+        contactListDiv.innerHTML = ''; // Limpa o "Buscando..."
+        contacts.forEach(renderContact);
+    }
+}
+
+
+/* ---------- INICIALIZAÇÃO E VERIFICAÇÃO DE SESSÃO ---------- */
+// Verifica a sessão ao carregar a página
+sb.auth.getSession().then(({ data: { session } }) => {
+    currentUser = session?.user || null;
+    if (!currentUser) {
+        // Se não houver sessão, o loadContacts mostra a mensagem de erro/login.
+        loadContacts();
+    } else {
+        // Se houver sessão, carrega os contatos do banco.
+        loadContacts();
+    }
+}).catch(err => {
+    console.error("Erro fatal ao carregar sessão:", err);
+    contactListDiv.innerHTML = `<p style="text-align:center; padding:20px; color:red;">Erro de conexão. Retorne à página principal.</p>`;
+});
+</script>
+</body>
+</html>
+
