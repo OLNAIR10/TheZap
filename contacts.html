@@ -231,7 +231,214 @@ sb.auth.getSession().then(({ data: { session } }) => {
     console.error("Erro fatal ao carregar sessão:", err);
     contactListDiv.innerHTML = `<p style="text-align:center; padding:20px; color:red;">Erro de conexão. Retorne à página principal.</p>`;
 });
+</script><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+<title>Contatos Online</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* Estilos baseados no WhatsApp para mobile */
+:root{ --bg:#e5ddd5; --panel:#fff; --my:#dcf8c6; --accent:#25d366; --header:#075e54; --dark:#111; }
+body{ 
+    margin:0; 
+    background:var(--bg); 
+    font-family:Arial, sans-serif; 
+    height: 100vh;
+    height: 100dvh; 
+    display:flex; 
+    flex-direction:column; 
+    overflow: hidden;
+}
+#topbar{ height:56px; background:var(--header); display:flex; align-items:center; padding:0 12px; color:#fff; font-size:18px; font-weight:bold; justify-content: space-between; }
+#contactsList {
+    flex: 1;
+    overflow-y: auto;
+    background-color: #fff;
+}
+.contact-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    background: #fff;
+    transition: background 0.2s;
+}
+.contact-item:hover {
+    background: #f5f5f5;
+}
+.contact-info {
+    flex-grow: 1;
+}
+.contact-name {
+    font-weight: bold;
+    color: var(--dark);
+}
+.contact-id {
+    font-size: 12px;
+    color: #666;
+    word-break: break-all;
+}
+.call-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-size: 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    margin-left: 10px;
+}
+.empty-state {
+    padding: 20px;
+    text-align: center;
+    color: #999;
+}
+#backBtn {
+    color: white;
+    text-decoration: none;
+    margin-right: 15px;
+    font-size: 24px;
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+    <a href="index.html" id="backBtn">←</a>
+    <span>Contatos Online</span>
+</div>
+
+<div id="contactsList">
+    <!-- Lista de contatos será inserida aqui -->
+    <div class="empty-state">Carregando usuários...</div>
+</div>
+
+<script>
+/* ---------- CONFIGURAÇÃO SUPABASE (AS MESMAS DO index.html) ---------- */
+const SUPABASE_URL = "https://oggzsjqwxqlqejcyakli.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nZ3pzanF3eHFscWVqY3lha2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2NzA3NDQsImV4cCI6MjA4MDI0Njc0NH0.LPdgQmoN-gE8EWxwEd4NBufbzrp1uQTYqqKicwDlgaQ";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true }
+});
+
+let user = null;
+const contactsList = document.getElementById('contactsList');
+
+/* ---------- AUTENTICAÇÃO E VERIFICAÇÃO ---------- */
+function checkAuthAndInit() {
+    sb.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+            user = session.user;
+            fetchOnlineUsers();
+            subscribeToAuthChanges();
+        } else {
+            // Se não estiver logado, redireciona para a página principal
+            contactsList.innerHTML = '<div class="empty-state" style="color:red; font-weight:bold;">Você precisa estar logado na página principal (index.html) primeiro.</div>';
+            setTimeout(() => {
+                window.location.href = 'index.html'; 
+            }, 3000);
+        }
+    });
+}
+
+/* ---------- REALTIME (Presença de Usuários) ---------- */
+function subscribeToAuthChanges() {
+    // Escuta mudanças de autenticação para reagir se o usuário sair em outra aba
+    sb.auth.onAuthStateChange((event, session) => {
+        if (!session) {
+            // Usuário saiu
+            window.location.href = 'index.html'; 
+        }
+    });
+    
+    // O Supabase tem um recurso de "Presença" que seria ideal aqui, 
+    // mas usaremos a tabela 'users' padrão para simplificar, já que
+    // todos os usuários que fizerem login estarão listados no Supabase Auth.
+}
+
+/* ---------- CARREGAR USUÁRIOS ---------- */
+async function fetchOnlineUsers() {
+    // Na verdade, esta função carrega TODOS os usuários registrados,
+    // pois o Supabase Auth não fornece o status "online" facilmente.
+    // Em produção, você usaria o recurso de Presença do Realtime.
+    
+    const { data, error } = await sb.from('users_public')
+        .select('id, email')
+        .neq('id', user.id); // Exclui o próprio usuário
+
+    contactsList.innerHTML = '';
+    
+    if (error) {
+        contactsList.innerHTML = `<div class="empty-state" style="color:red;">Erro ao carregar contatos: ${error.message}</div>`;
+        return;
+    }
+    
+    if (data.length === 0) {
+        contactsList.innerHTML = '<div class="empty-state">Nenhum outro usuário registrado para ligar.</div>';
+    } else {
+        data.forEach(renderContact);
+    }
+}
+
+/* ---------- RENDERIZAÇÃO E AÇÃO ---------- */
+function renderContact(contact) {
+    const item = document.createElement('div');
+    item.className = 'contact-item';
+    
+    const info = document.createElement('div');
+    info.className = 'contact-info';
+    
+    const name = document.createElement('div');
+    name.className = 'contact-name';
+    name.textContent = contact.email.split('@')[0]; // Usa o prefixo do email
+    
+    const id = document.createElement('div');
+    id.className = 'contact-id';
+    id.textContent = `ID: ${contact.id}`;
+    
+    info.appendChild(name);
+    info.appendChild(id);
+    item.appendChild(info);
+    
+    const callBtn = document.createElement('button');
+    callBtn.className = 'call-btn';
+    callBtn.innerHTML = '📹'; // Ícone de câmera
+    callBtn.onclick = (e) => startCall(e, contact.id);
+    item.appendChild(callBtn);
+
+    contactsList.appendChild(item);
+}
+
+function startCall(e, targetId) {
+    e.stopPropagation(); // Previne qualquer clique acidental no item
+    // Redireciona para a página principal com o ID do alvo na URL,
+    // fazendo com que a chamada seja iniciada automaticamente.
+    window.location.href = `index.html?target=${targetId}`;
+}
+
+// Torna a função de chamada global para uso no HTML
+window.startCall = startCall;
+
+// Inicia o processo
+checkAuthAndInit();
 </script>
+
+</body>
+</html>
+
+
 </body>
 </html>
 
