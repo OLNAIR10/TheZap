@@ -15,16 +15,16 @@ body{
     background:var(--bg); 
     font-family:Arial, sans-serif; 
     height: 100vh;
-    height: 100dvh; 
+    height: 100dvh; /* FIX: Usa a altura dinâmica da viewport */
     display:flex; 
     flex-direction:column; 
-    overflow:hidden; 
+    overflow:hidden; /* FIX: Impede o body de rolar */
 }
 #topbar{ height:56px; background:var(--header); display:flex; align-items:center; padding:0 12px; color:#fff; font-size:18px; font-weight:bold; justify-content: space-between; position: relative; }
 
-/* FIX: Garante que o container de mensagens use o espaço restante */
+/* FIX: Garante que o container de mensagens use o espaço restante (CORREÇÃO CHAVE) */
 #messages-container{ 
-    flex:1; 
+    flex:1; /* OCUPA TODO O ESPAÇO CENTRAL */
     position: relative; 
     display:flex; 
     flex-direction:column; 
@@ -107,6 +107,9 @@ body{
     width: 100%;
     box-sizing: border-box; 
     padding-bottom: env(safe-area-inset-bottom); 
+    /* Já está colado pelo flexbox no body, não precisa de position: fixed/sticky,
+       mas se precisar de mais garantia, o body deve ser ajustado para ser o flex container.
+       Neste caso, o `flex: 1` no #messages-container faz o trabalho. */
 }
 #textInput{ flex:1; height:40px; border:1px solid #ccc; border-radius:20px; padding:0 14px; font-size:15px; }
 .btn{ width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--accent); border:none; color:#fff; cursor:pointer; 
@@ -151,6 +154,7 @@ body{
   <button id="kebabBtn">⋮</button>
   <div id="kebabMenu" style="display:none; position:absolute; top:50px; right:5px; background:white; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.2); min-width:200px; z-index:1000;">
     <a href="#" class="menu-item" onclick="chooseWallpaper()">🖼️ Trocar Fundo de Tela</a>
+    <a href="#" class="menu-item" onclick="deleteAllMessages()">🗑️ Apagar TODAS as Mensagens</a>
     <a href="#" class="menu-item" onclick="logout()">Sair</a>
   </div>
 </div>
@@ -478,7 +482,7 @@ async function logout(){
   messagesDiv.style.backgroundImage = ''; // Limpa o fundo ao sair
 }
 
-/* ---------- EXCLUSÃO DE MENSAGENS ---------- */
+/* ---------- EXCLUSÃO DE MENSAGENS INDIVIDUAL ---------- */
 window.openMessageMenu = function(e, msg) {
     if(!user || msg.user_id !== user.id) return; 
 
@@ -506,10 +510,39 @@ async function deleteMessage(messageId){
             const groupEl = el.closest('.msg-group');
             if(groupEl) groupEl.remove();
         }
-        alert('Mensagem apagada com sucesso!');
+        // Nota: A exclusão em tempo real (realtime) não é automática. Se você quiser que o delete 
+        // apareça imediatamente para todos, precisará configurar uma política/função de realtime para DELETE.
+        // Como alternativa, a política de RLS fará com que a mensagem desapareça após um recarregamento.
     }
 }
 window.deleteMessage = deleteMessage;
+
+/* ---------- EXCLUSÃO EM MASSA DE MENSAGENS (NOVO) ---------- */
+async function deleteAllMessages(){
+    if(!user){
+        alert('Faça login primeiro.');
+        return;
+    }
+    
+    const confirmed = confirm("⚠️ ATENÇÃO: Deseja REALMENTE apagar TODAS as suas mensagens no chat? Esta ação é irreversível.");
+    if (!confirmed) return;
+    
+    // A RLS Policy (SQL fornecido) garante que só apagaremos as mensagens do usuário logado.
+    const { error } = await sb.from('messages')
+        .delete()
+        .eq('user_id', user.id); 
+
+    if(error){ 
+        alert('Erro ao apagar mensagens: ' + error.message);
+        console.error(error);
+    } else {
+        // Limpa a interface e avisa o usuário.
+        messagesDiv.innerHTML = '';
+        alert('Todas as suas mensagens foram apagadas com sucesso! (Recarregue para garantir a sincronização em tempo real).');
+        // loadHistory(); // Opcional: recarregar o histórico (que deve estar vazio)
+    }
+}
+window.deleteAllMessages = deleteAllMessages; // Torna global
 
 
 /* ---------- RENDER MENSAGENS ---------- */
