@@ -15,16 +15,16 @@ body{
     background:var(--bg); 
     font-family:Arial, sans-serif; 
     height: 100vh;
-    height: 100dvh; /* FIX: Usa a altura dinâmica da viewport */
+    height: 100dvh; 
     display:flex; 
     flex-direction:column; 
-    overflow:hidden; /* FIX: Impede o body de rolar */
+    overflow:hidden; 
 }
 #topbar{ height:56px; background:var(--header); display:flex; align-items:center; padding:0 12px; color:#fff; font-size:18px; font-weight:bold; justify-content: space-between; position: relative; }
 
 /* FIX: Garante que o container de mensagens use o espaço restante (CORREÇÃO CHAVE) */
 #messages-container{ 
-    flex:1; /* OCUPA TODO O ESPAÇO CENTRAL */
+    flex:1; 
     position: relative; 
     display:flex; 
     flex-direction:column; 
@@ -107,9 +107,6 @@ body{
     width: 100%;
     box-sizing: border-box; 
     padding-bottom: env(safe-area-inset-bottom); 
-    /* Já está colado pelo flexbox no body, não precisa de position: fixed/sticky,
-       mas se precisar de mais garantia, o body deve ser ajustado para ser o flex container.
-       Neste caso, o `flex: 1` no #messages-container faz o trabalho. */
 }
 #textInput{ flex:1; height:40px; border:1px solid #ccc; border-radius:20px; padding:0 14px; font-size:15px; }
 .btn{ width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--accent); border:none; color:#fff; cursor:pointer; 
@@ -216,6 +213,11 @@ let peerConnection = null; // Objeto RTCPeerConnection
 let remoteVideo = null; // Elemento para o vídeo do outro par
 let callChannel = null; // Canal Supabase para a sinalização
 
+// 💡 SEUS IDs de Usuário do Supabase (UUIDs)
+const USER_A_ID = "c172b479-2f8e-435b-bfa1-8a626d64b9c8";
+const USER_B_ID = "81db8699-2444-43b7-9bd0-830d401cec7f";
+
+
 // Servidores STUN (necessários para encontrar endereços de rede)
 const iceServers = {
     iceServers: [
@@ -249,11 +251,19 @@ function handleTrackEvent(event) {
 
 // Lida com a descoberta de candidatos ICE (endereços de rede)
 async function handleIceCandidateEvent(event) {
-    // ⚠️ LÓGICA DE TESTE: USE O ID DO PAR AQUI PARA O TESTE
-    const targetPeerId = 'chat_partner_id_for_demo'; 
-    if (user.email === 'user1@example.com') targetPeerId = 'user2@example.com';
-    if (user.email === 'user2@example.com') targetPeerId = 'user1@example.com';
+    
+    // ✅ LÓGICA DE DESTINO ATUALIZADA (WebRTC)
+    let targetPeerId = '';
 
+    if (user.id === USER_A_ID) {
+        targetPeerId = USER_B_ID;
+    } else if (user.id === USER_B_ID) {
+        targetPeerId = USER_A_ID;
+    } else {
+        // Se não for um dos pares de teste, não envie o candidato ICE
+        return; 
+    }
+    
     if (event.candidate) {
         console.log('Enviando candidato ICE:', event.candidate);
         
@@ -353,10 +363,27 @@ async function startVideoCall(){
         return;
     }
 
-    // ⚠️ LÓGICA DE TESTE: USE O ID DO PAR AQUI PARA O TESTE
-    const targetPeerId = 'chat_partner_id_for_demo'; 
-    if (user.email === 'user1@example.com') targetPeerId = 'user2@example.com';
-    if (user.email === 'user2@example.com') targetPeerId = 'user1@example.com';
+    // ✅ LÓGICA DE DESTINO ATUALIZADA (WebRTC)
+    let targetPeerId = '';
+    
+    // Se o usuário logado for o A, o destino é o B.
+    if (user.id === USER_A_ID) {
+        targetPeerId = USER_B_ID;
+    } 
+    // Se o usuário logado for o B, o destino é o A.
+    else if (user.id === USER_B_ID) {
+        targetPeerId = USER_A_ID;
+    }
+    // Se não for nenhum dos usuários de teste, não podemos ligar.
+    else {
+        alert("Erro: Você não é um usuário de teste (A ou B). Não sabemos para quem ligar.");
+        return;
+    }
+
+    if (!targetPeerId) {
+        alert("Erro: ID de destino não definido.");
+        return;
+    }
 
 
     try{
@@ -510,9 +537,6 @@ async function deleteMessage(messageId){
             const groupEl = el.closest('.msg-group');
             if(groupEl) groupEl.remove();
         }
-        // Nota: A exclusão em tempo real (realtime) não é automática. Se você quiser que o delete 
-        // apareça imediatamente para todos, precisará configurar uma política/função de realtime para DELETE.
-        // Como alternativa, a política de RLS fará com que a mensagem desapareça após um recarregamento.
     }
 }
 window.deleteMessage = deleteMessage;
@@ -527,7 +551,6 @@ async function deleteAllMessages(){
     const confirmed = confirm("⚠️ ATENÇÃO: Deseja REALMENTE apagar TODAS as suas mensagens no chat? Esta ação é irreversível.");
     if (!confirmed) return;
     
-    // A RLS Policy (SQL fornecido) garante que só apagaremos as mensagens do usuário logado.
     const { error } = await sb.from('messages')
         .delete()
         .eq('user_id', user.id); 
@@ -536,10 +559,8 @@ async function deleteAllMessages(){
         alert('Erro ao apagar mensagens: ' + error.message);
         console.error(error);
     } else {
-        // Limpa a interface e avisa o usuário.
         messagesDiv.innerHTML = '';
         alert('Todas as suas mensagens foram apagadas com sucesso! (Recarregue para garantir a sincronização em tempo real).');
-        // loadHistory(); // Opcional: recarregar o histórico (que deve estar vazio)
     }
 }
 window.deleteAllMessages = deleteAllMessages; // Torna global
