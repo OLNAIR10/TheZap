@@ -8,7 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-/* (copie seu CSS existente — mantive os principais estilos) */
+/* Estilos baseados no WhatsApp para mobile */
 :root{ --bg:#e5ddd5; --panel:#fff; --my:#dcf8c6; --accent:#25d366; --header:#075e54; --dark:#111; }
 body{ 
     margin:0; 
@@ -22,15 +22,15 @@ body{
 }
 #topbar{ height:56px; background:var(--header); display:flex; align-items:center; padding:0 12px; color:#fff; font-size:18px; font-weight:bold; justify-content: space-between; position: relative; }
 
-/* FIX: Garante que o container de mensagens use o espaço restante (CORREÇÃO CHAVE) */
+/* Garante que o container de mensagens use o espaço restante */
 #messages-container{ 
     flex:1; 
     position: relative; 
     display:flex; 
-    flex-direction:column; 
+    flex-direction:column;
 }
 
-/* FIX: Faz com que a área de mensagens role e use o espaço do container */
+/* Faz com que a área de mensagens role e use o espaço do container */
 #messages{ 
     flex:1; 
     overflow-y:auto; 
@@ -96,7 +96,7 @@ body{
     font-size: 10px;
     color: rgba(0, 0, 0, 0.4);
 }
-/* FIX: Garante rodapé fixo no mobile e considera barra de gesto */
+/* Garante rodapé fixo no mobile e considera barra de gesto */
 #inputArea{ 
     height:60px; 
     background:#fff; 
@@ -162,6 +162,7 @@ body{
     <video id="localVideo" autoplay playsinline muted></video>
     <button id="hangupBtn" onclick="hangUpCall()">📞 Desligar</button>
     <p style="position:absolute; top:10px; color:white; font-weight:bold;">Videochamada WebRTC</p>
+    <!-- Vídeo Remoto: Pequena sobreposição no canto -->
     <video id="remoteVideo" autoplay playsinline style="width: 100px; height: 100px; position: absolute; top: 10px; right: 10px; z-index: 100; border-radius: 8px; border: 2px solid white; display:none;"></video>
   </div>
   <div id="messages"></div>
@@ -192,7 +193,7 @@ body{
 <script>
 /* ---------- CONFIGURAÇÃO SUPABASE (substitua pelas suas chaves) ---------- */
 const SUPABASE_URL = "https://oggzsjqwxqlqejcyakli.supabase.co"; 
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nZ3pzanF3eHFscWVqY3lha2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2NzA3NDQsImV4cCI6MjA4MDI0Njc0NH0.LPdgQmoN-gE8EWxwEd4NBufbzrp1uQTYq2KicwDlgaQ";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nZ3pzanF3eHFscWVqY3lha2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2NzA3NDQsImV4cCI6MjA4MDI0Njc0NH0.LPdgQmoN-gE8EWxwEd4NBufbzrp1uQTYqqKicwDlgaQ";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true }
@@ -214,12 +215,7 @@ const localVideo = document.getElementById('localVideo');
 let peerConnection = null; // Objeto RTCPeerConnection
 let remoteVideo = null; // Elemento para o vídeo do outro par
 let callChannel = null; // Canal Supabase para a sinalização
-let autoCallTargetId = null; // NOVO: ID de destino para chamada automática via URL
-
-// IDs de Usuário de teste (mantidos para fallback/referência)
-const USER_A_ID = "c172b479-2f8e-435b-bfa1-8a626d64b9c8";
-const USER_B_ID = "81db8699-2444-43b7-9bd0-830d401cec7f";
-
+let autoCallTargetId = null; // ID de destino para chamada automática via URL
 
 // Servidores STUN e TURN OTIMIZADOS (essenciais para WebRTC em redes restritivas)
 const iceServers = {
@@ -243,29 +239,25 @@ const iceServers = {
     ]
 };
 
-// Obter elemento remoto (agora está no HTML para facilitar)
+// Obter elemento remoto (já está no HTML)
 remoteVideo = document.getElementById('remoteVideo');
 
 
-// ... (Adiciona funcionalidade aos botões)
+// Adiciona funcionalidade aos botões
 document.getElementById('fileBtn').onclick = () => { if(!user){ alert('Faça login primeiro'); return; } fileInput.click(); };
 document.getElementById('micBtn').onclick = () => { if(!user){ alert('Faça login primeiro'); return; } alert('Simulação de gravação de áudio...'); };
 fileInput.onchange = (e) => { if(e.target.files[0]) uploadFile(e.target.files[0]); };
 document.getElementById('sendBtn').onclick = sendMessage;
 textInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
 
-// O botão de chamada agora usa a função para iniciar a chamada se não houver um target no URL.
+// Lógica atualizada para o botão de chamada: se não houver alvo no URL, redireciona para contatos.
 document.getElementById('videoCallBtn').onclick = () => {
-    // Se o targetPeerId for nulo, tenta ligar para B se for A, ou vice-versa (fallback)
     let target = autoCallTargetId; 
     if (!target) {
-        if (user.id === USER_A_ID) target = USER_B_ID;
-        else if (user.id === USER_B_ID) target = USER_A_ID;
-        else {
-            alert("Selecione um contato na lista de 'Contatos' para iniciar uma chamada.");
-            window.location.href = 'contacts.html'; // Redireciona para a nova página
-            return;
-        }
+        alert("Selecione um contato na lista de 'Contatos' para iniciar uma chamada.");
+        // Redireciona para a página de contatos se não houver alvo na URL.
+        window.location.href = 'contacts.html'; 
+        return;
     }
     startVideoCall(target);
 };
@@ -409,20 +401,12 @@ async function startVideoCall(targetPeerId){
         // 1. Inicializa o PeerConnection e obtém a mídia
         await initializePeerConnection(targetPeerId); // Passa o targetPeerId
 
-        // 2. Configurar o canal Supabase para receber a resposta
-        // O canal de sinalização é baseado no ID do *seu* usuário (user.id).
-        if(!callChannel){
-            callChannel = sb.channel('call_room_' + user.id);
-            // IMPORTANTE: Adiciona o listener APENAS se o canal for criado, senão cria múltiplos listeners
-            callChannel.on('broadcast', { event: 'signal' }, handleSignalMessage).subscribe();
-            console.log(`Pronto para receber chamadas no canal: call_room_${user.id}`);
-        }
-
-        // 3. Criar e enviar a Oferta SDP (apenas o iniciador faz isso)
+        // 2. Criar e enviar a Oferta SDP (apenas o iniciador faz isso)
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         
         // Envia a oferta para o canal do usuário que você está ligando
+        // A subscrição do SEU canal de recebimento (callChannel) é garantida no initializeChat.
         await sb.channel('call_room_' + targetPeerId).send({
             type: 'broadcast',
             event: 'signal',
@@ -451,8 +435,9 @@ function hangUpCall(){
     }
     // Fecha o canal de sinalização Supabase
     if(callChannel){
-        sb.removeChannel(callChannel);
-        callChannel = null;
+        // Não remove o canal, apenas o desliga para não perder a subscrição
+        //sb.removeChannel(callChannel); 
+        // Não resetamos callChannel aqui, pois ele deve permanecer subscrito para receber futuras chamadas.
     }
     
     if(localStream){
@@ -533,6 +518,7 @@ async function logout(){
   loginModal.style.display = 'flex';
   document.getElementById('chatTitle').textContent = 'Chat Vídeos';
   messagesDiv.style.backgroundImage = ''; // Limpa o fundo ao sair
+  hangUpCall(); // Garante que a chamada seja desligada
 }
 window.logout = logout; // Torna global
 
@@ -569,7 +555,7 @@ async function deleteMessage(messageId){
 }
 window.deleteMessage = deleteMessage;
 
-/* ---------- EXCLUSÃO EM MASSA DE MENSAGENS (NOVO) ---------- */
+/* ---------- EXCLUSÃO EM MASSA DE MENSAGENS ---------- */
 async function deleteAllMessages(){
     if(!user){
         alert('Faça login primeiro.');
@@ -604,13 +590,11 @@ function renderMessage(msg){
   const groupDiv = document.createElement('div');
   groupDiv.className = 'msg-group ' + ((user && msg.user_id === user.id) ? 'me':'other');
 
-  // Adiciona o nome do perfil apenas para mensagens de outros usuários
-  if(msg.user_id !== user.id) {
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'profile-name';
-    nameSpan.textContent = profileName; 
-    groupDiv.appendChild(nameSpan);
-  }
+  // Adiciona o nome do perfil
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'profile-name';
+  nameSpan.textContent = profileName; 
+  groupDiv.appendChild(nameSpan);
 
   const div = document.createElement('div');
   div.className = 'msg ' + ((user && msg.user_id === user.id) ? 'me':'other');
@@ -692,7 +676,7 @@ async function uploadFile(file){
   fileInput.value = '';
 }
 
-// NOVO: Função para obter parâmetros da URL
+// Função para obter parâmetros da URL
 function getUrlParameter(name) {
     name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
     const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
@@ -700,35 +684,53 @@ function getUrlParameter(name) {
     return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 };
 
+/* ---------- Lógica de subscrição e início de chamada automática (CORRIGIDA) ---------- */
+function setupCallChannelAndStartAutoCall() {
+    if (!user) return; 
+    
+    // 1. Assina o canal de sinalização do próprio usuário para receber ofertas e respostas
+    if (!callChannel) {
+        callChannel = sb.channel('call_room_' + user.id);
+        callChannel.on('broadcast', { event: 'signal' }, handleSignalMessage).subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                console.log(`Pronto para receber chamadas no canal: call_room_${user.id}`);
+                // 2. Se houver um alvo no URL, inicia a chamada automaticamente AGORA QUE O CANAL ESTÁ PRONTO.
+                if (autoCallTargetId && autoCallTargetId !== user.id) {
+                    startVideoCall(autoCallTargetId);
+                }
+            }
+        });
+    } else {
+        // Fallback: Se o canal já estava pronto, mas a chamada não iniciou (ex: erro anterior), tenta iniciar.
+        if (autoCallTargetId && autoCallTargetId !== user.id) {
+             startVideoCall(autoCallTargetId);
+        }
+    }
+}
+
 
 /* ---------- INICIALIZAÇÃO ---------- */
 function initializeChat(){
-  // NOVO: Checa se há um alvo de chamada no URL
+  // Checa se há um alvo de chamada no URL
   autoCallTargetId = getUrlParameter('target');
   
   sb.auth.getSession().then(({ data: { session } }) => {
     if(session) user = session.user;
+    
     if(user){
       loginModal.style.display = 'none';
       document.getElementById('chatTitle').textContent = user.email.split('@')[0];
       loadHistory();
       subscribeToMessages();
       
-      // NOVO: Assina o canal de sinalização do próprio usuário
-      if(!callChannel){
-          callChannel = sb.channel('call_room_' + user.id);
-          callChannel.on('broadcast', { event: 'signal' }, handleSignalMessage).subscribe();
-          console.log(`Pronto para receber chamadas no canal: call_room_${user.id}`);
-      }
-      
-      // NOVO: Se houver um alvo no URL, inicia a chamada automaticamente
-      if(autoCallTargetId && autoCallTargetId !== user.id) {
-          startVideoCall(autoCallTargetId);
-      } else if (autoCallTargetId === user.id) {
+      // CHAVE: Configura o canal de recebimento e inicia a chamada automática
+      if (autoCallTargetId === user.id) {
           alert("Você não pode ligar para si mesmo.");
           // Limpa o target da URL
           history.pushState(null, '', window.location.pathname);
           autoCallTargetId = null; 
+      } else {
+          setupCallChannelAndStartAutoCall();
       }
 
     } else {
