@@ -192,7 +192,7 @@ body{
 <script>
 /* ---------- CONFIGURAÇÃO SUPABASE (substitua pelas suas chaves) ---------- */
 const SUPABASE_URL = "https://oggzsjqwxqlqejcyakli.supabase.co"; 
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nZ3pzanF3eHFscWVqY3lha2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2NzA3NDQsImV4cCI6MjA4MDI0Njc0NH0.LPdgQmoN-gE8EWxwEd4NBufbzrp1uQTYq2KicwDlgaQ";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nZ3pzanF3eHFscWVqY3lha2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2NzA3NDQsImV4cCI6MjA4MDI0Njc0NH0.LPdgQmoN-gE8EWxwEd4NBufbzrp1uQTYqqKicwDlgaQ";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true }
@@ -221,12 +221,25 @@ const USER_A_ID = "c172b479-2f8e-435b-bfa1-8a626d64b9c8";
 const USER_B_ID = "81db8699-2444-43b7-9bd0-830d401cec7f";
 
 
-// Servidores STUN (necessários para encontrar endereços de rede)
+// Servidores STUN e TURN OTIMIZADOS (essenciais para WebRTC em redes restritivas)
 const iceServers = {
     iceServers: [
+        // Servidores STUN mais confiáveis (prioriza P2P direto)
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        // Em produção, você pode precisar de um servidor TURN (retransmissão)
+        { urls: 'stun:stun.services.mozilla.com' },
+        
+        // Servidor TURN público para testes (usado como retransmissor quando o STUN falha)
+        // ATENÇÃO: Apenas para testes/protótipo. Requer um servidor próprio em produção.
+        {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp', // TURN via TCP (melhor para firewalls)
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443?transport=udp', // TURN via UDP
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        }
     ]
 };
 
@@ -302,7 +315,14 @@ async function handleSignalMessage(payload) {
 
     if (signal.type === 'offer') {
         // Se for uma oferta (o par está chamando)
-        await initializePeerConnection(); // Inicializa o PC
+        // Pergunta ao usuário se ele quer atender
+        if (!confirm(`Chamada recebida de ${signal.senderId.substring(0, 8)}... Deseja atender?`)) {
+            // Se recusar, envia um sinal de rejeição ou simplesmente encerra localmente
+            console.log("Chamada recusada.");
+            return; 
+        }
+
+        await initializePeerConnection(signal.senderId); // Inicializa o PC com o ID do remetente como alvo
         await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
@@ -326,7 +346,10 @@ async function handleSignalMessage(payload) {
     } else if (signal.type === 'ice-candidate') {
         // Adiciona o candidato ICE
         try {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            // Note: O peerConnection só é inicializado após a oferta ser aceita ou criada
+            if(peerConnection.remoteDescription) {
+                 await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            }
         } catch (e) {
             console.error('Erro ao adicionar candidato ICE:', e);
         }
@@ -356,6 +379,15 @@ async function initializePeerConnection(targetPeerId) {
     
     // O remoteVideo já está no HTML
     remoteVideo.style.display = 'none'; // Esconde até receber o stream
+    
+    // Monitoramento do estado da conexão para diagnóstico
+    peerConnection.onconnectionstatechange = (event) => {
+        console.log(`Estado da conexão WebRTC: ${peerConnection.connectionState}`);
+        if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
+             console.error("A conexão WebRTC falhou ou foi desconectada.");
+             // Pode disparar um pop-up de falha de conexão aqui.
+        }
+    };
 }
 
 
@@ -381,7 +413,9 @@ async function startVideoCall(targetPeerId){
         // O canal de sinalização é baseado no ID do *seu* usuário (user.id).
         if(!callChannel){
             callChannel = sb.channel('call_room_' + user.id);
+            // IMPORTANTE: Adiciona o listener APENAS se o canal for criado, senão cria múltiplos listeners
             callChannel.on('broadcast', { event: 'signal' }, handleSignalMessage).subscribe();
+            console.log(`Pronto para receber chamadas no canal: call_room_${user.id}`);
         }
 
         // 3. Criar e enviar a Oferta SDP (apenas o iniciador faz isso)
@@ -506,7 +540,8 @@ window.logout = logout; // Torna global
 window.openMessageMenu = function(e, msg) {
     if(!user || msg.user_id !== user.id) return; 
 
-    const confirmed = confirm(`Deseja apagar esta mensagem (ID: ${msg.id})?`);
+    // Substituído por modal/confirmação customizada em uma aplicação real.
+    const confirmed = confirm(`Deseja apagar esta mensagem (ID: ${msg.id})?`); 
     if (confirmed) {
         deleteMessage(msg.id);
     }
@@ -541,6 +576,7 @@ async function deleteAllMessages(){
         return;
     }
     
+    // Substituído por modal/confirmação customizada em uma aplicação real.
     const confirmed = confirm("⚠️ ATENÇÃO: Deseja REALMENTE apagar TODAS as suas mensagens no chat? Esta ação é irreversível.");
     if (!confirmed) return;
     
