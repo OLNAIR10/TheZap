@@ -150,6 +150,7 @@ body{
   <div id="topbar-left"><span id="chatTitle">Chat Vídeos</span></div>
   <button id="kebabBtn">⋮</button>
   <div id="kebabMenu" style="display:none; position:absolute; top:50px; right:5px; background:white; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.2); min-width:200px; z-index:1000;">
+    <a href="contacts.html" class="menu-item">👥 Contatos</a>
     <a href="#" class="menu-item" onclick="chooseWallpaper()">🖼️ Trocar Fundo de Tela</a>
     <a href="#" class="menu-item" onclick="deleteAllMessages()">🗑️ Apagar TODAS as Mensagens</a>
     <a href="#" class="menu-item" onclick="logout()">Sair</a>
@@ -161,6 +162,7 @@ body{
     <video id="localVideo" autoplay playsinline muted></video>
     <button id="hangupBtn" onclick="hangUpCall()">📞 Desligar</button>
     <p style="position:absolute; top:10px; color:white; font-weight:bold;">Videochamada WebRTC</p>
+    <video id="remoteVideo" autoplay playsinline style="width: 100px; height: 100px; position: absolute; top: 10px; right: 10px; z-index: 100; border-radius: 8px; border: 2px solid white; display:none;"></video>
   </div>
   <div id="messages"></div>
 </div>
@@ -190,7 +192,7 @@ body{
 <script>
 /* ---------- CONFIGURAÇÃO SUPABASE (substitua pelas suas chaves) ---------- */
 const SUPABASE_URL = "https://oggzsjqwxqlqejcyakli.supabase.co"; 
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nZ3pzanF3eHFscWVqY3lha2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2NzA3NDQsImV4cCI6MjA4MDI0Njc0NH0.LPdgQmoN-gE8EWxwEd4NBufbzrp1uQTYq2KicwDlgaQ";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nZ3pzanF3eHFscWVqY3lha2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2NzA3NDQsImV4cCI6MjA4MDI0Njc0NH0.LPdgQmoN-gE8EWxwEd4NBufbzrp1uQTYqqKicwDlgaQ";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true }
@@ -212,10 +214,11 @@ const localVideo = document.getElementById('localVideo');
 let peerConnection = null; // Objeto RTCPeerConnection
 let remoteVideo = null; // Elemento para o vídeo do outro par
 let callChannel = null; // Canal Supabase para a sinalização
+let autoCallTargetId = null; // NOVO: ID de destino para chamada automática via URL
 
-// 💡 SEUS IDs de Usuário do Supabase (UUIDs)
-const USER_A_ID = "a20cccbc-4a56-4f89-a0aa-bf7ee659d76e";
-const USER_B_ID = "cb54be46-cf5b-4666-85fe-0986da64aae0";
+// IDs de Usuário de teste (mantidos para fallback/referência)
+const USER_A_ID = "c172b479-2f8e-435b-bfa1-8a626d64b9c8";
+const USER_B_ID = "81db8699-2444-43b7-9bd0-830d401cec7f";
 
 
 // Servidores STUN (necessários para encontrar endereços de rede)
@@ -227,13 +230,33 @@ const iceServers = {
     ]
 };
 
+// Obter elemento remoto (agora está no HTML para facilitar)
+remoteVideo = document.getElementById('remoteVideo');
+
+
 // ... (Adiciona funcionalidade aos botões)
 document.getElementById('fileBtn').onclick = () => { if(!user){ alert('Faça login primeiro'); return; } fileInput.click(); };
 document.getElementById('micBtn').onclick = () => { if(!user){ alert('Faça login primeiro'); return; } alert('Simulação de gravação de áudio...'); };
 fileInput.onchange = (e) => { if(e.target.files[0]) uploadFile(e.target.files[0]); };
 document.getElementById('sendBtn').onclick = sendMessage;
 textInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
-document.getElementById('videoCallBtn').onclick = startVideoCall;
+
+// O botão de chamada agora usa a função para iniciar a chamada se não houver um target no URL.
+document.getElementById('videoCallBtn').onclick = () => {
+    // Se o targetPeerId for nulo, tenta ligar para B se for A, ou vice-versa (fallback)
+    let target = autoCallTargetId; 
+    if (!target) {
+        if (user.id === USER_A_ID) target = USER_B_ID;
+        else if (user.id === USER_B_ID) target = USER_A_ID;
+        else {
+            alert("Selecione um contato na lista de 'Contatos' para iniciar uma chamada.");
+            window.location.href = 'contacts.html'; // Redireciona para a nova página
+            return;
+        }
+    }
+    startVideoCall(target);
+};
+
 document.getElementById('kebabBtn').onclick = () => { const m = document.getElementById('kebabMenu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; };
 document.addEventListener('click', (e)=>{ const m=document.getElementById('kebabMenu'); if(e.target.id!=='kebabBtn' && !m.contains(e.target)) m.style.display='none'; });
 
@@ -250,20 +273,7 @@ function handleTrackEvent(event) {
 }
 
 // Lida com a descoberta de candidatos ICE (endereços de rede)
-async function handleIceCandidateEvent(event) {
-    
-    // ✅ LÓGICA DE DESTINO ATUALIZADA (WebRTC)
-    let targetPeerId = '';
-
-    if (user.id === USER_A_ID) {
-        targetPeerId = USER_B_ID;
-    } else if (user.id === USER_B_ID) {
-        targetPeerId = USER_A_ID;
-    } else {
-        // Se não for um dos pares de teste, não envie o candidato ICE
-        return; 
-    }
-    
+async function handleIceCandidateEvent(event, targetPeerId) {
     if (event.candidate) {
         console.log('Enviando candidato ICE:', event.candidate);
         
@@ -324,7 +334,7 @@ async function handleSignalMessage(payload) {
 }
 
 // Função para inicializar o PeerConnection e obter mídia
-async function initializePeerConnection() {
+async function initializePeerConnection(targetPeerId) {
     if (peerConnection) return;
     
     // 1. Configurar PeerConnection
@@ -332,7 +342,8 @@ async function initializePeerConnection() {
     
     // 2. Configurar eventos
     peerConnection.ontrack = handleTrackEvent;
-    peerConnection.onicecandidate = handleIceCandidateEvent;
+    // O evento de ICE agora precisa do targetPeerId para enviar a mensagem.
+    peerConnection.onicecandidate = (event) => handleIceCandidateEvent(event, targetPeerId); 
 
     // 3. Obter mídia local e adicionar tracks (se ainda não tiver)
     if (!localStream) {
@@ -343,60 +354,35 @@ async function initializePeerConnection() {
     videoCallArea.style.display = 'flex';
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
     
-    // 4. Adiciona elemento de vídeo remoto se não existir
-    if(!remoteVideo){
-        remoteVideo = document.createElement('video');
-        remoteVideo.autoplay = true;
-        remoteVideo.playsinline = true;
-        remoteVideo.style.cssText = 'width: 100px; height: 100px; position: absolute; top: 10px; right: 10px; z-index: 100; border-radius: 8px; border: 2px solid white;';
-        videoCallArea.appendChild(remoteVideo);
-    }
+    // O remoteVideo já está no HTML
+    remoteVideo.style.display = 'none'; // Esconde até receber o stream
 }
 
 
-/* ---------- VIDEOCHAMADA (WebRTC) - FUNÇÃO PRINCIPAL ---------- */
-async function startVideoCall(){
+/* ---------- VIDEOCHAMADA (WebRTC) - FUNÇÃO PRINCIPAL ATUALIZADA ---------- */
+async function startVideoCall(targetPeerId){
     if(!user){ alert('Faça login.'); return; }
 
     if(!isSecureContext()){
-        alert('O WebRTC requer HTTPS. Teste em localhost ou por HTTPS (ex: deploy no Netlify/Vercel ou use ngrok).');
-        return;
-    }
-
-    // ✅ LÓGICA DE DESTINO ATUALIZADA (WebRTC)
-    let targetPeerId = '';
-    
-    // Se o usuário logado for o A, o destino é o B.
-    if (user.id === USER_A_ID) {
-        targetPeerId = USER_B_ID;
-    } 
-    // Se o usuário logado for o B, o destino é o A.
-    else if (user.id === USER_B_ID) {
-        targetPeerId = USER_A_ID;
-    }
-    // Se não for nenhum dos usuários de teste, não podemos ligar.
-    else {
-        alert("Erro: Você não é um usuário de teste (A ou B). Não sabemos para quem ligar.");
+        alert('O WebRTC requer HTTPS. Teste em localhost ou por HTTPS.');
         return;
     }
 
     if (!targetPeerId) {
-        alert("Erro: ID de destino não definido.");
+        alert("Erro: ID de destino não definido. Selecione um contato.");
         return;
     }
 
-
     try{
         // 1. Inicializa o PeerConnection e obtém a mídia
-        await initializePeerConnection();
-        
+        await initializePeerConnection(targetPeerId); // Passa o targetPeerId
+
         // 2. Configurar o canal Supabase para receber a resposta
-        // O canal de sinalização é baseado no ID do *seu* usuário, pois é para onde o outro enviará a resposta.
+        // O canal de sinalização é baseado no ID do *seu* usuário (user.id).
         if(!callChannel){
             callChannel = sb.channel('call_room_' + user.id);
             callChannel.on('broadcast', { event: 'signal' }, handleSignalMessage).subscribe();
         }
-
 
         // 3. Criar e enviar a Oferta SDP (apenas o iniciador faz isso)
         const offer = await peerConnection.createOffer();
@@ -414,7 +400,7 @@ async function startVideoCall(){
             }
         });
 
-        alert(`Chamada iniciada. Tentando conectar com ${targetPeerId}...`);
+        alert(`Chamada iniciada. Tentando conectar com ${targetPeerId.substring(0, 8)}...`);
 
     }catch(err){
         console.error('Erro ao acessar mídia ou iniciar WebRTC:', err);
@@ -442,18 +428,24 @@ function hangUpCall(){
     }
     if(remoteVideo){
         remoteVideo.srcObject = null;
-        remoteVideo.remove();
-        remoteVideo = null;
+        remoteVideo.style.display = 'none';
     }
     videoCallArea.style.display = 'none';
     console.log('Chamada encerrada.');
+    
+    // Limpa o target da URL após desligar (para evitar recarregar e ligar de novo)
+    history.pushState(null, '', window.location.pathname);
+    autoCallTargetId = null; 
 }
+window.hangUpCall = hangUpCall; // Torna global para o botão
 
 /* ---------- OUTRAS FUNÇÕES (Não relacionadas a WebRTC) ---------- */
 function chooseWallpaper() {
     if(!user){ alert('Faça login primeiro'); return; }
     wallpaperInput.click();
 }
+window.chooseWallpaper = chooseWallpaper;
+
 wallpaperInput.onchange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -508,6 +500,7 @@ async function logout(){
   document.getElementById('chatTitle').textContent = 'Chat Vídeos';
   messagesDiv.style.backgroundImage = ''; // Limpa o fundo ao sair
 }
+window.logout = logout; // Torna global
 
 /* ---------- EXCLUSÃO DE MENSAGENS INDIVIDUAL ---------- */
 window.openMessageMenu = function(e, msg) {
@@ -575,6 +568,7 @@ function renderMessage(msg){
   const groupDiv = document.createElement('div');
   groupDiv.className = 'msg-group ' + ((user && msg.user_id === user.id) ? 'me':'other');
 
+  // Adiciona o nome do perfil apenas para mensagens de outros usuários
   if(msg.user_id !== user.id) {
     const nameSpan = document.createElement('span');
     nameSpan.className = 'profile-name';
@@ -662,9 +656,20 @@ async function uploadFile(file){
   fileInput.value = '';
 }
 
+// NOVO: Função para obter parâmetros da URL
+function getUrlParameter(name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+    const results = regex.exec(location.search);
+    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+};
+
 
 /* ---------- INICIALIZAÇÃO ---------- */
 function initializeChat(){
+  // NOVO: Checa se há um alvo de chamada no URL
+  autoCallTargetId = getUrlParameter('target');
+  
   sb.auth.getSession().then(({ data: { session } }) => {
     if(session) user = session.user;
     if(user){
@@ -673,15 +678,28 @@ function initializeChat(){
       loadHistory();
       subscribeToMessages();
       
-      // NOVO: Assina o canal de sinalização do próprio usuário assim que loga, para receber chamadas
+      // NOVO: Assina o canal de sinalização do próprio usuário
       if(!callChannel){
           callChannel = sb.channel('call_room_' + user.id);
           callChannel.on('broadcast', { event: 'signal' }, handleSignalMessage).subscribe();
           console.log(`Pronto para receber chamadas no canal: call_room_${user.id}`);
       }
+      
+      // NOVO: Se houver um alvo no URL, inicia a chamada automaticamente
+      if(autoCallTargetId && autoCallTargetId !== user.id) {
+          startVideoCall(autoCallTargetId);
+      } else if (autoCallTargetId === user.id) {
+          alert("Você não pode ligar para si mesmo.");
+          // Limpa o target da URL
+          history.pushState(null, '', window.location.pathname);
+          autoCallTargetId = null; 
+      }
 
     } else {
       loginModal.style.display = 'flex';
+      // Limpa o target do URL se não estiver logado
+      history.pushState(null, '', window.location.pathname);
+      autoCallTargetId = null;
     }
   });
 }
@@ -695,9 +713,10 @@ sb.auth.onAuthStateChange((event, session) => {
 // inicia quando a página carrega
 initializeChat();
 
-window.login = login; window.register = register; window.reset = reset; window.logout = logout;
-window.chooseWallpaper = chooseWallpaper;
+// Globaliza funções de login/registro
+window.login = login; window.register = register; window.reset = reset;
 </script>
 
 </body>
 </html>
+
