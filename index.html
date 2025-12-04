@@ -2,736 +2,769 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Chat Completo - WhatsApp Style</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+<title>Chat de Vídeos - WhatsApp Style (WebRTC via Supabase)</title>
 
-<!-- Supabase CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-/* -----------------------------------------------------------
-   ESTILO GERAL (100% inspirado no WhatsApp Mobile Android)
------------------------------------------------------------*/
-:root{
-  --bg:#e5ddd5;
-  --panel:#fff;
-  --chat-bg:#f0f0f0;
-  --my:#dcf8c6;
-  --accent:#25d366;
-  --header:#075e54;
-  --dark:#111;
+/* Estilos baseados no WhatsApp para mobile */
+:root{ --bg:#e5ddd5; --panel:#fff; --my:#dcf8c6; --accent:#25d366; --header:#075e54; --dark:#111; }
+body{ 
+    margin:0; 
+    background:var(--bg); 
+    font-family:Arial, sans-serif; 
+    height: 100vh;
+    height: 100dvh; 
+    display:flex; 
+    flex-direction:column; 
+    overflow:hidden; 
+}
+#topbar{ height:56px; background:var(--header); display:flex; align-items:center; padding:0 12px; color:#fff; font-size:18px; font-weight:bold; justify-content: space-between; position: relative; }
+
+/* Garante que o container de mensagens use o espaço restante */
+#messages-container{ 
+    flex:1; 
+    position: relative; 
+    display:flex; 
+    flex-direction:column;
 }
 
-/* CORREÇÃO DE LAYOUT PARA MOBILE (Resolvendo o problema do 100vh) */
-html, body {
-  /* Garante que o corpo ocupe 100% do espaço disponível pelo pai (viewport) */
-  height: 100%; 
-  /* Remove margem padrão */
-  margin: 0;
+/* Faz com que a área de mensagens role e use o espaço do container */
+#messages{ 
+    flex:1; 
+    overflow-y:auto; 
+    padding:0 10px 10px 10px; 
+    display:flex; 
+    flex-direction:column; 
+    scroll-behavior:smooth; 
+    background-color:var(--bg); 
+    padding-top: 10px;
+    background-size: cover; 
+    background-position: center; 
 }
-
-body{
-  background:var(--bg);
-  font-family:Arial, sans-serif;
-  display:flex;
-  flex-direction:column;
-  overflow: hidden; /* Evita o scroll no corpo principal */
-}
-/* FIM DA CORREÇÃO DE LAYOUT */
-
-
-/* HEADER */
-#topbar{
-  height:56px;
-  background:var(--header);
-  display:flex;
-  align-items:center;
-  padding:0 12px;
-  color:#fff;
-  font-size:18px;
-  font-weight:bold;
-  justify-content: space-between;
-  position: relative;
-  flex-shrink: 0; /* Garante que não encolhe */
-}
-#topbar-left {
-    display: flex;
-    align-items: center;
-}
-#kebabBtn {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 24px;
-    margin-left: 10px;
-    cursor: pointer;
-    line-height: 1;
-    padding: 0 5px;
-}
-
-/* MENU SUSPENSO */
-#kebabMenu {
-    position: absolute;
-    top: 50px; 
-    right: 5px;
-    background: white;
-    border-radius: 4px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    min-width: 250px; /* Aumentado para caber o novo item */
-    z-index: 1000;
-    display: none;
-}
-.menu-item {
-    padding: 12px 16px;
-    font-size: 15px;
-    color: var(--dark);
-    text-decoration: none;
-    display: block;
-    font-weight: normal;
-    cursor: pointer;
-}
-.menu-item:hover {
-    background: #f1f1f1;
-}
-.danger-item {
-    color: #e74c3c; /* Cor vermelha para destacar a ação destrutiva */
-    font-weight: bold;
-}
-
-
-/* LISTA DE MENSAGENS */
-#messages{
-  flex:1; /* Ocupa todo o espaço vertical restante */
-  overflow-y:auto; /* Permite rolar apenas a área de mensagens */
-  padding:10px;
-  display:flex;
-  flex-direction:column;
-  scroll-behavior: smooth;
-  background-color: var(--bg); /* Garante que o fundo do chat é o bg principal */
-}
-.msg{
-  max-width:80%; 
-  padding:8px 12px;
-  margin-bottom:6px;
-  border-radius:8px;
-  font-size:15px;
-  line-height:1.3;
-}
-/* Adapta a largura para conteúdo de mídia que é maior */
-.msg[data-media="true"] {
-    max-width: 280px; 
-}
-.me{
-  align-self:flex-end;
-  background:var(--my);
-}
-.other{
-  align-self:flex-start;
-  background:#fff;
-}
-/* Estilo para arquivos, imagens e vídeos */
-.msg .file-content {
+/* Estilo para o grupo de mensagem e nome do perfil */
+.msg-group {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    max-width: 80%;
+    margin-bottom: 8px; 
 }
-.msg img {
-    max-width: 200px;
-    height: auto;
-    border-radius: 6px;
+.msg-group.me {
+    align-self: flex-end;
 }
-.msg video {
-    max-width: 100%;
-    height: auto;
-    border-radius: 6px;
+.msg-group.other {
+    align-self: flex-start;
 }
-.msg a {
-    color: var(--header);
-    text-decoration: none;
+/* Estilo para o nome do perfil (e-mail) */
+.profile-name {
+    font-size: 12px;
+    color: #075e54; 
+    margin-bottom: 2px;
+    align-self: flex-start;
+    padding-left: 8px;
     font-weight: bold;
 }
-.msg .file-icon {
-    margin-right: 5px;
+.msg-group.me .profile-name {
+    color: #128C7E;
+    align-self: flex-end;
+    padding-right: 8px;
+    padding-left: 0;
 }
-
-
-/* INPUT AREA */
-#inputArea{
-  height:60px; /* Altura fixa */
-  background:#fff;
-  display:flex;
-  align-items:center;
-  padding:0 6px;
-  gap:6px;
-  flex-shrink: 0; /* Garante que não encolhe */
+.msg{ 
+    max-width:100%; 
+    padding:8px 12px; 
+    margin-bottom:2px; 
+    border-radius:8px; 
+    font-size:15px; 
+    line-height:1.3; 
+    position: relative;
+    padding-right: 50px; 
+    cursor: pointer; 
 }
-#textInput{
-  flex:1;
-  height:40px;
-  border:1px solid #ccc;
-  border-radius:20px;
-  padding:0 14px;
-  font-size:15px;
+.me{ align-self:flex-end; background:var(--my); 
+    border-bottom-right-radius: 0; 
 }
-.btn{
-  width:42px;
-  height:42px;
-  border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:var(--accent);
-  border:none;
-  color:#fff;
-  cursor: pointer;
+.other{ align-self:flex-start; background:#fff; 
+    border-bottom-left-radius: 0; 
 }
-/* Estilo para o botão de microfone quando gravando */
-#audioBtn.recording {
-    background: red;
-    animation: pulse 1s infinite;
+/* Estilo do horário */
+.timestamp {
+    position: absolute;
+    bottom: 2px;
+    right: 8px;
+    font-size: 10px;
+    color: rgba(0, 0, 0, 0.4);
 }
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-
-/* LOGIN MODAL */
-#loginModal{
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:#fff;
-  z-index:9999;
-  padding:20px;
-  display:flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-#loginModal div {
+/* Garante rodapé fixo no mobile e considera barra de gesto */
+#inputArea{ 
+    height:60px; 
+    background:#fff; 
+    display:flex; 
+    align-items:center; 
+    padding:0 6px; 
+    gap:6px; 
     width: 100%;
-    max-width: 300px;
+    box-sizing: border-box; 
+    padding-bottom: env(safe-area-inset-bottom); 
 }
-#loginModal input{
-  width:100%;
-  padding:12px;
-  margin:6px 0;
-  border-radius:6px;
-  border:1px solid #ccc;
-  box-sizing: border-box;
+#textInput{ flex:1; height:40px; border:1px solid #ccc; border-radius:20px; padding:0 14px; font-size:15px; }
+.btn{ width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--accent); border:none; color:#fff; cursor:pointer; 
+    font-size: 18px; 
 }
-#loginModal button {
-    width: 100%;
-    max-width: 300px;
-    padding: 10px;
-    margin-top: 10px;
-    border: none;
-    border-radius: 6px;
-    background: var(--accent);
-    color: white;
-    font-size: 16px;
-    cursor: pointer;
+.menu-item {
+    display: block;
+    padding: 10px 15px;
+    text-decoration: none;
+    color: var(--dark);
 }
-#loginModal button:hover {
-    opacity: 0.9;
+.menu-item:hover {
+    background-color: #f0f0f0;
+}
+#videoCallArea{ 
+    position:absolute; top:0; left:0; width:100%; height:100%; 
+    background:rgba(0,0,0,0.9); z-index:10; 
+    display:none; flex-direction: column; justify-content:center; align-items:center; 
+}
+#localVideo{ 
+    width:100%; height:100%; object-fit:cover; 
+}
+#hangupBtn{ 
+    position:absolute; bottom:20px; background:red; color:white; 
+    font-size:24px; border-radius:30px; padding:8px 24px; border:none; cursor:pointer; 
+}
+#loginModal{ position:fixed; top:0; left:0; width:100%; height:100%; background:#fff; z-index:9999; padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.file-content {
+    margin: 4px 0;
+}
+.file-content img, .file-content video {
+    display: block;
+    max-width: 100%; 
+    height: auto;
 }
 </style>
 </head>
 <body>
 
 <div id="topbar">
-    <div id="topbar-left">
-        <span id="chatTitle">Chat</span>
-    </div>
-    <button id="kebabBtn">⋮</button>
-    
-    <div id="kebabMenu">
-        <!-- NOVO LINK PARA CHAT DE VÍDEOS -->
-        <a href="videos1.html" class="menu-item">Ir para Chat de Videos 📹 </a>
-        
-        <input type="file" id="bgFile" accept="image/*" style="display: none;" onchange="setBackground(this.files[0])">
-        <a class="menu-item" onclick="document.getElementById('bgFile').click()">🖼️ Trocar Fundo de Tela</a>
-        
-        <!-- NOVO ITEM: APAGAR MENSAGENS -->
-        <a class="menu-item danger-item" onclick="confirmClearChat()">
-            🗑️ Apagar Todas as Mensagens
-        </a>
-        
-        <a href="perfil1.html" target="_blank" class="menu-item">Página de Perfil</a>
-        <a href="termos1.html" target="_blank" class="menu-item">Termos e Condições</a>
-        <a class="menu-item" onclick="logout()">Sair</a>
-    </div>
+  <div id="topbar-left"><span id="chatTitle">Chat Vídeos</span></div>
+  <button id="kebabBtn">⋮</button>
+  <div id="kebabMenu" style="display:none; position:absolute; top:50px; right:5px; background:white; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.2); min-width:200px; z-index:1000;">
+    <a href="contacts.html" class="menu-item">👥 Contatos</a>
+    <a href="#" class="menu-item" onclick="chooseWallpaper()">🖼️ Trocar Fundo de Tela</a>
+    <a href="#" class="menu-item" onclick="deleteAllMessages()">🗑️ Apagar TODAS as Mensagens</a>
+    <a href="#" class="menu-item" onclick="logout()">Sair</a>
+  </div>
 </div>
 
-<div id="messages"></div>
+<div id="messages-container">
+  <div id="videoCallArea">
+    <video id="localVideo" autoplay playsinline muted></video>
+    <button id="hangupBtn" onclick="hangUpCall()">📞 Desligar</button>
+    <p style="position:absolute; top:10px; color:white; font-weight:bold;">Videochamada WebRTC</p>
+    <video id="remoteVideo" autoplay playsinline style="width: 100px; height: 100px; position: absolute; top: 10px; right: 10px; z-index: 100; border-radius: 8px; border: 2px solid white; display:none;"></video>
+  </div>
+  <div id="messages"></div>
+</div>
 
 <div id="inputArea">
   <button id="fileBtn" class="btn">📎</button>
-  <!-- Aceita Imagem e Vídeo/Outros -->
-  <input type="file" id="fileInput" accept="image/*,video/*,application/*" style="display: none;" onchange="uploadFile(this.files[0])">
-  <button id="audioBtn" class="btn">🎤</button>
+  <input type="file" id="wallpaperInput" accept="image/*" style="display:none"> 
+  <input type="file" id="fileInput" accept="video/*,image/*" style="display:none">
+  <button id="videoCallBtn" class="btn" title="Iniciar Videochamada">📹</button>
   <input id="textInput" placeholder="Mensagem">
+  <button id="micBtn" class="btn">🎤</button>
   <button id="sendBtn" class="btn">➤</button>
 </div>
 
 <div id="loginModal">
-  <div>
+  <div style="width:100%;max-width:320px;">
     <h2>Entrar</h2>
-    <input id="email" placeholder="Email">
-    <input id="pass" placeholder="Senha" type="password">
+    <input id="email" placeholder="Email (seu nome de perfil)" style="width:100%;padding:10px;margin:6px 0;border-radius:6px;border:1px solid #ccc;">
+    <input id="pass" placeholder="Senha" type="password" style="width:100%;padding:10px;margin:6px 0;border-radius:6px;border:1px solid #ccc;">
     <button onclick="login()">Entrar</button>
     <button onclick="register()">Registrar</button>
     <button onclick="reset()">Esqueci a senha</button>
+    <p style="font-size:13px;color:#666;margin-top:10px;">Observação: teste em <strong>localhost</strong> ou via <em>HTTPS</em>. Chrome bloqueia câmera/microfone em contexto inseguro.</p>
   </div>
 </div>
 
 <script>
-/* -----------------------------------------------------------
-   CONFIGURAÇÃO SUPABASE
------------------------------------------------------------*/
-// Chaves do Supabase (reutilizadas)
-const SUPABASE_URL = "https://qytxdewvwpfdulsiweyi.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5dHhkZXd2d3BmZHVsc2l3ZXlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0NjI5NzYsImV4cCI6MjA4MDAzODk3Nn0.fPquiaUntC89YT6tqvB0lqg8oRdwSN0kN-CnhCPOu_Q";
+/* ---------- CONFIGURAÇÃO SUPABASE (NOVAS CHAVES) ---------- */
+const SUPABASE_URL = "https://rtbfafyckvjexabywztu.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0YmZhZnlja3ZqZXhhYnl3enR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4MTg4MDYsImV4cCI6MjA4MDM5NDgwNn0.pemzzt-0MNF1wxVVtM13n5rgWCu8mSmdF_GQU4TrMM4";
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true }
+});
 
+/* ---------- Variáveis Globais de Estado e WebRTC ---------- */
 let user = null;
+let localStream = null;
+let messagesDiv = document.getElementById('messages');
+const loginModal = document.getElementById('loginModal');
+const emailInput = document.getElementById('email');
+const passInput = document.getElementById('pass');
+const textInput = document.getElementById('textInput');
+const fileInput = document.getElementById('fileInput');
+const wallpaperInput = document.getElementById('wallpaperInput'); 
+const videoCallArea = document.getElementById('videoCallArea');
+const localVideo = document.getElementById('localVideo');
 
-// Elementos DOM
-const messagesDiv = document.getElementById("messages");
-const loginModal = document.getElementById("loginModal");
-const emailInput = document.getElementById("email");
-const passInput = document.getElementById("pass");
-const textInput = document.getElementById("textInput");
-const sendBtn = document.getElementById("sendBtn");
-const chatTitle = document.getElementById("chatTitle");
-const kebabBtn = document.getElementById("kebabBtn");
-const kebabMenu = document.getElementById("kebabMenu");
-const audioBtn = document.getElementById("audioBtn");
-const fileBtn = document.getElementById("fileBtn");
-const fileInput = document.getElementById("fileInput");
+let peerConnection = null; // Objeto RTCPeerConnection
+let remoteVideo = null; // Elemento para o vídeo do outro par
+let callChannel = null; // Canal Supabase para a sinalização
+let autoCallTargetId = null; // ID de destino para chamada automática via URL
 
-// Evento para abrir o seletor de arquivos
-fileBtn.onclick = () => {
-    if (!user) {
-        // Usa alert() apenas para feedback rápido de login, idealmente seria um modal
-        alert("Você deve estar logado para enviar arquivos."); 
-        return;
-    }
-    fileInput.click();
+// Servidores STUN e TURN OTIMIZADOS (essenciais para WebRTC em redes restritivas)
+const iceServers = {
+    iceServers: [
+        // Servidores STUN mais confiáveis (prioriza P2P direto)
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun.services.mozilla.com' },
+        
+        // Servidor TURN público para testes (usado como retransmissor quando o STUN falha)
+        {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp', 
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443?transport=udp', 
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        }
+    ]
 };
 
+// Obter elemento remoto (já está no HTML)
+remoteVideo = document.getElementById('remoteVideo');
 
-/* -----------------------------------------------------------
-   AUTENTICAÇÃO (LOGIN / REGISTRO / RECUPERAÇÃO / LOGOUT)
------------------------------------------------------------*/
+
+// Adiciona funcionalidade aos botões
+document.getElementById('fileBtn').onclick = () => { if(!user){ alert('Faça login primeiro'); return; } fileInput.click(); };
+document.getElementById('micBtn').onclick = () => { if(!user){ alert('Faça login primeiro'); return; } alert('Simulação de gravação de áudio...'); };
+fileInput.onchange = (e) => { if(e.target.files[0]) uploadFile(e.target.files[0]); };
+document.getElementById('sendBtn').onclick = sendMessage;
+textInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
+
+// Lógica atualizada para o botão de chamada: verifica login primeiro
+document.getElementById('videoCallBtn').onclick = () => {
+    if(!user){
+        alert('Faça login para iniciar uma videochamada.');
+        return;
+    }
+    let target = autoCallTargetId; 
+    if (!target) {
+        // Redireciona para a página de contatos se não houver alvo na URL.
+        alert("Selecione um contato na lista de 'Contatos' para iniciar uma chamada.");
+        window.location.href = 'contacts.html'; 
+        return;
+    }
+    startVideoCall(target);
+};
+
+document.getElementById('kebabBtn').onclick = () => { const m = document.getElementById('kebabMenu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; };
+document.addEventListener('click', (e)=>{ const m=document.getElementById('kebabMenu'); if(e.target.id!=='kebabBtn' && !m.contains(e.target)) m.style.display='none'; });
+
+
+/* ---------- FUNÇÕES AUXILIARES DE VIDEOCHAMADA ---------- */
+
+// Lida com a chegada do stream de vídeo/áudio do par remoto
+function handleTrackEvent(event) {
+    if (remoteVideo && event.streams && event.streams[0]) {
+        remoteVideo.srcObject = event.streams[0];
+        remoteVideo.style.display = 'block';
+        console.log('Stream remoto recebido.');
+    }
+}
+
+// Lida com a descoberta de candidatos ICE (endereços de rede)
+async function handleIceCandidateEvent(event, targetPeerId) {
+    if (event.candidate) {
+        console.log('Enviando candidato ICE:', event.candidate);
+        
+        // Envia o candidato ICE (endereço de rede) para o outro par via Broadcast
+        // Nota: O canal 'call_room_' + targetPeerId deve estar subscrito no lado do receptor.
+        await sb.channel('call_room_' + targetPeerId).send({
+            type: 'broadcast',
+            event: 'signal',
+            payload: {
+                senderId: user.id,
+                targetId: targetPeerId,
+                type: 'ice-candidate',
+                candidate: event.candidate
+            }
+        });
+    }
+}
+
+// Lida com mensagens de sinalização recebidas via Supabase Broadcast
+async function handleSignalMessage(payload) {
+    const signal = payload.payload;
+    
+    // Ignora sinais que não são relevantes ou se já estiver em chamada
+    if (signal.targetId !== user.id) return; 
+
+    console.log('Sinal recebido:', signal.type, signal);
+
+    if (signal.type === 'offer') {
+        // Se for uma oferta (o par está chamando)
+        // Se já estiver em uma chamada, rejeita
+        if(peerConnection){
+            console.log('Já em chamada. Ignorando nova oferta.');
+            return; 
+        }
+
+        if (!confirm(`Chamada recebida de ${signal.senderId.substring(0, 8)}... Deseja atender?`)) {
+            console.log("Chamada recusada.");
+            return; 
+        }
+
+        // Inicializa o PC com o ID do remetente como alvo
+        await initializePeerConnection(signal.senderId); 
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+
+        // Envia a resposta de volta para o chamador
+        await sb.channel('call_room_' + signal.senderId).send({
+            type: 'broadcast',
+            event: 'signal',
+            payload: {
+                senderId: user.id,
+                targetId: signal.senderId,
+                type: 'answer',
+                sdp: peerConnection.localDescription
+            }
+        });
+
+    } else if (signal.type === 'answer') {
+        // Se for a resposta, define como descrição remota
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+
+    } else if (signal.type === 'ice-candidate') {
+        // Adiciona o candidato ICE
+        try {
+            if(peerConnection && peerConnection.remoteDescription) {
+                 await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            }
+        } catch (e) {
+            console.error('Erro ao adicionar candidato ICE:', e);
+        }
+    }
+}
+
+// Função para inicializar o PeerConnection e obter mídia
+async function initializePeerConnection(targetPeerId) {
+    if (peerConnection) return;
+    
+    // 1. Obter mídia local (MUDANÇA: Fazemos aqui para garantir que a permissão é pedida só na chamada)
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    } catch(err) {
+        console.error('Erro ao acessar mídia (câmera/microfone):', err);
+        alert('Erro ao acessar câmera/microfone. Verifique as permissões. ' + (err.message || err.name));
+        return; // Sai se falhar ao obter a mídia
+    }
+    
+    // 2. Configurar PeerConnection
+    peerConnection = new RTCPeerConnection(iceServers);
+    
+    // 3. Configurar eventos
+    peerConnection.ontrack = handleTrackEvent;
+    // O evento de ICE agora precisa do targetPeerId para enviar a mensagem.
+    peerConnection.onicecandidate = (event) => handleIceCandidateEvent(event, targetPeerId); 
+
+    // 4. Exibir vídeo local e adicionar tracks
+    localVideo.srcObject = localStream;
+    localVideo.muted = true; 
+    videoCallArea.style.display = 'flex';
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+    
+    remoteVideo.style.display = 'none'; // Esconde até receber o stream
+    
+    // Monitoramento do estado da conexão para diagnóstico
+    peerConnection.onconnectionstatechange = (event) => {
+        console.log(`Estado da conexão WebRTC: ${peerConnection.connectionState}`);
+        if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
+             console.error("A conexão WebRTC falhou ou foi desconectada.");
+             // Lembre-se que o hangUpCall() é chamado quando o canal WebRTC é fechado/perdido
+        }
+    };
+}
+
+
+/* ---------- VIDEOCHAMADA (WebRTC) - FUNÇÃO PRINCIPAL ATUALIZADA ---------- */
+async function startVideoCall(targetPeerId){
+    if(!user || !targetPeerId){ 
+        console.error('Usuário ou alvo não definido.');
+        return; 
+    }
+
+    if(!isSecureContext()){
+        alert('O WebRTC requer HTTPS. Teste em localhost ou por HTTPS.');
+        return;
+    }
+
+    try{
+        // 1. Inicializa o PeerConnection e obtém a mídia
+        await initializePeerConnection(targetPeerId); // Passa o targetPeerId
+        
+        // Se a inicialização falhou (ex: sem permissão de mídia), sai.
+        if(!peerConnection) return; 
+
+        // 2. Criar e enviar a Oferta SDP (apenas o iniciador faz isso)
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        
+        // Envia a oferta para o canal do usuário que você está ligando
+        await sb.channel('call_room_' + targetPeerId).send({
+            type: 'broadcast',
+            event: 'signal',
+            payload: {
+                senderId: user.id,
+                targetId: targetPeerId,
+                type: 'offer',
+                sdp: peerConnection.localDescription
+            }
+        });
+
+        alert(`Chamada iniciada. Tentando conectar com ${targetPeerId.substring(0, 8)}...`);
+
+    }catch(err){
+        console.error('Erro ao iniciar WebRTC:', err);
+        alert('Erro ao iniciar chamada: ' + (err.message || err.name));
+        hangUpCall();
+    }
+}
+
+function hangUpCall(){
+    // Fecha a conexão P2P
+    if(peerConnection){
+        peerConnection.close();
+        peerConnection = null;
+    }
+    
+    if(localStream){
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+        localVideo.srcObject = null;
+    }
+    if(remoteVideo){
+        remoteVideo.srcObject = null;
+        remoteVideo.style.display = 'none';
+    }
+    videoCallArea.style.display = 'none';
+    console.log('Chamada encerrada.');
+    
+    // Limpa o target da URL após desligar (para evitar recarregar e ligar de novo)
+    history.pushState(null, '', window.location.pathname);
+    autoCallTargetId = null; 
+}
+window.hangUpCall = hangUpCall; // Torna global para o botão
+
+/* ---------- OUTRAS FUNÇÕES (Não relacionadas a WebRTC) ---------- */
+function chooseWallpaper() {
+    if(!user){ alert('Faça login primeiro'); return; }
+    wallpaperInput.click();
+}
+window.chooseWallpaper = chooseWallpaper;
+
+wallpaperInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            messagesDiv.style.backgroundImage = `url('${e.target.result}')`;
+            alert('Fundo de tela alterado!');
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+/* ---------- UTIL: checar se estamos em contexto seguro ---------- */
+function isSecureContext() {
+  return window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+}
+
+/* ---------- AUTENTICAÇÃO ---------- */
 async function login(){
-    const emailValue = emailInput.value.trim();
-    const passValue = passInput.value;
-    if (!emailValue || !passValue) { alert("Preencha email e senha."); return; }
-
-    const {data, error} = await sb.auth.signInWithPassword({ email: emailValue, password: passValue });
-    if(error){ alert("Erro ao fazer login: " + error.message); return; }
-
-    user = data.user;
-    initializeChat();
+  const email = emailInput.value.trim();
+  const pass = passInput.value;
+  if(!email || !pass){ alert('Preencha email e senha.'); return; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if(error){ alert('Erro: ' + (error.message || JSON.stringify(error))); return; }
+  user = data.user;
+  initializeChat();
 }
 
 async function register(){
-    const emailValue = emailInput.value.trim();
-    const passValue = passInput.value;
-    if (!emailValue.includes('@') || !emailValue.includes('.')) {
-        alert("Erro ao registrar: O formato do email parece inválido.");
-        return;
-    }
-    const {error} = await sb.auth.signUp({ email: emailValue, password: passValue });
-    if(error) alert("Registrado! Confirme o email e tente fazer login.");
-    else alert("Registrado! Confirme o email e tente fazer login.");
+  const email = emailInput.value.trim();
+  const pass = passInput.value;
+  if(!email.includes('@')){ alert('Email inválido'); return; }
+  const { data, error } = await sb.auth.signUp({ email, password: pass });
+  if(error){ alert('Erro no registro: ' + (error.message || JSON.stringify(error))); }
+  else { alert('Registrado! Confirme o email e faça login.'); }
 }
 
 async function reset(){
-    const emailValue = emailInput.value.trim();
-    if (!emailValue || !emailValue.includes('@')) { alert("Preencha um email válido."); return; }
-    const {error} = await sb.auth.resetPasswordForEmail(emailValue);
-    if(error) alert("Email de recuperação enviado!");
-    else alert("Email de recuperação enviado!");
+  const email = emailInput.value.trim();
+  if(!email.includes('@')){ alert('Email inválido'); return; }
+  const { data, error } = await sb.auth.resetPasswordForEmail(email);
+  if(error) alert('Erro: ' + (error.message || JSON.stringify(error)));
+  else alert('Email de recuperação enviado!');
 }
 
 async function logout(){
-    const { error } = await sb.auth.signOut();
-    if (error) {
-        alert("Erro ao sair: " + error.message);
+  const { error } = await sb.auth.signOut();
+  if(error) alert('Erro ao sair: ' + error.message);
+  user = null;
+  messagesDiv.innerHTML = '';
+  loginModal.style.display = 'flex';
+  document.getElementById('chatTitle').textContent = 'Chat Vídeos';
+  messagesDiv.style.backgroundImage = ''; // Limpa o fundo ao sair
+  hangUpCall(); // Garante que a chamada seja desligada
+}
+window.logout = logout; // Torna global
+
+/* ---------- EXCLUSÃO DE MENSAGENS INDIVIDUAL ---------- */
+window.openMessageMenu = function(e, msg) {
+    if(!user || msg.user_id !== user.id) return; 
+
+    // Substituído por modal/confirmação customizada em uma aplicação real.
+    const confirmed = confirm(`Deseja apagar esta mensagem (ID: ${msg.id})?`); 
+    if (confirmed) {
+        deleteMessage(msg.id);
+    }
+    e.stopPropagation(); 
+};
+
+async function deleteMessage(messageId){
+    if(!user) return;
+
+    const { error } = await sb.from('messages')
+        .delete()
+        .eq('id', messageId)
+        .eq('user_id', user.id); 
+
+    if(error){ 
+        alert('Erro ao apagar mensagem: ' + error.message);
+        console.error(error);
     } else {
-        user = null;
-        messagesDiv.innerHTML = "";
-        loginModal.style.display = "flex";
-        chatTitle.textContent = "Chat";
-        window.location.reload(); 
-    }
-}
-
-
-/* -----------------------------------------------------------
-   CHAT — ENVIAR / RENDERIZAR / RECEBER
------------------------------------------------------------*/
-sendBtn.onclick = sendMessage;
-textInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { sendMessage(); } });
-
-async function sendMessage(){
-  const text = textInput.value.trim();
-  if(!text || !user) return;
-
-  const { error } = await sb.from("messages").insert({
-    user_id: user.id,
-    text: text
-  });
-
-  if (error) {
-      alert("Erro ao enviar mensagem: " + error.message);
-  } else {
-      textInput.value = "";
-  }
-}
-
-// ** FUNÇÃO RENDERIZAR MENSAGEM (SUPORTE MULTI-MÍDIA OTIMIZADO - INCLUI VÍDEO) **
-function renderMessage(msg){
-  const div = document.createElement("div");
-  div.className = "msg " + (msg.user_id === user.id ? "me" : "other");
-  div.removeAttribute('data-media'); // Limpa o atributo
-
-  let contentHTML = msg.text;
-  const mediaPrefixes = {
-    '[Áudio]:': 'audio',
-    '[Imagem]:': 'image',
-    '[Vídeo]:': 'video', // Prefixo para vídeos
-    '[Arquivo]:': 'file' 
-  };
-
-  for (const prefix in mediaPrefixes) {
-    if (msg.text.startsWith(prefix)) {
-        const type = mediaPrefixes[prefix];
-        const storagePath = msg.text.substring(prefix.length).trim();
-        const { data: publicUrlData } = sb.storage.from('chat-media').getPublicUrl(storagePath);
-        const fileUrl = publicUrlData.publicUrl;
-        const fileExt = storagePath.split('.').pop().toLowerCase();
-        
-        div.setAttribute('data-media', 'true'); // Marca a mensagem como mídia
-
-        if (type === 'audio') {
-            const mimeType = fileExt === 'mp3' ? 'audio/mpeg' : 'audio/webm';
-            contentHTML = `
-                <div class="file-content">
-                    🎤 **Áudio**
-                    <audio controls style="width: 100%; max-width: 250px;">
-                        <source src="${fileUrl}" type="${mimeType}">
-                        Seu navegador não suporta a reprodução.
-                    </audio>
-                </div>
-            `;
-        } else if (type === 'image') {
-             contentHTML = `
-                <div class="file-content">
-                    🖼️ **Imagem**
-                    <a href="${fileUrl}" target="_blank">
-                        <img src="${fileUrl}" alt="Imagem do Chat" />
-                    </a>
-                </div>
-            `;
-        } else if (type === 'video') {
-             // Tratamento para Vídeos
-             const mimeType = fileExt === 'mp4' ? 'video/mp4' : (fileExt === 'webm' ? 'video/webm' : 'video/ogg');
-             contentHTML = `
-                <div class="file-content">
-                    📹 **Vídeo**
-                    <video controls style="width: 100%; max-width: 250px;">
-                        <source src="${fileUrl}" type="${mimeType}">
-                        Seu navegador não suporta vídeos.
-                    </video>
-                </div>
-            `;
-        } else if (type === 'file') {
-             // Arquivo genérico
-             const fileName = storagePath.substring(storagePath.lastIndexOf('/') + 1);
-             contentHTML = `
-                <div class="file-content">
-                    📦 **Arquivo**
-                    <a href="${fileUrl}" target="_blank" download>
-                        <span class="file-icon">↓</span> ${fileName}
-                    </a>
-                </div>
-            `;
+        const el = document.querySelector(`[data-message-id="${messageId}"]`);
+        if(el) {
+            const groupEl = el.closest('.msg-group');
+            if(groupEl) groupEl.remove();
         }
-        break; 
+    }
+}
+window.deleteMessage = deleteMessage;
+
+/* ---------- EXCLUSÃO EM MASSA DE MENSAGENS ---------- */
+async function deleteAllMessages(){
+    if(!user){
+        alert('Faça login primeiro.');
+        return;
+    }
+    
+    // Substituído por modal/confirmação customizada em uma aplicação real.
+    const confirmed = confirm("⚠️ ATENÇÃO: Deseja REALMENTE apagar TODAS as suas mensagens no chat? Esta ação é irreversível.");
+    if (!confirmed) return;
+    
+    const { error } = await sb.from('messages')
+        .delete()
+        .eq('user_id', user.id); 
+
+    if(error){ 
+        alert('Erro ao apagar mensagens: ' + error.message);
+        console.error(error);
+    } else {
+        messagesDiv.innerHTML = '';
+        alert('Todas as suas mensagens foram apagadas com sucesso! (Recarregue para garantir a sincronização em tempo real).');
+    }
+}
+window.deleteAllMessages = deleteAllMessages; // Torna global
+
+
+/* ---------- RENDER MENSAGENS ---------- */
+function renderMessage(msg){
+  const date = new Date(msg.created_at);
+  const timeString = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const profileName = msg.user_id === user.id ? 'Você' : (msg.email || msg.user_id); 
+  
+  const groupDiv = document.createElement('div');
+  groupDiv.className = 'msg-group ' + ((user && msg.user_id === user.id) ? 'me':'other');
+
+  // Adiciona o nome do perfil
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'profile-name';
+  nameSpan.textContent = profileName; 
+  groupDiv.appendChild(nameSpan);
+
+  const div = document.createElement('div');
+  div.className = 'msg ' + ((user && msg.user_id === user.id) ? 'me':'other');
+  
+  div.dataset.messageId = msg.id; 
+  div.onclick = (e) => openMessageMenu(e, msg);
+
+
+  let content = msg.text || '';
+  const prefixes = { '[Áudio]:':'audio', '[Imagem]:':'image', '[Vídeo]:':'video', '[Arquivo]:':'file' };
+  for(const p in prefixes){
+    if(content.startsWith(p)){
+      const type = prefixes[p];
+      const path = content.substring(p.length).trim();
+      const { data: urlData } = sb.storage.from('chat-media').getPublicUrl(path);
+      const fileUrl = urlData.publicUrl;
+      if(type === 'image') {
+        content = `<div class="file-content">🖼️ <a href="${fileUrl}" target="_blank"><img src="${fileUrl}" alt="imagem" style="max-width:220px;border-radius:6px"></a></div>`;
+      } else if(type === 'video') {
+        content = `<div class="file-content">📹<video controls style="max-width:240px;border-radius:6px"><source src="${fileUrl}">Seu navegador não suporta.</video></div>`;
+      } else if(type === 'audio') {
+        content = `<div class="file-content">🎤<audio controls src="${fileUrl}" style="max-width:240px"></audio></div>`;
+      } else {
+        const fileName = path.split('/').pop();
+        content = `<div class="file-content">📦 <a href="${fileUrl}" target="_blank" download>${fileName}</a></div>`;
+      }
+      break;
     }
   }
 
-  div.innerHTML = contentHTML;
-  messagesDiv.appendChild(div);
+  div.innerHTML = `${content}<span class="timestamp">${timeString}</span>`;
+  groupDiv.appendChild(div);
+  
+  messagesDiv.appendChild(groupDiv);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-
-function subscribeToMessages() {
-    if (window.chatChannel) sb.removeChannel(window.chatChannel);
-
-    window.chatChannel = sb.channel("msgs")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" },
-        payload => {
-            if (user) {
-                renderMessage(payload.new);
-            }
-        }
-      )
-      .subscribe();
+/* ---------- INSERIR E CARREGAR HISTÓRICO ---------- */
+async function sendMessage(){
+  const text = textInput.value.trim();
+  if(!text || !user) return;
+  const { error } = await sb.from('messages').insert({ user_id: user.id, text, email: user.email }); 
+  if(error) alert('Erro ao enviar: ' + error.message);
+  else textInput.value = '';
 }
 
 async function loadHistory(){
-  let {data, error} = await sb.from("messages")
-    .select("*").order("created_at",{ascending:true});
-
-  if (error) {
-      alert("Erro ao carregar histórico: " + error.message);
-      return;
-  }
-  
-  messagesDiv.innerHTML = "";
+  const { data, error } = await sb.from('messages').select('*').order('created_at', { ascending: true });
+  if(error){ console.error(error); alert('Erro ao carregar histórico'); return; }
+  messagesDiv.innerHTML = '';
   data.forEach(renderMessage);
 }
 
-/* -----------------------------------------------------------
-   FUNÇÃO: APAGAR TODAS AS MENSAGENS (DO USUÁRIO LOGADO)
------------------------------------------------------------*/
-async function confirmClearChat() {
-    kebabMenu.style.display = 'none'; // Fecha o menu
-    
-    if (!user) {
-        alert("Você deve estar logado para apagar mensagens.");
-        return;
-    }
-
-    // Usamos window.prompt() para simular o alerta/confirmação
-    const confirmation = prompt("ATENÇÃO: Você está prestes a apagar TODAS as suas mensagens (apenas as suas). Digite 'CONFIRMAR' para continuar:");
-
-    if (confirmation !== 'CONFIRMAR') {
-        alert("Ação cancelada.");
-        return;
-    }
-
-    // 1. Apagar todas as linhas da tabela 'messages'
-    const { error: deleteError } = await sb.from('messages')
-        .delete()
-        .eq('user_id', user.id); // Filtra apenas as mensagens do usuário logado
-
-    if (deleteError) {
-        console.error("Erro ao apagar mensagens:", deleteError.message);
-        alert("ERRO: Falha ao apagar mensagens. Verifique as políticas de RLS para DELETE na tabela 'messages'.");
-    } else {
-        alert("Todas as suas mensagens foram apagadas com sucesso!");
-        // Limpa a tela e recarrega o histórico (que agora deve estar vazio)
-        messagesDiv.innerHTML = "";
-        loadHistory();
-    }
+/* ---------- SUBSCRIBE (Realtime) ---------- */
+function subscribeToMessages(){
+  if(window.chatChannel) sb.removeChannel(window.chatChannel);
+  window.chatChannel = sb.channel('public:messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+      if(payload && payload.new) renderMessage(payload.new);
+    })
+    .subscribe();
 }
 
+/* ---------- UPLOAD ---------- */
+async function uploadFile(file){
+  if(!file || !user) return;
+  const mimeType = file.type || '';
+  let prefix = '[Arquivo]: ';
+  if(mimeType.startsWith('video/')) prefix = '[Vídeo]: ';
+  else if(mimeType.startsWith('image/')) prefix = '[Imagem]: ';
+  
+  const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+  const path = `${user.id}/${Date.now()}_${safeName}`;
+  const { data: uploadData, error: uploadError } = await sb.storage.from('chat-media').upload(path, file, { cacheControl: '3600', upsert: false, contentType: mimeType });
+  if(uploadError){ console.error(uploadError); alert('Erro no upload: ' + uploadError.message); return; }
+  
+  const { error: dbError } = await sb.from('messages').insert({ user_id: user.id, text: `${prefix}${uploadData.path}`, email: user.email }); 
+  if(dbError) alert('Erro ao gravar mensagem: ' + dbError.message);
+  fileInput.value = '';
+}
 
-/* -----------------------------------------------------------
-   MENU E FUNDO DE TELA
------------------------------------------------------------*/
-kebabBtn.onclick = () => {
-    kebabMenu.style.display = kebabMenu.style.display === 'block' ? 'none' : 'block';
+// Função para obter parâmetros da URL
+function getUrlParameter(name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+    const results = regex.exec(location.search);
+    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 };
 
-document.addEventListener('click', (e) => {
-    if (e.target !== kebabBtn && !kebabMenu.contains(e.target)) {
-        kebabMenu.style.display = 'none';
+/* ---------- Lógica de subscrição e início de chamada automática ---------- */
+function setupCallChannelAndStartAutoCall() {
+    if (!user) return; 
+    
+    // 1. Assina o canal de sinalização do próprio usuário para receber ofertas e respostas
+    if (!callChannel) {
+        callChannel = sb.channel('call_room_' + user.id);
+        callChannel.on('broadcast', { event: 'signal' }, handleSignalMessage).subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                console.log(`Pronto para receber chamadas no canal: call_room_${user.id}`);
+                // 2. Se houver um alvo no URL, inicia a chamada automaticamente AGORA QUE O CANAL ESTÁ PRONTO.
+                if (autoCallTargetId && autoCallTargetId !== user.id) {
+                    startVideoCall(autoCallTargetId);
+                }
+            }
+        });
+    } else {
+        // Se o canal já estava pronto, tenta iniciar a chamada se houver um alvo
+        if (autoCallTargetId && autoCallTargetId !== user.id) {
+             startVideoCall(autoCallTargetId);
+        }
     }
+}
+
+
+/* ---------- INICIALIZAÇÃO ---------- */
+function initializeChat(){
+  // Checa se há um alvo de chamada no URL
+  autoCallTargetId = getUrlParameter('target');
+  
+  sb.auth.getSession().then(({ data: { session } }) => {
+    if(session) user = session.user;
+    
+    if(user){
+      loginModal.style.display = 'none';
+      document.getElementById('chatTitle').textContent = user.email.split('@')[0];
+      loadHistory();
+      subscribeToMessages();
+      
+      // CHAVE: Configura o canal de recebimento e inicia a chamada automática
+      if (autoCallTargetId === user.id) {
+          alert("Você não pode ligar para si mesmo.");
+          // Limpa o target da URL
+          history.pushState(null, '', window.location.pathname);
+          autoCallTargetId = null; 
+      } else {
+          setupCallChannelAndStartAutoCall();
+      }
+
+    } else {
+      loginModal.style.display = 'flex';
+      // Limpa o target do URL se não estiver logado
+      history.pushState(null, '', window.location.pathname);
+      autoCallTargetId = null;
+    }
+  });
+}
+
+sb.auth.onAuthStateChange((event, session) => {
+  user = session?.user || null;
+  if (user && loginModal.style.display === 'flex') {
+     // Força a reinicialização se o usuário acabou de entrar.
+     initializeChat(); 
+  } else if (!user) {
+     loginModal.style.display = 'flex';
+  }
 });
 
-function setBackground(file) {
-    if (file) {
-        const url = URL.createObjectURL(file);
-        messagesDiv.style.backgroundImage = `url('${url}')`;
-        messagesDiv.style.backgroundSize = 'cover';
-        messagesDiv.style.backgroundPosition = 'center';
-    }
-}
+// inicia quando a página carrega
+// Nota: O initializeChat já lida com a recuperação de sessão e decide o que fazer.
+initializeChat();
 
-/* -----------------------------------------------------------
-   UPLOAD DE ARQUIVOS (MÍDIA GERAL)
------------------------------------------------------------*/
-async function uploadFile(file) {
-    if (!file || !user) return;
-
-    const mimeType = file.type;
-    
-    let messagePrefix;
-    if (mimeType.startsWith('video/')) {
-        messagePrefix = '[Vídeo]: '; 
-    } else if (mimeType.startsWith('image/')) {
-        messagePrefix = '[Imagem]: ';
-    } else {
-        messagePrefix = '[Arquivo]: ';
-    }
-    
-    // Cria um caminho de arquivo único
-    const fileName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase(); 
-    const filePath = `${user.id}/${Date.now()}_${fileName}`; 
-
-    const { data: uploadData, error: uploadError } = await sb.storage
-        .from('chat-media') 
-        .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: mimeType
-        });
-
-    if (uploadError) {
-        console.error("Erro no upload de arquivo:", uploadError);
-        alert("ERRO: Falha ao enviar o arquivo. " + uploadError.message);
-    } else {
-        const storagePath = uploadData.path;
-
-        const { error: dbError } = await sb.from("messages").insert({
-            user_id: user.id,
-            text: `${messagePrefix}${storagePath}` 
-        });
-
-        if (dbError) {
-            alert("ERRO: Falha ao registrar mensagem no DB: " + dbError.message);
-        } else {
-            console.log(`Upload de arquivo bem-sucedido: ${storagePath}`);
-        }
-    }
-    
-    fileInput.value = '';
-}
-
-
-/* -----------------------------------------------------------
-   GRAVAÇÃO DE ÁUDIO (MICROFONE)
------------------------------------------------------------*/
-let mediaRecorder;
-let audioChunks = [];
-let isRecording = false;
-let audioStream;
-
-audioBtn.onclick = async () => {
-    if (!user) {
-        alert("Você deve estar logado para usar o microfone.");
-        return;
-    }
-
-    if (isRecording) {
-        if (mediaRecorder) {
-            mediaRecorder.stop();
-        }
-        audioBtn.classList.remove('recording');
-        isRecording = false;
-    } else {
-        try {
-            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mimeType = 'audio/webm'; 
-            mediaRecorder = new MediaRecorder(audioStream, { mimeType: mimeType });
-            audioChunks = [];
-            
-            mediaRecorder.ondataavailable = e => {
-                if (e.data.size > 0) {
-                    audioChunks.push(e.data);
-                }
-            };
-
-            mediaRecorder.onstop = async () => {
-                let blob = new Blob(audioChunks, { type: mimeType });
-                
-                if (blob.size < 100) { 
-                    alert("Gravação muito curta ou vazia.");
-                    if (audioStream) audioStream.getTracks().forEach(track => track.stop());
-                    return;
-                }
-                
-                const fileExtension = 'webm';
-                const filePath = `${user.id}/${Date.now()}.${fileExtension}`; 
-
-                const { data: uploadData, error: uploadError } = await sb.storage
-                    .from('chat-media') 
-                    .upload(filePath, blob, {
-                        cacheControl: '3600',
-                        upsert: false,
-                        contentType: mimeType
-                    });
-
-                if (uploadError) {
-                    console.error("Erro no upload para Storage:", uploadError);
-                    alert("ERRO: Falha ao enviar áudio. " + uploadError.message);
-                } else {
-                    const storagePath = uploadData.path;
-
-                    const { error: dbError } = await sb.from("messages").insert({
-                        user_id: user.id,
-                        text: `[Áudio]: ${storagePath}` 
-                    });
-
-                    if (dbError) {
-                        alert("ERRO: Falha ao registrar mensagem no DB: " + dbError.message);
-                    } else {
-                        console.log(`Upload de áudio bem-sucedido para: ${storagePath}`);
-                    }
-                }
-                
-                if (audioStream) {
-                    audioStream.getTracks().forEach(track => track.stop());
-                }
-                mediaRecorder = null;
-            };
-
-            mediaRecorder.start();
-            audioBtn.classList.add('recording');
-            isRecording = true;
-
-        } catch (e) {
-            console.error("Erro ao acessar o microfone:", e);
-            alert("Navegador bloqueou acesso ao microfone ou ocorreu um erro.");
-        }
-    }
-};
-
-
-/* -----------------------------------------------------------
-   INICIALIZAÇÃO
------------------------------------------------------------*/
-function initializeChat() {
-    if (user) {
-        loginModal.style.display = "none";
-        chatTitle.textContent = "Chat (" + user.email + ")";
-        loadHistory();
-        subscribeToMessages();
-    } else {
-        loginModal.style.display = "flex";
-    }
-}
-
-sb.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-        user = session.user;
-    }
-    initializeChat();
-});
-
-
-/* -----------------------------------------------------------
-   EXPOSE FUNCTIONS TO WINDOW
------------------------------------------------------------*/
-window.login = login;
-window.register = register;
-window.reset = reset;
-window.logout = logout;
-window.setBackground = setBackground;
-window.uploadFile = uploadFile; 
-window.confirmClearChat = confirmClearChat;
+// Globaliza funções de login/registro
+window.login = login; window.register = register; window.reset = reset;
 </script>
 
 </body>
 </html>
-
