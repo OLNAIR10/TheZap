@@ -87,14 +87,13 @@ body{
 </div>
 
 <div id="contactsList">
-    <!-- Lista de contatos será inserida aqui -->
     <div class="empty-state">Carregando usuários...</div>
 </div>
 
 <script>
-/* ---------- CONFIGURAÇÃO SUPABASE (AS MESMAS DO index.html) ---------- */
-const SUPABASE_URL = "https://qytxdewvwpfdulsiweyi.supabase.co"; 
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5dHhkZXd2d3BmZHVsc2l3ZXlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0NjI5NzYsImV4cCI6MjA4MDAzODk3Nn0.fPquiaUntC89YT6tqvB0lqg8oRdwSN0kN-CnhCPOu_Q";
+/* ---------- CONFIGURAÇÃO SUPABASE (NOVAS CHAVES) ---------- */
+const SUPABASE_URL = "https://rtbfafyckvjexabywztu.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0YmZhZnlja3ZqZXhhYnl3enR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4MTg4MDYsImV4cCI6MjA4MDM5NDgwNn0.pemzzt-0MNF1wxVVtM13n5rgWCu8mSmdF_GQU4TrMM4";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true }
@@ -129,26 +128,24 @@ function subscribeToAuthChanges() {
             window.location.href = 'index.html'; 
         }
     });
-    
-    // O Supabase tem um recurso de "Presença" que seria ideal aqui, 
-    // mas usaremos a tabela 'users' padrão para simplificar, já que
-    // todos os usuários que fizerem login estarão listados no Supabase Auth.
 }
 
-/* ---------- CARREGAR USUÁRIOS ---------- */
+/* ---------- CARREGAR USUÁRIOS (AJUSTADO PARA USAR 'profiles') ---------- */
 async function fetchOnlineUsers() {
-    // Na verdade, esta função carrega TODOS os usuários registrados,
-    // pois o Supabase Auth não fornece o status "online" facilmente.
-    // Em produção, você usaria o recurso de Presença do Realtime.
-    
-    const { data, error } = await sb.from('users_public')
+    // CORREÇÃO APLICADA: Consulta a tabela 'profiles' que você criou via SQL.
+    const { data, error } = await sb.from('profiles')
         .select('id, email')
         .neq('id', user.id); // Exclui o próprio usuário
 
     contactsList.innerHTML = '';
     
     if (error) {
-        contactsList.innerHTML = `<div class="empty-state" style="color:red;">Erro ao carregar contatos: ${error.message}</div>`;
+        // Mensagem de erro aprimorada para ajudar no diagnóstico de RLS ou tabela
+        const errorMessage = error.message.includes('permission denied') || error.message.includes('exist') 
+            ? 'Erro: Verifique se a tabela `profiles` foi criada e se as Políticas RLS de SELECT para "authenticated" estão ativas.'
+            : `Erro ao carregar contatos: ${error.message}`;
+            
+        contactsList.innerHTML = `<div class="empty-state" style="color:red; font-weight:bold;">${errorMessage}</div>`;
         return;
     }
     
@@ -191,7 +188,7 @@ function renderContact(contact) {
 function startCall(e, targetId) {
     e.stopPropagation(); // Previne qualquer clique acidental no item
     // Redireciona para a página principal com o ID do alvo na URL,
-    // fazendo com que a chamada seja iniciada automaticamente.
+    // fazendo com que a chamada seja iniciada automaticamente após o check de login.
     window.location.href = `index.html?target=${targetId}`;
 }
 
@@ -204,4 +201,3 @@ checkAuthAndInit();
 
 </body>
 </html>
-
