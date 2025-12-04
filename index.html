@@ -190,13 +190,19 @@ body{
 </div>
 
 <script>
-/* ---------- CONFIGURAÇÃO SUPABASE (NOVAS CHAVES) ---------- */
+/* ---------- CONFIGURAÇÃO SUPABASE (CHAVES) ---------- */
 const SUPABASE_URL = "https://rtbfafyckvjexabywztu.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0YmZhZnlja3ZqZXhhYnl3enR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4MTg4MDYsImV4cCI6MjA4MDM5NDgwNn0.pemzzt-0MNF1wxVVtM13n5rgWCu8mSmdF_GQU4TrMM4";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true }
 });
+
+/* ---------- CHAVE DE NOTIFICAÇÃO PUSH E ENDPOINT (ADICIONADO) ---------- */
+// 🛑 IMPORTANTE: Esta é a CHAVE PÚBLICA VAPID que você gerou!
+const VAPID_PUBLIC_KEY = "BOsT4e25vpeQWxxJLSgnfi0I8VoSiWMX3MZD2NMTxV_XE-DrVjBR3RS5hNeMhUadd_pxVDuENeDvNW5N1YG1qWc";
+const EDGE_FUNCTION_URL = "https://rtbfafyckvjexabywztu.supabase.co/functions/v1/send-call-notification";
+
 
 /* ---------- Variáveis Globais de Estado e WebRTC ---------- */
 let user = null;
@@ -227,8 +233,6 @@ const iceServers = {
         { urls: 'stun:stun.callwithus.com' },
         
         // TURN Servers (Mantidos como fallback para redes restritivas)
-        // Nota: Estes são servidores TURN PÚBLICOS e GRATUITOS para TESTES. 
-        // Para PRODUÇÃO, é ALTAMENTE recomendado usar um serviço TURN pago e dedicado para estabilidade.
         {
             urls: 'turn:openrelay.metered.ca:443?transport=tcp', 
             username: 'openrelayproject',
@@ -267,7 +271,8 @@ document.getElementById('videoCallBtn').onclick = () => {
         window.location.href = 'contacts.html'; 
         return;
     }
-    startVideoCall(target);
+    // CHAMA A FUNÇÃO DE CHAMADA (QUE AGORA DISPARA O PUSH)
+    startVideoCall(target, user.email.split('@')[0]); // Passa o nome do chamador (email sem @)
 };
 
 document.getElementById('kebabBtn').onclick = () => { const m = document.getElementById('kebabMenu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; };
@@ -275,8 +280,8 @@ document.addEventListener('click', (e)=>{ const m=document.getElementById('kebab
 
 
 /* ---------- FUNÇÕES AUXILIARES DE VIDEOCHAMADA ---------- */
+// ... (O restante das funções handleTrackEvent, handleIceCandidateEvent, handleSignalMessage, initializePeerConnection, e hangUpCall permanecem IGUAIS) ...
 
-// Lida com a chegada do stream de vídeo/áudio do par remoto
 function handleTrackEvent(event) {
     if (remoteVideo && event.streams && event.streams[0]) {
         remoteVideo.srcObject = event.streams[0];
@@ -285,13 +290,10 @@ function handleTrackEvent(event) {
     }
 }
 
-// Lida com a descoberta de candidatos ICE (endereços de rede)
 async function handleIceCandidateEvent(event, targetPeerId) {
     if (event.candidate) {
         console.log('Enviando candidato ICE:', event.candidate);
         
-        // Envia o candidato ICE (endereço de rede) para o outro par via Broadcast
-        // Nota: O canal 'call_room_' + targetPeerId deve estar subscrito no lado do receptor.
         await sb.channel('call_room_' + targetPeerId).send({
             type: 'broadcast',
             event: 'signal',
@@ -305,18 +307,14 @@ async function handleIceCandidateEvent(event, targetPeerId) {
     }
 }
 
-// Lida com mensagens de sinalização recebidas via Supabase Broadcast
 async function handleSignalMessage(payload) {
     const signal = payload.payload;
     
-    // Ignora sinais que não são relevantes ou se já estiver em chamada
     if (signal.targetId !== user.id) return; 
 
     console.log('Sinal recebido:', signal.type, signal);
 
     if (signal.type === 'offer') {
-        // Se for uma oferta (o par está chamando)
-        // Se já estiver em uma chamada, rejeita
         if(peerConnection){
             console.log('Já em chamada. Ignorando nova oferta.');
             return; 
@@ -327,13 +325,11 @@ async function handleSignalMessage(payload) {
             return; 
         }
 
-        // Inicializa o PC com o ID do remetente como alvo
         await initializePeerConnection(signal.senderId); 
         await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
 
-        // Envia a resposta de volta para o chamador
         await sb.channel('call_room_' + signal.senderId).send({
             type: 'broadcast',
             event: 'signal',
@@ -346,11 +342,9 @@ async function handleSignalMessage(payload) {
         });
 
     } else if (signal.type === 'answer') {
-        // Se for a resposta, define como descrição remota
         await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
 
     } else if (signal.type === 'ice-candidate') {
-        // Adiciona o candidato ICE
         try {
             if(peerConnection && peerConnection.remoteDescription) {
                  await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
@@ -361,48 +355,41 @@ async function handleSignalMessage(payload) {
     }
 }
 
-// Função para inicializar o PeerConnection e obter mídia
 async function initializePeerConnection(targetPeerId) {
     if (peerConnection) return;
     
-    // 1. Obter mídia local (MUDANÇA: Fazemos aqui para garantir que a permissão é pedida só na chamada)
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     } catch(err) {
         console.error('Erro ao acessar mídia (câmera/microfone):', err);
         alert('Erro ao acessar câmera/microfone. Verifique as permissões. ' + (err.message || err.name));
-        return; // Sai se falhar ao obter a mídia
+        return; 
     }
     
-    // 2. Configurar PeerConnection
     peerConnection = new RTCPeerConnection(iceServers);
     
-    // 3. Configurar eventos
     peerConnection.ontrack = handleTrackEvent;
-    // O evento de ICE agora precisa do targetPeerId para enviar a mensagem.
     peerConnection.onicecandidate = (event) => handleIceCandidateEvent(event, targetPeerId); 
 
-    // 4. Exibir vídeo local e adicionar tracks
     localVideo.srcObject = localStream;
     localVideo.muted = true; 
     videoCallArea.style.display = 'flex';
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
     
-    remoteVideo.style.display = 'none'; // Esconde até receber o stream
+    remoteVideo.style.display = 'none'; 
     
-    // Monitoramento do estado da conexão para diagnóstico
     peerConnection.onconnectionstatechange = (event) => {
         console.log(`Estado da conexão WebRTC: ${peerConnection.connectionState}`);
         if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
              console.error("A conexão WebRTC falhou ou foi desconectada.");
-             // Lembre-se que o hangUpCall() é chamado quando o canal WebRTC é fechado/perdido
         }
     };
 }
 
 
-/* ---------- VIDEOCHAMADA (WebRTC) - FUNÇÃO PRINCIPAL ATUALIZADA ---------- */
-async function startVideoCall(targetPeerId){
+/* ---------- VIDEOCHAMADA (WebRTC) - FUNÇÃO PRINCIPAL COM PUSH (MODIFICADO) ---------- */
+// Adicionado caller_name para enviar no payload da notificação Push
+async function startVideoCall(targetPeerId, caller_name = 'Usuário Desconhecido'){
     if(!user || !targetPeerId){ 
         console.error('Usuário ou alvo não definido.');
         return; 
@@ -415,12 +402,28 @@ async function startVideoCall(targetPeerId){
 
     try{
         // 1. Inicializa o PeerConnection e obtém a mídia
-        await initializePeerConnection(targetPeerId); // Passa o targetPeerId
-        
-        // Se a inicialização falhou (ex: sem permissão de mídia), sai.
+        await initializePeerConnection(targetPeerId); 
         if(!peerConnection) return; 
 
-        // 2. Criar e enviar a Oferta SDP (apenas o iniciador faz isso)
+        // ----------------------------------------------------
+        // 2. NOVO CÓDIGO: Dispara a Notificação Push via Edge Function
+        // ----------------------------------------------------
+        
+        await fetch(EDGE_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                // A chave ANON deve ser usada para acesso público.
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}` 
+            },
+            body: JSON.stringify({
+                target_user_id: targetPeerId,
+                caller_name: caller_name 
+            })
+        });
+        console.log('Notificação Push disparada (Edge Function).');
+        
+        // 3. Criar e enviar a Oferta SDP (inicia a sinalização WebRTC)
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         
@@ -436,17 +439,16 @@ async function startVideoCall(targetPeerId){
             }
         });
 
-        alert(`Chamada iniciada. Tentando conectar com ${targetPeerId.substring(0, 8)}...`);
+        alert(`Chamada iniciada. Tentando conectar com ${targetPeerId.substring(0, 8)}... (Notificação Push enviada)`);
 
     }catch(err){
-        console.error('Erro ao iniciar WebRTC:', err);
+        console.error('Erro ao iniciar WebRTC/Edge Function:', err);
         alert('Erro ao iniciar chamada: ' + (err.message || err.name));
         hangUpCall();
     }
 }
 
 function hangUpCall(){
-    // Fecha a conexão P2P
     if(peerConnection){
         peerConnection.close();
         peerConnection = null;
@@ -464,11 +466,66 @@ function hangUpCall(){
     videoCallArea.style.display = 'none';
     console.log('Chamada encerrada.');
     
-    // Limpa o target da URL após desligar (para evitar recarregar e ligar de novo)
     history.pushState(null, '', window.location.pathname);
     autoCallTargetId = null; 
 }
-window.hangUpCall = hangUpCall; // Torna global para o botão
+window.hangUpCall = hangUpCall; 
+
+/* ---------- FUNÇÕES DE PUSH NOTIFICATION (NOVAS) ---------- */
+
+// Função auxiliar para converter a chave VAPID
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// Função para registrar o Service Worker e enviar a Subscrição Push
+async function subscribeUserToPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('Push Notifications ou Service Workers não suportados.');
+        return;
+    }
+
+    try {
+        // 1. Registra o Service Worker (o arquivo service-worker.js que você criou)
+        const registration = await navigator.serviceWorker.register('/service-worker.js');
+        console.log('Service Worker registrado!');
+
+        // 2. Obtém a subscrição (passando a chave pública VAPID)
+        const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey
+        });
+
+        // 3. Salva ou atualiza a subscrição no Supabase (tabela user_subscriptions)
+        const { error } = await sb.from('user_subscriptions')
+            .upsert({
+                user_id: user.id,
+                subscription_data: subscription, // O objeto PushSubscription completo
+            }, { onConflict: 'user_id' }); // Conflito em user_id para atualizar
+
+        if (error) {
+            console.error('Erro ao salvar subscrição no Supabase:', error);
+        } else {
+            console.log('Inscrição Push salva com sucesso!');
+        }
+
+    } catch (e) {
+        console.error('Falha na inscrição Push. O usuário negou a permissão?', e);
+    }
+}
+
 
 /* ---------- OUTRAS FUNÇÕES (Não relacionadas a WebRTC) ---------- */
 function chooseWallpaper() {
@@ -529,16 +586,15 @@ async function logout(){
   messagesDiv.innerHTML = '';
   loginModal.style.display = 'flex';
   document.getElementById('chatTitle').textContent = 'Chat Vídeos';
-  messagesDiv.style.backgroundImage = ''; // Limpa o fundo ao sair
-  hangUpCall(); // Garante que a chamada seja desligada
+  messagesDiv.style.backgroundImage = ''; 
+  hangUpCall(); 
 }
-window.logout = logout; // Torna global
+window.logout = logout; 
 
 /* ---------- EXCLUSÃO DE MENSAGENS INDIVIDUAL ---------- */
 window.openMessageMenu = function(e, msg) {
     if(!user || msg.user_id !== user.id) return; 
 
-    // Substituído por modal/confirmação customizada em uma aplicação real.
     const confirmed = confirm(`Deseja apagar esta mensagem (ID: ${msg.id})?`); 
     if (confirmed) {
         deleteMessage(msg.id);
@@ -574,7 +630,6 @@ async function deleteAllMessages(){
         return;
     }
     
-    // Substituído por modal/confirmação customizada em uma aplicação real.
     const confirmed = confirm("⚠️ ATENÇÃO: Deseja REALMENTE apagar TODAS as suas mensagens no chat? Esta ação é irreversível.");
     if (!confirmed) return;
     
@@ -590,7 +645,7 @@ async function deleteAllMessages(){
         alert('Todas as suas mensagens foram apagadas com sucesso! (Recarregue para garantir a sincronização em tempo real).');
     }
 }
-window.deleteAllMessages = deleteAllMessages; // Torna global
+window.deleteAllMessages = deleteAllMessages; 
 
 
 /* ---------- RENDER MENSAGENS ---------- */
@@ -602,7 +657,6 @@ function renderMessage(msg){
   const groupDiv = document.createElement('div');
   groupDiv.className = 'msg-group ' + ((user && msg.user_id === user.id) ? 'me':'other');
 
-  // Adiciona o nome do perfil
   const nameSpan = document.createElement('span');
   nameSpan.className = 'profile-name';
   nameSpan.textContent = profileName; 
@@ -708,14 +762,15 @@ function setupCallChannelAndStartAutoCall() {
                 console.log(`Pronto para receber chamadas no canal: call_room_${user.id}`);
                 // 2. Se houver um alvo no URL, inicia a chamada automaticamente AGORA QUE O CANAL ESTÁ PRONTO.
                 if (autoCallTargetId && autoCallTargetId !== user.id) {
-                    startVideoCall(autoCallTargetId);
+                    // Passa o nome do chamador para a Edge Function
+                    startVideoCall(autoCallTargetId, user.email.split('@')[0]);
                 }
             }
         });
     } else {
-        // Se o canal já estava pronto, tenta iniciar a chamada se houver um alvo
         if (autoCallTargetId && autoCallTargetId !== user.id) {
-             startVideoCall(autoCallTargetId);
+             // Passa o nome do chamador para a Edge Function
+             startVideoCall(autoCallTargetId, user.email.split('@')[0]);
         }
     }
 }
@@ -735,10 +790,12 @@ function initializeChat(){
       loadHistory();
       subscribeToMessages();
       
+      // 🛑 NOVO: Tenta inscrever o usuário para notificações Push após o login
+      subscribeUserToPush(); 
+
       // CHAVE: Configura o canal de recebimento e inicia a chamada automática
       if (autoCallTargetId === user.id) {
           alert("Você não pode ligar para si mesmo.");
-          // Limpa o target da URL
           history.pushState(null, '', window.location.pathname);
           autoCallTargetId = null; 
       } else {
@@ -747,7 +804,6 @@ function initializeChat(){
 
     } else {
       loginModal.style.display = 'flex';
-      // Limpa o target do URL se não estiver logado
       history.pushState(null, '', window.location.pathname);
       autoCallTargetId = null;
     }
@@ -757,15 +813,12 @@ function initializeChat(){
 sb.auth.onAuthStateChange((event, session) => {
   user = session?.user || null;
   if (user && loginModal.style.display === 'flex') {
-     // Força a reinicialização se o usuário acabou de entrar.
      initializeChat(); 
   } else if (!user) {
      loginModal.style.display = 'flex';
   }
 });
 
-// inicia quando a página carrega
-// Nota: O initializeChat já lida com a recuperação de sessão e decide o que fazer.
 initializeChat();
 
 // Globaliza funções de login/registro
