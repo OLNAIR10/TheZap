@@ -216,14 +216,19 @@ let remoteVideo = null; // Elemento para o vídeo do outro par
 let callChannel = null; // Canal Supabase para a sinalização
 let autoCallTargetId = null; // ID de destino para chamada automática via URL
 
-// Servidores STUN e TURN OTIMIZADOS (essenciais para WebRTC em redes restritivas)
+// --- INÍCIO DA REVISÃO DOS iceServers ---
 const iceServers = {
     iceServers: [
-        // Servidores STUN mais confiáveis (prioriza P2P direto)
+        // STUN Servers (Aumentamos a lista para maior confiabilidade P2P)
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun.services.mozilla.com' },
+        { urls: 'stun:stun.stunprotocol.org' },
+        { urls: 'stun:stun.voipbuster.com' },
+        { urls: 'stun:stun.callwithus.com' },
         
-        // Servidor TURN público para testes (usado como retransmissor quando o STUN falha)
+        // TURN Servers (Mantidos como fallback para redes restritivas)
+        // Nota: Estes são servidores TURN PÚBLICOS e GRATUITOS para TESTES. 
+        // Para PRODUÇÃO, é ALTAMENTE recomendado usar um serviço TURN pago e dedicado para estabilidade.
         {
             urls: 'turn:openrelay.metered.ca:443?transport=tcp', 
             username: 'openrelayproject',
@@ -236,6 +241,7 @@ const iceServers = {
         }
     ]
 };
+// --- FIM DA REVISÃO DOS iceServers ---
 
 // Obter elemento remoto (já está no HTML)
 remoteVideo = document.getElementById('remoteVideo');
