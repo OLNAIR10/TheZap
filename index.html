@@ -226,17 +226,22 @@ let remoteVideo = null; // Elemento para o vídeo do outro par
 let callChannel = null; // Canal Supabase para a sinalização
 let autoCallTargetId = null; // ID de destino para chamada automática via URL
 
-// --- INÍCIO DA REVISÃO DOS iceServers ---
+// --- INÍCIO DA REVISÃO DOS iceServers (Melhoria STUN Gratuita Aplicada) ---
 const iceServers = {
     iceServers: [
-        // STUN Servers (Aumentamos a lista para maior confiabilidade P2P)
+        // --- STUN Servers (Melhoria Gratuita Aplicada) ---
+        // Lista expandida para maior resiliência de conexão P2P
         { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun.services.mozilla.com' },
         { urls: 'stun:stun.stunprotocol.org' },
         { urls: 'stun:stun.voipbuster.com' },
-        { urls: 'stun:stun.callwithus.com' },
+        { urls: 'stun:stun.ideasip.com' },
+        { urls: 'stun:stun.schlund.de' },
         
-        // TURN Servers (Mantidos como fallback para redes restritivas)
+        // --- TURN Servers (Fallback - Públicos Mantidos) ---
+        // Mantidos como último recurso para redes restritivas (com confiabilidade limitada)
         {
             urls: 'turn:openrelay.metered.ca:443?transport=tcp', 
             username: 'openrelayproject',
