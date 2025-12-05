@@ -1,191 +1,202 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quick Task - Chat & Push</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Chat Completo - Supabase + WebRTC + Push</title>
 
-<!-- Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<style>
-    :root {
-        --bg: #e5ddd5;
-        --panel: #fff;
-        --accent: #128c7e;
-        --text: #111;
-        --radius: 12px;
-    }
-
-    body {
-        margin: 0;
-        background: var(--bg);
-        font-family: Arial, sans-serif;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-    }
-
-    header {
-        background: var(--accent);
-        padding: 16px;
-        color: white;
-        font-size: 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    #menu {
-        font-size: 26px;
-        cursor: pointer;
-    }
-
-    #chat {
-        flex: 1;
-        overflow-y: auto;
-        padding: 10px;
-        background: var(--bg);
-    }
-
-    #input-area {
-        background: var(--panel);
-        padding: 10px;
-        display: flex;
-        gap: 10px;
-    }
-
-    #msg {
-        flex: 1;
-        padding: 10px;
-        border-radius: var(--radius);
-        border: 1px solid #bbb;
-    }
-
-    button {
-        padding: 10px 16px;
-        border: none;
-        border-radius: var(--radius);
-        background: var(--accent);
-        color: white;
-        cursor: pointer;
-    }
-</style>
+  <style>
+    body { margin:0; background:#e5ddd5; font-family:sans-serif; }
+    #app{ display:none; flex-direction:column; height:100vh; }
+    #messages{ flex:1; padding:10px; overflow-y:auto; }
+    #inputArea{ background:#fff; padding:10px; display:flex; gap:10px; }
+    #inputArea input{ flex:1; padding:10px; border-radius:6px; border:1px solid #ccc; }
+    #inputArea button{ padding:10px 16px; background:#128C7E; color:#fff; border:none; border-radius:6px; }
+    #loginModal{ position:fixed; inset:0; background:#0008; display:flex; align-items:center; justify-content:center; }
+    #loginBox{ background:#fff; padding:20px; border-radius:8px; width:300px; }
+  </style>
 </head>
-
 <body>
 
-<header>
-    Quick Task
-    <div id="menu">⋮</div>
-</header>
+<!-- LOGIN -->
+<div id="loginModal">
+  <div id="loginBox">
+    <h3>Entrar</h3>
+    <input id="email" placeholder="Email" style="width:100%;margin-bottom:8px;">
+    <input id="password" type="password" placeholder="Senha" style="width:100%;margin-bottom:8px;">
+    <button style="width:100%;" onclick="login()">Login</button>
+  </div>
+</div>
 
-<div id="chat"></div>
+<!-- APP -->
+<div id="app">
+  <div id="messages"></div>
 
-<div id="input-area">
-    <input id="msg" placeholder="Digite uma mensagem..." />
+  <div id="inputArea">
+    <input id="textInput" placeholder="Digite...">
+    <input id="fileInput" type="file">
     <button onclick="sendMessage()">Enviar</button>
+  </div>
 </div>
 
 <script>
-/* ---------------------------------------
-   CONFIGURAÇÃO DO SUPABASE
------------------------------------------*/
-const supabase = supabase.createClient(
-    "https://YOUR-PROJECT.supabase.co",
-    "YOUR-ANON-KEY"
+/* ================================================
+   ⚙️ CONFIGURAÇÃO SUPABASE
+================================================= */
+const sb = supabase.createClient(
+  "https://YOUR-PROJECT-ID.supabase.co", 
+  "YOUR-ANON-KEY"
 );
 
-/* ---------------------------------------
-   REGISTRAR SERVICE WORKER
------------------------------------------*/
-async function registerSW() {
-    if ("serviceWorker" in navigator) {
-        try {
-            const reg = await navigator.serviceWorker.register("/sw.js");
-            console.log("SW registrado:", reg);
-        } catch (e) {
-            console.error("Erro ao registrar SW:", e);
-        }
-    }
-}
-registerSW();
+let user = null;
+let callChannel = null;
+let autoCallTarget = null;
 
-/* ---------------------------------------
-   INSCREVER PUSH COM SUAS CHAVES VAPID
------------------------------------------*/
-const vapidPublic = "BEEvF0xTsqZwJkfEsuA5y7ybd3iT7iN82R5E5BRv8GmTgEoSZoXbe4v0XJXBm5dSYI3Lw7p1oL2Vj2nJbX0LZq4";
+/* ================================================
+   🔔 PUSH NOTIFICATIONS — SUAS VAPID KEYS
+================================================= */
+const VAPID_PUBLIC = "BEEvF0xTsqZwJkfEsuA5y7ybd3iT7iN82R5E5BRv8GmTgEoSZoXbe4v0XJXBm5dSYI3Lw7p1oL2Vj2nJbX0LZq4";
+const VAPID_PRIVATE = "u8Vt0T5Gc8uGJ81iYgP7sW6iTo2qLh4D2oU9R15V0go";
 
-async function subscribePush() {
-    const reg = await navigator.serviceWorker.ready;
+/* ================================================
+   🔐 LOGIN
+================================================= */
+async function login(){
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
-    const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublic)
-    });
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
 
-    console.log("Push Sub:", sub);
+  if(error){ alert(error.message); return; }
 
-    // Salvar no Supabase
-    await supabase.from("subscriptions").insert({
-        endpoint: sub.endpoint,
-        p256dh: arrayBufferToBase64(sub.getKey("p256dh")),
-        auth: arrayBufferToBase64(sub.getKey("auth")),
-        user_email: "olnair11pereira@gmail.com"
-    });
-
-    alert("Push Notification ativado!");
+  user = data.user;
+  initializeApp();
 }
 
-// Conversão necessária para VAPID
-function urlBase64ToUint8Array(base64) {
-    const padding = "=".repeat((4 - (base64.length % 4)) % 4);
-    const base64Safe = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
-    const raw = window.atob(base64Safe);
-    const output = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; ++i) output[i] = raw.charCodeAt(i);
-    return output;
+/* ================================================
+   💬 MENSAGENS
+================================================= */
+function renderMessage(msg){
+  const div = document.createElement("div");
+  div.textContent = msg.email + ": " + msg.text;
+  messages.appendChild(div);
 }
 
-function arrayBufferToBase64(buffer) {
-    let binary = "";
-    const bytes = new Uint8Array(buffer);
-    bytes.forEach(b => binary += String.fromCharCode(b));
-    return btoa(binary);
+async function sendMessage(){
+  const text = textInput.value.trim();
+  if(!text || !user) return;
+
+  await sb.from("messages").insert({
+    user_id: user.id,
+    text,
+    email: user.email
+  });
+
+  textInput.value = "";
 }
 
-/* ---------------------------------------
-   CHAT - ENVIAR MENSAGEM
------------------------------------------*/
-async function sendMessage() {
-    const text = document.getElementById("msg").value;
-    if (!text.trim()) return;
+async function loadHistory(){
+  const { data } = await sb.from("messages")
+    .select("*")
+    .order("created_at", { ascending: true });
 
-    await supabase.from("messages").insert({
-        text,
-        sender: "Você",
-        created_at: new Date()
-    });
-
-    document.getElementById("msg").value = "";
+  messages.innerHTML = "";
+  data.forEach(renderMessage);
 }
 
-/* ---------------------------------------
-   RECEBER MENSAGENS EM TEMPO REAL
------------------------------------------*/
-supabase
-    .channel("chat")
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" },
-        payload => {
-            const m = payload.new;
-            const chat = document.getElementById("chat");
-            chat.innerHTML += `<p><strong>${m.sender}</strong>: ${m.text}</p>`;
-            chat.scrollTop = chat.scrollHeight;
-        }
-    )
+function subscribeToMessages(){
+  sb.channel("public:messages")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, 
+      p => renderMessage(p.new))
     .subscribe();
+}
 
+/* ================================================
+   📁 UPLOAD
+================================================= */
+fileInput.addEventListener("change", async () => {
+  const file = fileInput.files[0];
+  if(!file || !user) return;
+
+  const safe = file.name.replace(/[^a-z0-9.]/gi, "_").toLowerCase();
+  const path = `${user.id}/${Date.now()}_${safe}`;
+
+  await sb.storage.from("chat-media").upload(path, file);
+
+  await sb.from("messages").insert({
+    user_id: user.id,
+    text: `[Arquivo]: ${path}`,
+    email: user.email
+  });
+
+  fileInput.value = "";
+});
+
+/* ================================================
+   🔔 PUSH — Inscrição
+================================================= */
+async function subscribePush(){
+  if(!("serviceWorker" in navigator)) return;
+
+  const reg = await navigator.serviceWorker.register("/service-worker.js");
+
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8(VAPID_PUBLIC)
+  });
+
+  await sb.from("push_subscriptions").insert({
+    user_id: user.id,
+    endpoint: sub.endpoint,
+    p256dh: b64(sub.getKey("p256dh")),
+    auth: b64(sub.getKey("auth"))
+  });
+}
+
+function urlBase64ToUint8(base64){
+  const padding = "=".repeat((4 - base64.length % 4) % 4);
+  const base64url = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64url);
+  return Uint8Array.from([...raw].map(x => x.charCodeAt(0)));
+}
+function b64(buff){ return btoa(String.fromCharCode(...new Uint8Array(buff))); }
+
+/* ================================================
+   📞 WEBRTC — Estrutura pronta
+================================================= */
+function setupCallChannel(){
+  callChannel = sb.channel("call_room_" + user.id)
+    .on("broadcast", { event: "signal" }, msg => console.log("Sinal recebido:", msg))
+    .subscribe();
+}
+
+function startCall(targetId){
+  console.log("Chamando:", targetId);
+}
+
+/* ================================================
+   🚀 INICIALIZAÇÃO
+================================================= */
+function initializeApp(){
+  loginModal.style.display = "none";
+  app.style.display = "flex";
+
+  loadHistory();
+  subscribeToMessages();
+  subscribePush();
+  setupCallChannel();
+}
+
+sb.auth.getSession().then(({ data }) => {
+  if(data.session){
+    user = data.session.user;
+    initializeApp();
+  }
+});
 </script>
 
 </body>
-  </html>
+        </html>
