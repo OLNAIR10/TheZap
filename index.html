@@ -201,7 +201,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 /* ---------- CHAVE DE NOTIFICAÇÃO PUSH E ENDPOINT (ADICIONADO) ---------- */
 // 🛑 IMPORTANTE: Esta é a CHAVE PÚBLICA VAPID que você gerou!
 const VAPID_PUBLIC_KEY = "BOsT4e25vpeQWxxJLSgnfi0I8VoSiWMX3MZD2NMTxV_XE-DrVjBR3RS5hNeMhUadd_pxVDuENeDvNW5N1YG1qWc";
-const EDGE_FUNCTION_URL = "https://rtbfafyckvjexabywztu.supabase.co/functions/v1/send-call-notification";
+// 🛑 CORREÇÃO AQUI: Trocado de 'send-call-notification' para o nome da função implantada 'hyper-function'.
+const EDGE_FUNCTION_URL = "https://rtbfafyckvjexabywztu.supabase.co/functions/v1/hyper-function";
 
 
 /* ---------- Variáveis Globais de Estado e WebRTC ---------- */
@@ -409,6 +410,7 @@ async function startVideoCall(targetPeerId, caller_name = 'Usuário Desconhecido
         // 2. NOVO CÓDIGO: Dispara a Notificação Push via Edge Function
         // ----------------------------------------------------
         
+        // CORREÇÃO: A URL do fetch AGORA usa o endpoint 'hyper-function'
         await fetch(EDGE_FUNCTION_URL, {
             method: 'POST',
             headers: {
