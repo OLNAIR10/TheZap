@@ -30,7 +30,7 @@ body{
     flex-direction:column;
 }
 
-/* Faz com que a área de mensagens role e use o espaço do container */
+/* Faz que a área de mensagens role e use o espaço do container */
 #messages{ 
     flex:1; 
     overflow-y:auto; 
@@ -407,15 +407,13 @@ async function startVideoCall(targetPeerId, caller_name = 'Usuário Desconhecido
         if(!peerConnection) return; 
 
         // ----------------------------------------------------
-        // 2. NOVO CÓDIGO: Dispara a Notificação Push via Edge Function
+        // 2. Dispara a Notificação Push via Edge Function
         // ----------------------------------------------------
         
-        // CORREÇÃO: A URL do fetch AGORA usa o endpoint 'hyper-function'
         await fetch(EDGE_FUNCTION_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // A chave ANON deve ser usada para acesso público.
                 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` 
             },
             body: JSON.stringify({
@@ -473,7 +471,7 @@ function hangUpCall(){
 }
 window.hangUpCall = hangUpCall; 
 
-/* ---------- FUNÇÕES DE PUSH NOTIFICATION (NOVAS) ---------- */
+/* ---------- FUNÇÕES DE PUSH NOTIFICATION (REFATORADAS PARA DEBUG) ---------- */
 
 // Função auxiliar para converter a chave VAPID
 function urlBase64ToUint8Array(base64String) {
@@ -491,26 +489,36 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
-// Função para registrar o Service Worker e enviar a Subscrição Push
+// FUNÇÃO CRÍTICA: Adicionado logs e tratamento de erro de permissão.
 async function subscribeUserToPush() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         console.warn('Push Notifications ou Service Workers não suportados.');
         return;
     }
+    
+    // NOVO: Verifica o status da permissão antes de tentar subscrever
+    console.log('➡️ Status da permissão de Notificação atual:', Notification.permission);
+    if (Notification.permission === 'denied') {
+        console.error('🛑 Permissão negada. O usuário precisa reativá-la nas configurações do navegador.');
+        alert('As notificações foram permanentemente bloqueadas. Reative-as nas configurações do navegador para que as chamadas funcionem.');
+        return;
+    }
 
     try {
-        // 1. Registra o Service Worker (o arquivo service-worker.js que você criou)
+        // 1. Registra o Service Worker
         const registration = await navigator.serviceWorker.register('/service-worker.js');
-        console.log('Service Worker registrado!');
+        console.log('✅ Service Worker registrado com sucesso!');
 
-        // 2. Obtém a subscrição (passando a chave pública VAPID)
+        // 2. Obtém a subscrição (dispara o prompt se a permissão for 'default')
         const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: applicationServerKey
         });
 
-        // 3. Salva ou atualiza a subscrição no Supabase (tabela user_subscriptions)
+        console.log('✅ Objeto de subscrição Push criado (Token gerado):', subscription);
+
+        // 3. Salva ou atualiza a subscrição no Supabase
         const { error } = await sb.from('user_subscriptions')
             .upsert({
                 user_id: user.id,
@@ -518,13 +526,18 @@ async function subscribeUserToPush() {
             }, { onConflict: 'user_id' }); // Conflito em user_id para atualizar
 
         if (error) {
-            console.error('Erro ao salvar subscrição no Supabase:', error);
+            console.error('🛑 Erro FATAL ao salvar subscrição no Supabase (Verifique o RLS!):', error);
+            alert('Erro ao salvar subscrição no banco. Verifique as permissões de escrita do RLS na tabela user_subscriptions.');
         } else {
-            console.log('Inscrição Push salva com sucesso!');
+            console.log('✅ Inscrição Push salva com sucesso no Supabase!');
         }
 
     } catch (e) {
-        console.error('Falha na inscrição Push. O usuário negou a permissão?', e);
+        // Lida com erros como: Registro do SW falhou ou o usuário negou o prompt de subscrição.
+        console.error('🛑 Falha geral na inscrição Push (registro SW ou subscrição). Detalhes:', e.name, e.message, e);
+        if (e instanceof DOMException && e.name === 'NotAllowedError') {
+             alert('A inscrição Push falhou: O usuário negou a permissão. Tente novamente após liberar nas configurações.');
+        }
     }
 }
 
@@ -828,4 +841,4 @@ window.login = login; window.register = register; window.reset = reset;
 </script>
 
 </body>
-</html> 
+</html>
