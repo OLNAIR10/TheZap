@@ -91,7 +91,8 @@ body{
 </div>
 
 <script>
-/* ---------- CONFIGURAÇÃO SUPABASE (NOVAS CHAVES) ---------- */
+/* ---------- CONFIGURAÇÃO SUPABASE (SUAS CHAVES) ---------- */
+// ⚠️ ATENÇÃO: Use APENAS sua chave pública (anon) aqui.
 const SUPABASE_URL = "https://rtbfafyckvjexabywztu.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0YmZhZnlja3ZqZXhhYnl3enR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4MTg4MDYsImV4cCI6MjA4MDM5NDgwNn0.pemzzt-0MNF1wxVVtM13n5rgWCu8mSmdF_GQU4TrMM4";
 
@@ -102,26 +103,29 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 let user = null;
 const contactsList = document.getElementById('contactsList');
 
-/* ---------- AUTENTICAÇÃO E VERIFICAÇÃO ---------- */
-function checkAuthAndInit() {
-    sb.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-            user = session.user;
-            fetchOnlineUsers();
-            subscribeToAuthChanges();
-        } else {
-            // Se não estiver logado, redireciona para a página principal
-            contactsList.innerHTML = '<div class="empty-state" style="color:red; font-weight:bold;">Você precisa estar logado na página principal (index.html) primeiro.</div>';
-            setTimeout(() => {
-                window.location.href = 'index.html'; 
-            }, 3000);
-        }
-    });
+/* ---------- AUTENTICAÇÃO E VERIFICAÇÃO (CORRIGIDA E ROBUSTA) ---------- */
+async function checkAuthAndInit() {
+    // Tenta obter o usuário logado, que é a verificação mais confiável.
+    const { data: { user: loggedUser } } = await sb.auth.getUser(); 
+    
+    if (loggedUser) {
+        user = loggedUser;
+        fetchOnlineUsers();
+        subscribeToAuthChanges();
+    } else {
+        // Se não estiver logado, exibe a mensagem de erro...
+        contactsList.innerHTML = '<div class="empty-state" style="color:red; font-weight:bold;">Sessão não encontrada. Redirecionando para login...</div>';
+        
+        // ... e espera 1.5s antes de redirecionar para dar tempo de ler a sessão.
+        setTimeout(() => {
+            window.location.href = 'index.html'; 
+        }, 1500); 
+    }
 }
 
 /* ---------- REALTIME (Presença de Usuários) ---------- */
 function subscribeToAuthChanges() {
-    // Escuta mudanças de autenticação para reagir se o usuário sair em outra aba
+    // Escuta mudanças de autenticação (ex: logoff em outra aba)
     sb.auth.onAuthStateChange((event, session) => {
         if (!session) {
             // Usuário saiu
@@ -132,7 +136,7 @@ function subscribeToAuthChanges() {
 
 /* ---------- CARREGAR USUÁRIOS (AJUSTADO PARA USAR 'profiles') ---------- */
 async function fetchOnlineUsers() {
-    // CORREÇÃO APLICADA: Consulta a tabela 'profiles' que você criou via SQL.
+    // Consulta a tabela 'profiles' (requer RLS de SELECT para 'authenticated')
     const { data, error } = await sb.from('profiles')
         .select('id, email')
         .neq('id', user.id); // Exclui o próprio usuário
@@ -140,9 +144,9 @@ async function fetchOnlineUsers() {
     contactsList.innerHTML = '';
     
     if (error) {
-        // Mensagem de erro aprimorada para ajudar no diagnóstico de RLS ou tabela
-        const errorMessage = error.message.includes('permission denied') || error.message.includes('exist') 
-            ? 'Erro: Verifique se a tabela `profiles` foi criada e se as Políticas RLS de SELECT para "authenticated" estão ativas.'
+        // Mensagem de erro para ajudar no diagnóstico de RLS
+        const errorMessage = error.message.includes('permission denied') 
+            ? 'Erro: As Políticas RLS de SELECT na tabela `profiles` não estão ativas para "authenticated".'
             : `Erro ao carregar contatos: ${error.message}`;
             
         contactsList.innerHTML = `<div class="empty-state" style="color:red; font-weight:bold;">${errorMessage}</div>`;
@@ -187,15 +191,14 @@ function renderContact(contact) {
 
 function startCall(e, targetId) {
     e.stopPropagation(); // Previne qualquer clique acidental no item
-    // Redireciona para a página principal com o ID do alvo na URL,
-    // fazendo com que a chamada seja iniciada automaticamente após o check de login.
+    // Redireciona para a página principal com o ID do alvo na URL para iniciar a chamada.
     window.location.href = `index.html?target=${targetId}`;
 }
 
 // Torna a função de chamada global para uso no HTML
 window.startCall = startCall;
 
-// Inicia o processo
+// Inicia o processo de verificação de autenticação
 checkAuthAndInit();
 </script>
 
