@@ -197,9 +197,11 @@ body{
 
 <script>
 
-/* ---------- CONFIGURAÇÃO SUPABASE (NOVAS CHAVES DO NOVO PROJETO) ---------- */
+/* ---------- CONFIGURAÇÃO SUPABASE (CHAVE CORRETA: ANON PÚBLICA) ---------- */
 const SUPABASE_URL = "https://dktkzsmfhhjxkbhvnwnw.supabase.co"; 
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrdGt6c21maGhqeGtiaHZud253Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDk0NDQxNCwiZXhwIjoyMDgwNTIwNDE0fQ.Zx-kvcpwTUOLw5becZwRS2OidYEOvfeka7tNmT77a6A";
+
+// 🚨 CHAVE CORRIGIDA: USANDO A CHAVE PÚBLICA 'anon' PARA O CLIENTE WEB
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrdGt6c21maGhqeGtiaHZud253Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5NDQ0MTQsImV4cCI6MjA4MDUyMDQxNH0.QpLkvWSaVPdjszXx0_epadmmfMRjwe_8C7WjcQzNbAs";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { persistSession: true }
