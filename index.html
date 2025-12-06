@@ -543,7 +543,7 @@ async function login(){
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
     if(error){ alert('Erro: ' + (error.message || JSON.stringify(error))); return; }
     user = data.user;
-    initializeChat();
+    // initializeChat() será chamado pelo onAuthStateChange logo após o login
 }
 
 
@@ -575,6 +575,10 @@ async function logout(){
     document.getElementById('chatTitle').textContent = 'Chat Vídeos';
     messagesDiv.style.backgroundImage = ''; // Limpa o fundo ao sair
     hangUpCall(); // Garante que a chamada seja desligada
+    
+    // Limpa o target da URL
+    history.pushState(null, '', window.location.pathname);
+    autoCallTargetId = null;
 }
 window.logout = logout; // Torna global
 
@@ -721,15 +725,24 @@ async function loadHistory(){
 }
 
 
-/* ---------- SUBSCRIBE (Realtime) ---------- */
+/* ---------- SUBSCRIBE (Realtime Otimizado) ---------- */
 
 function subscribeToMessages(){
-    if(window.chatChannel) sb.removeChannel(window.chatChannel);
+    // 💡 Otimização: remove o canal existente para evitar subscrições duplicadas.
+    if(window.chatChannel) {
+        sb.removeChannel(window.chatChannel);
+        console.log('Canal Realtime anterior removido.');
+    }
+    
     window.chatChannel = sb.channel('public:messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
             if(payload && payload.new) renderMessage(payload.new);
         })
-        .subscribe();
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                 console.log('Realtime Messages: SUBSCRIBED');
+            }
+        });
 }
 
 
@@ -797,7 +810,7 @@ async function subscribeUserToPush() {
         const swReg = await navigator.serviceWorker.register('service-worker.js');
         console.log('✅ Service Worker registrado com sucesso!');
 
-        // 2. Pedir Permissão
+        // 2. Pedir Permissão (só acontece se for 'default')
         if (Notification.permission === 'default') {
             const permissionResult = await Notification.requestPermission();
             console.log(`Novo status da permissão: ${permissionResult}`);
@@ -872,59 +885,75 @@ function setupCallChannelAndStartAutoCall() {
 
 
 
-/* ---------- INICIALIZAÇÃO ---------- */
+/* ---------- INICIALIZAÇÃO (Lógica Simplificada, dependente de onAuthStateChange) ---------- */
 
-function initializeChat(){
+function initializeChat(event_type = 'SESSION_RECOVERED'){
+    
     // Checa se há um alvo de chamada no URL
     autoCallTargetId = getUrlParameter('target');
     
-    sb.auth.getSession().then(({ data: { session } }) => {
-        if(session) user = session.user;
+    if(user){
+        loginModal.style.display = 'none';
+        document.getElementById('chatTitle').textContent = user.email.split('@')[0];
+        loadHistory();
+        subscribeToMessages();
         
-        if(user){
-            loginModal.style.display = 'none';
-            document.getElementById('chatTitle').textContent = user.email.split('@')[0];
-            loadHistory();
-            subscribeToMessages();
-            
-            // CHAVE: Registra para receber notificações Push
-            subscribeUserToPush(); 
-            
-            // CHAVE: Configura o canal de recebimento e inicia a chamada automática
-            if (autoCallTargetId === user.id) {
-                alert("Você não pode ligar para si mesmo.");
-                // Limpa o target da URL
-                history.pushState(null, '', window.location.pathname);
-                autoCallTargetId = null; 
-            } else {
-                setupCallChannelAndStartAutoCall();
-            }
-
-
-        } else {
-            loginModal.style.display = 'flex';
-            // Limpa o target do URL se não estiver logado
-            history.pushState(null, '', window.location.pathname);
-            autoCallTargetId = null;
+        // A inscrição Push acontece no onAuthStateChange (SIGNED_IN)
+        // ou aqui para usuários que já estavam logados (recuperação de sessão)
+        if(event_type !== 'SIGNED_IN') {
+             subscribeUserToPush(); 
         }
-    });
+
+        // Configura o canal de recebimento e inicia a chamada automática
+        if (autoCallTargetId === user.id) {
+            alert("Você não pode ligar para si mesmo.");
+            // Limpa o target da URL
+            history.pushState(null, '', window.location.pathname);
+            autoCallTargetId = null; 
+        } else {
+            setupCallChannelAndStartAutoCall();
+        }
+
+
+    } else {
+        loginModal.style.display = 'flex';
+        // Limpa o target do URL se não estiver logado
+        history.pushState(null, '', window.location.pathname);
+        autoCallTargetId = null;
+    }
 }
 
 
-sb.auth.onAuthStateChange((event, session) => {
+// CHAVE: Usamos onAuthStateChange para distinguir entre login novo e sessão recuperada
+sb.auth.onAuthStateChange(async (event, session) => {
     user = session?.user || null;
-    if (user && loginModal.style.display === 'flex') {
-        // Força a reinicialização se o usuário acabou de entrar.
-        initializeChat(); 
-    } else if (!user) {
+    
+    if (user) {
+        if (event === 'SIGNED_IN') {
+             // 💡 Melhoria UX: Mensagem amigável ANTES do prompt nativo
+             alert('Bem-vindo! Para receber alertas de chamadas e mensagens quando o aplicativo não estiver aberto, clique em "Permitir" na próxima notificação.');
+             
+             // Inicializa o chat e faz o Push.
+             initializeChat('SIGNED_IN'); 
+             await subscribeUserToPush(); // Inicia o processo de registro do Service Worker e solicitação de permissão
+        } else if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+             // Inicializa o chat para sessões existentes (já logado)
+             initializeChat('SESSION_RECOVERED');
+        }
+    } else if (event === 'SIGNED_OUT') {
         loginModal.style.display = 'flex';
+        // A função logout já lida com limpeza e display do modal
     }
 });
 
 
-// inicia quando a página carrega
-// Nota: O initializeChat já lida com a recuperação de sessão e decide o que fazer.
-initializeChat();
+// Inicia o processo de recuperação de sessão. O onAuthStateChange cuidará do resto.
+sb.auth.getSession().then(({ data: { session } }) => {
+    if(!session) {
+         // Se não há sessão, chama initializeChat para mostrar o modal de login
+         initializeChat('NO_SESSION'); 
+    }
+});
 
 
 // Globaliza funções de login/registro
