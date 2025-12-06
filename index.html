@@ -142,11 +142,28 @@ body{
 .file-content {
     margin: 4px 0;
 }
-.file-content img, .file-content video {
+.file-content img, .file-content video, .file-content audio {
     display: block;
     max-width: 100%; 
     height: auto;
 }
+
+/* Estilos para o status de gravação de áudio */
+.recording-status {
+    width: 42px; 
+    height: 42px;
+    border-radius: 50%;
+    background: red;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulse 1s infinite alternate;
+}
+@keyframes pulse {
+    from { opacity: 1; }
+    to { opacity: 0.5; }
+}
+
 </style>
 
 </head>
@@ -176,7 +193,7 @@ body{
 <div id="inputArea">
     <button id="fileBtn" class="btn">📎</button>
     <input type="file" id="wallpaperInput" accept="image/*" style="display:none"> 
-    <input type="file" id="fileInput" accept="video/*,image/*" style="display:none">
+    <input type="file" id="fileInput" accept="video/*,image/*,audio/*" style="display:none">
     <button id="videoCallBtn" class="btn" title="Iniciar Videochamada">📹</button>
     <input id="textInput" placeholder="Mensagem">
     <button id="micBtn" class="btn">🎤</button>
@@ -199,8 +216,6 @@ body{
 
 /* ---------- CONFIGURAÇÃO SUPABASE (CHAVE CORRETA: ANON PÚBLICA) ---------- */
 const SUPABASE_URL = "https://dktkzsmfhhjxkbhvnwnw.supabase.co"; 
-
-// 🚨 CHAVE CORRIGIDA: USANDO A CHAVE PÚBLICA 'anon' PARA O CLIENTE WEB
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrdGt6c21maGhqeGtiaHZud253Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5NDQ0MTQsImV4cCI6MjA4MDUyMDQxNH0.QpLkvWSaVPdjszXx0_epadmmfMRjwe_8C7WjcQzNbAs";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -221,18 +236,19 @@ const fileInput = document.getElementById('fileInput');
 const wallpaperInput = document.getElementById('wallpaperInput'); 
 const videoCallArea = document.getElementById('videoCallArea');
 const localVideo = document.getElementById('localVideo');
+const micBtn = document.getElementById('micBtn'); // Novo
+const inputArea = document.getElementById('inputArea'); // Novo
+
+let peerConnection = null; 
+let remoteVideo = null; 
+let callChannel = null; 
+let autoCallTargetId = null; 
+let mediaRecorder = null; // Variável para a gravação de áudio
+let audioChunks = []; // Array para armazenar partes do áudio
 
 
-let peerConnection = null; // Objeto RTCPeerConnection
-let remoteVideo = null; // Elemento para o vídeo do outro par
-let callChannel = null; // Canal Supabase para a sinalização
-let autoCallTargetId = null; // ID de destino para chamada automática via URL
-
-// --- INÍCIO DA REVISÃO DOS iceServers (Melhoria STUN Gratuita Aplicada) ---
 const iceServers = {
     iceServers: [
-        // --- STUN Servers (Melhoria Gratuita Aplicada) ---
-        // Lista expandida para maior resiliência de conexão P2P
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
@@ -241,9 +257,6 @@ const iceServers = {
         { urls: 'stun:stun.voipbuster.com' },
         { urls: 'stun:stun.ideasip.com' },
         { urls: 'stun:stun.schlund.de' },
-        
-        // --- TURN Servers (Fallback - Públicos Mantidos) ---
-        // Mantidos como último recurso para redes restritivas (com confiabilidade limitada)
         {
             urls: 'turn:openrelay.metered.ca:443?transport=tcp', 
             username: 'openrelayproject',
@@ -256,22 +269,26 @@ const iceServers = {
         }
     ]
 };
-// --- FIM DA REVISÃO DOS iceServers ---
 
-
-// Obter elemento remoto (já está no HTML)
 remoteVideo = document.getElementById('remoteVideo');
 
 
 // Adiciona funcionalidade aos botões
 document.getElementById('fileBtn').onclick = () => { if(!user){ alert('Faça login primeiro'); return; } fileInput.click(); };
-document.getElementById('micBtn').onclick = () => { if(!user){ alert('Faça login primeiro'); return; } alert('Simulação de gravação de áudio...'); };
+// 🚨 NOVO: Lógica de INICIAR/PARAR gravação no clique do MIC
+micBtn.onclick = () => { 
+    if(!user){ alert('Faça login primeiro'); return; } 
+    if(mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+};
+
 fileInput.onchange = (e) => { if(e.target.files[0]) uploadFile(e.target.files[0]); };
 document.getElementById('sendBtn').onclick = sendMessage;
 textInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
 
-
-// Lógica atualizada para o botão de chamada: verifica login primeiro
 document.getElementById('videoCallBtn').onclick = () => {
     if(!user){
         alert('Faça login para iniciar uma videochamada.');
@@ -279,7 +296,6 @@ document.getElementById('videoCallBtn').onclick = () => {
     }
     let target = autoCallTargetId; 
     if (!target) {
-        // Redireciona para a página de contatos se não houver alvo na URL.
         alert("Selecione um contato na lista de 'Contatos' para iniciar uma chamada.");
         window.location.href = 'contacts.html'; 
         return;
@@ -293,10 +309,8 @@ document.addEventListener('click', (e)=>{ const m=document.getElementById('kebab
 
 
 
-/* ---------- FUNÇÕES AUXILIARES DE VIDEOCHAMADA ---------- */
+/* ---------- FUNÇÕES AUXILIARES DE VIDEOCHAMADA (INALTERADAS) ---------- */
 
-
-// Lida com a chegada do stream de vídeo/áudio do par remoto
 function handleTrackEvent(event) {
     if (remoteVideo && event.streams && event.streams[0]) {
         remoteVideo.srcObject = event.streams[0];
@@ -305,13 +319,9 @@ function handleTrackEvent(event) {
     }
 }
 
-
-// Lida com a descoberta de candidatos ICE (endereços de rede)
 async function handleIceCandidateEvent(event, targetPeerId) {
     if (event.candidate) {
         console.log('Enviando candidato ICE:', event.candidate);
-        
-        // Envia o candidato ICE (endereço de rede) para o outro par via Broadcast
         await sb.channel('call_room_' + targetPeerId).send({
             type: 'broadcast',
             event: 'signal',
@@ -325,40 +335,28 @@ async function handleIceCandidateEvent(event, targetPeerId) {
     }
 }
 
-
-// Lida com mensagens de sinalização recebidas via Supabase Broadcast
 async function handleSignalMessage(payload) {
     const signal = payload.payload;
-    
-    // Ignora sinais que não são relevantes ou se já estiver em chamada
     if (signal.targetId !== user.id) return; 
 
     console.log('Sinal recebido:', signal.type, signal);
 
-
     if (signal.type === 'offer') {
-        // Se for uma oferta (o par está chamando)
-        // Se já estiver em uma chamada, rejeita
         if(peerConnection){
             console.log('Já em chamada. Ignorando nova oferta.');
             return; 
         }
-
 
         if (!confirm(`Chamada recebida de ${signal.senderId.substring(0, 8)}... Deseja atender?`)) {
             console.log("Chamada recusada.");
             return; 
         }
 
-
-        // Inicializa o PC com o ID do remetente como alvo
         await initializePeerConnection(signal.senderId); 
         await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
 
-
-        // Envia a resposta de volta para o chamador
         await sb.channel('call_room_' + signal.senderId).send({
             type: 'broadcast',
             event: 'signal',
@@ -369,15 +367,9 @@ async function handleSignalMessage(payload) {
                 sdp: peerConnection.localDescription
             }
         });
-
-
     } else if (signal.type === 'answer') {
-        // Se for a resposta, define como descrição remota
         await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-
-
     } else if (signal.type === 'ice-candidate') {
-        // Adiciona o candidato ICE
         try {
             if(peerConnection && peerConnection.remoteDescription) {
                 await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
@@ -388,38 +380,29 @@ async function handleSignalMessage(payload) {
     }
 }
 
-
-// Função para inicializar o PeerConnection e obter mídia
 async function initializePeerConnection(targetPeerId) {
     if (peerConnection) return;
     
-    // 1. Obter mídia local 
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     } catch(err) {
         console.error('Erro ao acessar mídia (câmera/microfone):', err);
         alert('Erro ao acessar câmera/microfone. Verifique as permissões. ' + (err.message || err.name));
-        return; // Sai se falhar ao obter a mídia
+        return; 
     }
     
-    // 2. Configurar PeerConnection
     peerConnection = new RTCPeerConnection(iceServers);
     
-    // 3. Configurar eventos
     peerConnection.ontrack = handleTrackEvent;
-    // O evento de ICE agora precisa do targetPeerId para enviar a mensagem.
     peerConnection.onicecandidate = (event) => handleIceCandidateEvent(event, targetPeerId); 
 
-
-    // 4. Exibir vídeo local e adicionar tracks
     localVideo.srcObject = localStream;
     localVideo.muted = true; 
     videoCallArea.style.display = 'flex';
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
     
-    remoteVideo.style.display = 'none'; // Esconde até receber o stream
+    remoteVideo.style.display = 'none'; 
     
-    // Monitoramento do estado da conexão para diagnóstico
     peerConnection.onconnectionstatechange = (event) => {
         console.log(`Estado da conexão WebRTC: ${peerConnection.connectionState}`);
         if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
@@ -428,36 +411,25 @@ async function initializePeerConnection(targetPeerId) {
     };
 }
 
-
-
-/* ---------- VIDEOCHAMADA (WebRTC) - FUNÇÃO PRINCIPAL ATUALIZADA ---------- */
-
 async function startVideoCall(targetPeerId){
     if(!user || !targetPeerId){ 
         console.error('Usuário ou alvo não definido.');
         return; 
     }
 
-
     if(!isSecureContext()){
         alert('O WebRTC requer HTTPS. Teste em localhost ou por HTTPS.');
         return;
     }
 
-
     try{
-        // 1. Inicializa o PeerConnection e obtém a mídia
-        await initializePeerConnection(targetPeerId); // Passa o targetPeerId
+        await initializePeerConnection(targetPeerId); 
         
-        // Se a inicialização falhou (ex: sem permissão de mídia), sai.
         if(!peerConnection) return; 
 
-
-        // 2. Criar e enviar a Oferta SDP (apenas o iniciador faz isso)
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         
-        // Envia a oferta para o canal do usuário que você está ligando
         await sb.channel('call_room_' + targetPeerId).send({
             type: 'broadcast',
             event: 'signal',
@@ -469,9 +441,7 @@ async function startVideoCall(targetPeerId){
             }
         });
 
-
         alert(`Chamada iniciada. Tentando conectar com ${targetPeerId.substring(0, 8)}...`);
-
 
     }catch(err){
         console.error('Erro ao iniciar WebRTC:', err);
@@ -480,9 +450,7 @@ async function startVideoCall(targetPeerId){
     }
 }
 
-
 function hangUpCall(){
-    // Fecha a conexão P2P
     if(peerConnection){
         peerConnection.close();
         peerConnection = null;
@@ -500,11 +468,64 @@ function hangUpCall(){
     videoCallArea.style.display = 'none';
     console.log('Chamada encerrada.');
     
-    // Limpa o target da URL após desligar (para evitar recarregar e ligar de novo)
     history.pushState(null, '', window.location.pathname);
     autoCallTargetId = null; 
 }
-window.hangUpCall = hangUpCall; // Torna global para o botão
+window.hangUpCall = hangUpCall; 
+
+
+/* ---------- GRAVAÇÃO E ENVIO DE ÁUDIO (NOVO) ---------- */
+
+async function startRecording() {
+    if (!user) return;
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        
+        // Exibir indicador de gravação (muda o ícone do botão)
+        micBtn.innerHTML = '🔴';
+        micBtn.classList.add('recording-status');
+        
+        mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            // Cria o Blob de áudio e chama a função de upload
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            
+            // Reverter o botão
+            micBtn.innerHTML = '🎤';
+            micBtn.classList.remove('recording-status');
+            
+            // O stream de áudio pode ser parado
+            stream.getTracks().forEach(track => track.stop());
+            
+            // Chama a função de upload (com o Blob e o prefixo de áudio)
+            uploadFile(audioBlob, true); 
+        };
+
+        mediaRecorder.start();
+        textInput.placeholder = 'Gravando áudio... Clique no microfone para parar.';
+        console.log('Gravação de áudio iniciada.');
+
+    } catch (err) {
+        console.error('Erro ao iniciar gravação de áudio:', err);
+        alert('Erro ao acessar microfone. Verifique as permissões.');
+        // Reverter o botão
+        micBtn.innerHTML = '🎤';
+        micBtn.classList.remove('recording-status');
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        textInput.placeholder = 'Mensagem';
+    }
+}
 
 
 /* ---------- OUTRAS FUNÇÕES (Não relacionadas a WebRTC) ---------- */
@@ -529,14 +550,12 @@ wallpaperInput.onchange = (e) => {
 };
 
 
-/* ---------- UTIL: checar se estamos em contexto seguro ---------- */
-
 function isSecureContext() {
     return window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
 }
 
 
-/* ---------- AUTENTICAÇÃO ---------- */
+/* ---------- AUTENTICAÇÃO (INALTERADA) ---------- */
 
 async function login(){
     const email = emailInput.value.trim();
@@ -545,7 +564,6 @@ async function login(){
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
     if(error){ alert('Erro: ' + (error.message || JSON.stringify(error))); return; }
     user = data.user;
-    // initializeChat() será chamado pelo onAuthStateChange logo após o login
 }
 
 
@@ -554,8 +572,8 @@ async function register(){
     const pass = passInput.value;
     if(!email.includes('@')){ alert('Email inválido'); return; }
     const { data, error } = await sb.auth.signUp({ email, password: pass });
-    if(error){ alert('Erro no registro: ' + (error.message || JSON.stringify(error))); }
-    else { alert('Registrado! Confirme o email e faça login.'); }
+    if(error) alert('Erro no registro: ' + (error.message || JSON.stringify(error)));
+    else alert('Registrado! Confirme o email e faça login.'); 
 }
 
 
@@ -575,22 +593,19 @@ async function logout(){
     messagesDiv.innerHTML = '';
     loginModal.style.display = 'flex';
     document.getElementById('chatTitle').textContent = 'Chat Vídeos';
-    messagesDiv.style.backgroundImage = ''; // Limpa o fundo ao sair
-    hangUpCall(); // Garante que a chamada seja desligada
+    messagesDiv.style.backgroundImage = ''; 
+    hangUpCall(); 
     
-    // Limpa o target da URL
     history.pushState(null, '', window.location.pathname);
     autoCallTargetId = null;
 }
-window.logout = logout; // Torna global
+window.logout = logout; 
 
 
-/* ---------- EXCLUSÃO DE MENSAGENS INDIVIDUAL ---------- */
+/* ---------- EXCLUSÃO DE MENSAGENS INDIVIDUAL (INALTERADA) ---------- */
 
 window.openMessageMenu = function(e, msg) {
     if(!user || msg.user_id !== user.id) return; 
-
-    // Substituído por modal/confirmação customizada em uma aplicação real.
     const confirmed = confirm(`Deseja apagar esta mensagem (ID: ${msg.id})?`); 
     if (confirmed) {
         deleteMessage(msg.id);
@@ -602,12 +617,10 @@ window.openMessageMenu = function(e, msg) {
 async function deleteMessage(messageId){
     if(!user) return;
 
-
     const { error } = await sb.from('messages')
         .delete()
         .eq('id', messageId)
         .eq('user_id', user.id); 
-
 
     if(error){ 
         alert('Erro ao apagar mensagem: ' + error.message);
@@ -623,7 +636,7 @@ async function deleteMessage(messageId){
 window.deleteMessage = deleteMessage;
 
 
-/* ---------- EXCLUSÃO EM MASSA DE MENSAGENS ---------- */
+/* ---------- EXCLUSÃO EM MASSA DE MENSAGENS (INALTERADA) ---------- */
 
 async function deleteAllMessages(){
     if(!user){
@@ -631,14 +644,12 @@ async function deleteAllMessages(){
         return;
     }
     
-    // Substituído por modal/confirmação customizada em uma aplicação real.
     const confirmed = confirm("⚠️ ATENÇÃO: Deseja REALMENTE apagar TODAS as suas mensagens no chat? Esta ação é irreversível.");
     if (!confirmed) return;
     
     const { error } = await sb.from('messages')
         .delete()
         .eq('user_id', user.id); 
-
 
     if(error){ 
         alert('Erro ao apagar mensagens: ' + error.message);
@@ -648,11 +659,10 @@ async function deleteAllMessages(){
         alert('Todas as suas mensagens foram apagadas com sucesso! (Recarregue para garantir a sincronização em tempo real).');
     }
 }
-window.deleteAllMessages = deleteAllMessages; // Torna global
+window.deleteAllMessages = deleteAllMessages; 
 
 
-
-/* ---------- RENDER MENSAGENS ---------- */
+/* ---------- RENDER MENSAGENS (CORRIGIDA PARA ÁUDIO) ---------- */
 
 function renderMessage(msg){
     const date = new Date(msg.created_at);
@@ -662,13 +672,10 @@ function renderMessage(msg){
     const groupDiv = document.createElement('div');
     groupDiv.className = 'msg-group ' + ((user && msg.user_id === user.id) ? 'me':'other');
 
-
-    // Adiciona o nome do perfil
     const nameSpan = document.createElement('span');
     nameSpan.className = 'profile-name';
     nameSpan.textContent = profileName; 
     groupDiv.appendChild(nameSpan);
-
 
     const div = document.createElement('div');
     div.className = 'msg ' + ((user && msg.user_id === user.id) ? 'me':'other');
@@ -676,20 +683,23 @@ function renderMessage(msg){
     div.dataset.messageId = msg.id; 
     div.onclick = (e) => openMessageMenu(e, msg);
 
-
     let content = msg.text || '';
     const prefixes = { '[Áudio]:':'audio', '[Imagem]:':'image', '[Vídeo]:':'video', '[Arquivo]:':'file' };
     for(const p in prefixes){
         if(content.startsWith(p)){
             const type = prefixes[p];
             const path = content.substring(p.length).trim();
-            const { data: urlData } = sb.storage.from('chat-media').getPublicUrl(path);
+            
+            // 🚨 CORREÇÃO AQUI: Obter URL público do Bucket 'messages'
+            const { data: urlData } = sb.storage.from('messages').getPublicUrl(path); 
             const fileUrl = urlData.publicUrl;
+            
             if(type === 'image') {
                 content = `<div class="file-content">🖼️ <a href="${fileUrl}" target="_blank"><img src="${fileUrl}" alt="imagem" style="max-width:220px;border-radius:6px"></a></div>`;
             } else if(type === 'video') {
                 content = `<div class="file-content">📹<video controls style="max-width:240px;border-radius:6px"><source src="${fileUrl}">Seu navegador não suporta.</video></div>`;
             } else if(type === 'audio') {
+                // 🚨 CORREÇÃO AQUI: Renderiza o reprodutor de áudio
                 content = `<div class="file-content">🎤<audio controls src="${fileUrl}" style="max-width:240px"></audio></div>`;
             } else {
                 const fileName = path.split('/').pop();
@@ -699,7 +709,6 @@ function renderMessage(msg){
         }
     }
 
-
     div.innerHTML = `${content}<span class="timestamp">${timeString}</span>`;
     groupDiv.appendChild(div);
     
@@ -708,7 +717,7 @@ function renderMessage(msg){
 }
 
 
-/* ---------- INSERIR E CARREGAR HISTÓRICO ---------- */
+/* ---------- INSERIR E CARREGAR HISTÓRICO (INALTERADA) ---------- */
 
 async function sendMessage(){
     const text = textInput.value.trim();
@@ -727,10 +736,9 @@ async function loadHistory(){
 }
 
 
-/* ---------- SUBSCRIBE (Realtime Otimizado) ---------- */
+/* ---------- SUBSCRIBE (Realtime Otimizado) - INALTERADA ---------- */
 
 function subscribeToMessages(){
-    // 💡 Otimização: remove o canal existente para evitar subscrições duplicadas.
     if(window.chatChannel) {
         sb.removeChannel(window.chatChannel);
         console.log('Canal Realtime anterior removido.');
@@ -748,27 +756,48 @@ function subscribeToMessages(){
 }
 
 
-/* ---------- UPLOAD ---------- */
+/* ---------- UPLOAD (CORRIGIDO PARA O BUCKET 'messages' e ÁUDIO) ---------- */
 
-async function uploadFile(file){
+async function uploadFile(file, isAudio = false){
     if(!file || !user) return;
-    const mimeType = file.type || '';
+    
+    let mimeType = file.type || '';
+    if(isAudio) mimeType = 'audio/webm'; // Garante o tipo correto para áudio gravado
+
     let prefix = '[Arquivo]: ';
-    if(mimeType.startsWith('video/')) prefix = '[Vídeo]: ';
+    if(isAudio) prefix = '[Áudio]: '; // Prioriza prefixo de áudio
+    else if(mimeType.startsWith('video/')) prefix = '[Vídeo]: ';
     else if(mimeType.startsWith('image/')) prefix = '[Imagem]: ';
     
-    const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
-    const path = `${user.id}/${Date.now()}_${safeName}`;
-    const { data: uploadData, error: uploadError } = await sb.storage.from('chat-media').upload(path, file, { cacheControl: '3600', upsert: false, contentType: mimeType });
-    if(uploadError){ console.error(uploadError); alert('Erro no upload: ' + uploadError.message); return; }
+    
+    const fileExtension = isAudio ? 'webm' : (file.name.split('.').pop() || 'dat');
+    const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase() || 'audio';
+    const path = `${user.id}/${Date.now()}_${safeName}.${fileExtension}`;
+    
+    // 🚨 CORREÇÃO MAIS IMPORTANTE: Usa o Bucket CORRETO 'messages'
+    const { data: uploadData, error: uploadError } = await sb.storage
+        .from('messages') 
+        .upload(path, file, { 
+            cacheControl: '3600', 
+            upsert: false, 
+            contentType: mimeType 
+        });
+        
+    if(uploadError){ 
+        console.error(uploadError); 
+        alert('Erro no upload: ' + uploadError.message); 
+        return; 
+    }
     
     const { error: dbError } = await sb.from('messages').insert({ user_id: user.id, text: `${prefix}${uploadData.path}`, email: user.email }); 
     if(dbError) alert('Erro ao gravar mensagem: ' + dbError.message);
-    fileInput.value = '';
+    
+    // Limpar o input file apenas se não for um Blob de áudio
+    if(!isAudio) fileInput.value = '';
 }
 
 
-// Função para obter parâmetros da URL
+// Função para obter parâmetros da URL (INALTERADA)
 function getUrlParameter(name) {
     name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
     const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
@@ -777,9 +806,8 @@ function getUrlParameter(name) {
 };
 
 
-/* ---------- FUNÇÃO DE NOTIFICAÇÃO PUSH (Adicionada) ---------- */
+/* ---------- FUNÇÃO DE NOTIFICAÇÃO PUSH (INALTERADA) ---------- */
 
-// Função auxiliar para converter chave VAPID
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -797,7 +825,6 @@ function urlBase64ToUint8Array(base64String) {
 
 
 async function subscribeUserToPush() {
-    // Sua chave pública VAPID (NOVA)
     const PUBLIC_VAPID_KEY = 'BMaR3zFqEh_OVdJSDBEWokPLjYg0LxausOc9VrQj_FKwW869k7rK07M_bLbrE3WoVYkA0tkK-DwssC4K2I9BJ2U'; 
 
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !user) {
@@ -807,12 +834,10 @@ async function subscribeUserToPush() {
 
     console.log(`➡️ Status da permissão de Notificação atual: ${Notification.permission}`);
 
-    // 1. Registrar o Service Worker (o arquivo service-worker.js deve estar na raiz)
     try {
         const swReg = await navigator.serviceWorker.register('service-worker.js');
         console.log('✅ Service Worker registrado com sucesso!');
 
-        // 2. Pedir Permissão (só acontece se for 'default')
         if (Notification.permission === 'default') {
             const permissionResult = await Notification.requestPermission();
             console.log(`Novo status da permissão: ${permissionResult}`);
@@ -825,7 +850,6 @@ async function subscribeUserToPush() {
             return;
         }
 
-        // 3. Gerar o token de subscrição Push
         const applicationServerKey = urlBase64ToUint8Array(PUBLIC_VAPID_KEY);
         const subscription = await swReg.pushManager.subscribe({
             userVisibleOnly: true,
@@ -834,8 +858,6 @@ async function subscribeUserToPush() {
 
         console.log('✅ Objeto de subscrição Push criado (Token gerado):', subscription);
 
-        // 4. Salvar o token no Supabase (Tabela user_subscriptions)
-        // Usa UPSERT (atualiza se o user_id já existir) para lidar com troca de navegadores/dispositivos
         const { error: dbError } = await sb.from('user_subscriptions').upsert({
             user_id: user.id,
             subscription_data: subscription,
@@ -860,25 +882,22 @@ async function subscribeUserToPush() {
 }
 
 
-/* ---------- Lógica de subscrição e início de chamada automática ---------- */
+/* ---------- Lógica de subscrição e início de chamada automática (INALTERADA) ---------- */
 
 function setupCallChannelAndStartAutoCall() {
     if (!user) return; 
     
-    // 1. Assina o canal de sinalização do próprio usuário para receber ofertas e respostas
     if (!callChannel) {
         callChannel = sb.channel('call_room_' + user.id);
         callChannel.on('broadcast', { event: 'signal' }, handleSignalMessage).subscribe((status) => {
             if (status === 'SUBSCRIBED') {
                 console.log(`Pronto para receber chamadas no canal: call_room_${user.id}`);
-                // 2. Se houver um alvo no URL, inicia a chamada automaticamente AGORA QUE O CANAL ESTÁ PRONTO.
                 if (autoCallTargetId && autoCallTargetId !== user.id) {
                     startVideoCall(autoCallTargetId);
                 }
             }
         });
     } else {
-        // Se o canal já estava pronto, tenta iniciar a chamada se houver um alvo
         if (autoCallTargetId && autoCallTargetId !== user.id) {
               startVideoCall(autoCallTargetId);
         }
@@ -886,12 +905,10 @@ function setupCallChannelAndStartAutoCall() {
 }
 
 
-
-/* ---------- INICIALIZAÇÃO (Lógica Simplificada, dependente de onAuthStateChange) ---------- */
+/* ---------- INICIALIZAÇÃO (INALTERADA) ---------- */
 
 function initializeChat(event_type = 'SESSION_RECOVERED'){
     
-    // Checa se há um alvo de chamada no URL
     autoCallTargetId = getUrlParameter('target');
     
     if(user){
@@ -900,65 +917,48 @@ function initializeChat(event_type = 'SESSION_RECOVERED'){
         loadHistory();
         subscribeToMessages();
         
-        // A inscrição Push acontece no onAuthStateChange (SIGNED_IN)
-        // ou aqui para usuários que já estavam logados (recuperação de sessão)
         if(event_type !== 'SIGNED_IN') {
              subscribeUserToPush(); 
         }
 
-        // Configura o canal de recebimento e inicia a chamada automática
         if (autoCallTargetId === user.id) {
             alert("Você não pode ligar para si mesmo.");
-            // Limpa o target da URL
             history.pushState(null, '', window.location.pathname);
             autoCallTargetId = null; 
         } else {
             setupCallChannelAndStartAutoCall();
         }
 
-
     } else {
         loginModal.style.display = 'flex';
-        // Limpa o target do URL se não estiver logado
         history.pushState(null, '', window.location.pathname);
         autoCallTargetId = null;
     }
 }
 
-
-// CHAVE: Usamos onAuthStateChange para distinguir entre login novo e sessão recuperada
 sb.auth.onAuthStateChange(async (event, session) => {
     user = session?.user || null;
     
     if (user) {
         if (event === 'SIGNED_IN') {
-             // 💡 Melhoria UX: Mensagem amigável ANTES do prompt nativo
              alert('Bem-vindo! Para receber alertas de chamadas e mensagens quando o aplicativo não estiver aberto, clique em "Permitir" na próxima notificação.');
-             
-             // Inicializa o chat e faz o Push.
              initializeChat('SIGNED_IN'); 
-             await subscribeUserToPush(); // Inicia o processo de registro do Service Worker e solicitação de permissão
+             await subscribeUserToPush();
         } else if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-             // Inicializa o chat para sessões existentes (já logado)
              initializeChat('SESSION_RECOVERED');
         }
     } else if (event === 'SIGNED_OUT') {
         loginModal.style.display = 'flex';
-        // A função logout já lida com limpeza e display do modal
     }
 });
 
 
-// Inicia o processo de recuperação de sessão. O onAuthStateChange cuidará do resto.
 sb.auth.getSession().then(({ data: { session } }) => {
     if(!session) {
-         // Se não há sessão, chama initializeChat para mostrar o modal de login
          initializeChat('NO_SESSION'); 
     }
 });
 
-
-// Globaliza funções de login/registro
 window.login = login; window.register = register; window.reset = reset;
 
 </script>
