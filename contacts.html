@@ -1,379 +1,242 @@
-
-
 <!DOCTYPE html>
-
 <html lang="pt-BR">
-
 <head>
-
-<meta charset="utf-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Contatos On-line</title>
-
-
-<script src=" https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2 "></script>
-
-
-<style>
-
-/* Estilos baseados no WhatsApp para celular */
-
-:root{ --bg:#e5ddd5; --panel:#fff; --my:#dcf8c6; --accent:#25d366; --header:#075e54; --dark:#111; }
-
-corpo{
-
-margem:0;
-
-fundo:var(--bg);
-
-família-da-fonte: Arial, sem serifa;
-
-altura: 100vh;
-
-altura: 100dvh;
-
-exibição:flex;
-
-flex-direction:column;
-
-overflow: oculto;
-
-}
-
-#topbar{ altura:56px; fundo:var(--header); exibição:flex; alinhamento-itens:centro; preenchimento:0 12px; cor:#fff; tamanho-da-fonte:18px; peso-da-fonte:negrito; justificar-conteúdo: espaço-entre; }
-
-#lista de contatos {
-
-flex: 1;
-
-overflow-y: automático;
-
-cor de fundo: #fff;
-
-}
-
-.item-de-contato {
-
-Exibir: flexível;
-
-justify-content: espaço-entre;
-
-alinhamento-itens: centro;
-
-preenchimento: 10px 15px;
-
-borda inferior: 1px sólida #eee;
-
-cursor: ponteiro;
-
-fundo: #fff;
-
-transição: fundo 0,2s;
-
-}
-
-.contact-item:hover {
-
-fundo: #f5f5f5;
-
-}
-
-.informações-de-contato {
-
-flex-grow: 1;
-
-}
-
-.nome-de-contato {
-
-peso da fonte: negrito;
-
-cor: var(--dark);
-
-}
-
-.contact-id {
-
-tamanho da fonte: 12px;
-
-cor: #666;
-
-quebra-de-palavras: quebrar-tudo;
-
-}
-
-.call-btn {
-
-largura: 40px;
-
-altura: 40px;
-
-raio-da-borda: 50%;
-
-fundo: var(--accent);
-
-cor: branca;
-
-fronteira: nenhuma;
-
-tamanho da fonte: 18px;
-
-Exibir: flexível;
-
-justificar-conteúdo: centralizado;
-
-alinhamento-itens: centro;
-
-cursor: ponteiro;
-
-box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-
-margem esquerda: 10px;
-
-}
-
-.estado-vazio {
-
-preenchimento: 20px;
-
-alinhamento do texto: centralizado;
-
-cor: #999;
-
-}
-
-#botãovoltar {
-
-cor: branca;
-
-decoração de texto: nenhuma;
-
-margem-direita: 15px;
-
-tamanho da fonte: 24px;
-
-}
-
-</style>
-
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contatos Online</title>
+    
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        window.createClient = createClient; // Torna a função global para uso no script abaixo
+    </script>
+
+    <style>
+        /* Variáveis de Estilo para consistência visual */
+        :root {
+            --bg: #e5ddd5;
+            --panel: #fff;
+            --accent: #25d366;
+            --header: #075e54;
+            --dark: #111;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #topbar {
+            height: 56px;
+            background: var(--header);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            justify-content: space-between;
+        }
+
+        #contactsList {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #fff;
+        }
+
+        .contact-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            background: #fff;
+            transition: background 0.2s;
+        }
+
+        .contact-item:hover {
+            background: #f5f5f5;
+        }
+
+        .contact-info {
+            flex-grow: 1;
+        }
+
+        .contact-name {
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        .contact-id {
+            font-size: 12px;
+            color: #666;
+            word-break: break-all;
+        }
+
+        .call-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            border: none;
+            font-size: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            margin-left: 10px;
+        }
+
+        .empty-state {
+            padding: 20px;
+            text-align: center;
+            color: #999;
+        }
+
+        #backBtn {
+            color: white;
+            text-decoration: none;
+            margin-right: 15px;
+            font-size: 24px;
+        }
+    </style>
 </head>
-
 <body>
 
-
-<div id="topbar">
-
-<a href="index.html" id="backBtn">←</a>
-
-<span>Contatos Online</span>
-
-</div>
-
-
-<div id="contactsList">
-
-<div class="empty-state">Carregando usuários...</div>
-
-</div>
-
-
-<script>
-
-/* ---------- CONFIGURAÇÃO SUPABASE (CHAVES UNIFICADAS) ---------- */
-
-// 🚨 CORREÇÃO: Usando a chave do projeto principal para manter a sessão
-
-const SUPABASE_URL = " https://dktkzsmfhhjxkbhvnwnw.supabase.co ";
-
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrdGt6c21maGhqeGtiaHZud253Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5NDQ0MTQsImV4cCI6MjA4MDUyMDQxNH0.QpLkvWSaVPdjszXx0_epadmmfMRjwe_8C7WjcQzNbAs";
-
-
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-
-autenticação: { persistSessão: true }
-
-});
-
-
-seja usuário = nulo;
-
-const contactsList = document.getElementById('contactsList');
-
-
-/* ---------- AUTENTICAÇÃO E VERIFICAÇÃO (CORRIGIDA E ROBUSTA) ---------- */
-
-função assíncrona verificarAutenticaçãoEInicialização() {
-
-// Tente obter o usuário logado, que é uma verificação mais confiável.
-
-const { data: { user: loggedUser } } = await sb.auth.getUser();
-
-se (usuário logado) {
-
-usuário = usuário conectado;
-
-buscarUsuáriosOnline();
-
-subscribeToAuthChanges();
-
-} outro {
-
-// Se não estiver logado, exibe uma mensagem de erro...
-
-contatosList.innerHTML = '<div class="empty-state" style="color:red; font-weight:bold;">Sessão não encontrada. Redirecionando para login...</div>';
-
-// ... e espera 1.5s antes de redirecionar para dar tempo de ler a sessão.
-
-setTimeout(() => {
-
-window.location.href = 'index.html';
-
-}, 1500);
-
-}
-
-}
-
-
-/* ---------- REALTIME (Presença de Usuários) ---------- */
-
-função subscribeToAuthChanges() {
-
-// Escuta mudanças de autenticação (ex: logoff em outra aba)
-
-sb.auth.onAuthStateChange((event, session) => {
-
-se (!sessão) {
-
-// Usuário
-
-window.location.href = 'index.html';
-
-}
-
-});
-
-}
-
-
-/* ---------- CARREGAR USUÁRIOS (AJUSTADO PARA USAR 'perfis') ---------- */
-
-função assíncrona buscarUsuáriosOnline() {
-
-// Consulta a tabela 'profiles' (requer RLS de SELECT para 'autenticado')
-
-const { data, error } = await sb.from('profiles')
-
-.select('id, email')
-
-.neq('id', user.id ); // Exclui o próprio usuário
-
-
-contactsList.innerHTML = '';
-
-se (erro) {
-
-// Mensagem de erro para ajudar no diagnóstico de RLS
-
-const mensagemDeErro = error.message.includes('permissão negada')
-
-? 'Erro: As Políticas RLS de SELECT na tabela `profiles` não estão ativas para "autenticados".'
-
-: `Erro ao enviar contatos: ${error.message}`;
-
-contactsList.innerHTML = `<div class="empty-state" style="color:red; font-weight:bold;">${errorMessage}</div>`;
-
-retornar;
-
-}
-
-se (data.length === 0) {
-
-ContactList.innerHTML = '<div class="empty-state">Nenhum outro usuário registrado para ligar.</div>';
-
-} outro {
-
-dados.forEach(renderContato);
-
-}
-
-}
-
-
-/* ---------- RENDERIZAÇÃO E AÇÃO ---------- */
-
-função renderContato(contato) {
-
-const item = document.createElement('div');
-
-item.className = 'contact-item';
-
-const info = document.createElement('div');
-
-info.className = 'contact-info';
-
-const nome = document.createElement('div');
-
-nome.className = 'nome-do-contato';
-
-name.textContent = contact.email.split('@')[0]; // Usa o prefixo do email
-
-const id = document.createElement('div');
-
-id.className = 'contact-id';
-
-id.textContent = `ID: ${ contact.id }`;
-
-info.appendChild(nome);
-
-info.appendChild(id);
-
-item.appendChild(info);
-
-const callBtn = document.createElement('button');
-
-callBtn.className = 'call-btn';
-
-callBtn.innerHTML = ' 📹'; //Ícone da câmera
-
-callBtn.onclick = (e) => startCall(e, contact.id );
-
-item.appendChild(callBtn);
-
-
-contactsList.appendChild(item);
-
-}
-
-
-função iniciarChamada(e, targetId) {
-
-e.stopPropagation(); // Previne qualquer clique acidental no item
-
-// Redireciona para a página principal com o ID do alvo na URL para iniciar a chamada.
-
-window.location.href = `index.html?target=${targetId}`;
-
-}
-
-
-// Torna a função de chamada global para uso no HTML
-
-janela.iniciarChamada = iniciarChamada;
-
-
-// Inicia o processo de verificação de autenticação
-
-verificarAutenticaçãoEInicialização();
-
-</script>
-
-
+    <div id="topbar">
+        <a href="index.html" id="backBtn">←</a>
+        <span>Contatos Online</span>
+    </div>
+
+    <div id="contactsList">
+        <div class="empty-state">Carregando usuários...</div>
+    </div>
+
+    <script>
+        /* ---------- CONFIGURAÇÃO SUPABASE ---------- */
+        const SUPABASE_URL = "https://dktkzsmfhhjxkbhvnwnw.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrdGt6c21maGhqeGtiaHZud253Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5NDQ0MTQsImV4cCI6MjA4MDUyMDQxNH0.QpLkvWSaVPdjszXx0_epadmmfMRjwe_8C7WjcQzNbAs";
+
+        // Inicializa o cliente Supabase (usa window.createClient do script module acima)
+        const sb = window.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: true }
+        });
+
+        let user = null;
+        const contactsList = document.getElementById('contactsList');
+
+        /* -------------------------------------------------------------------------- */
+        /* FUNÇÕES DE AUTENTICAÇÃO E INICIALIZAÇÃO */
+        /* -------------------------------------------------------------------------- */
+
+        async function checkAuthenticationAndInitialize() {
+            // Verifica o usuário logado
+            const { data: { user: loggedUser } } = await sb.auth.getUser();
+
+            if (loggedUser) {
+                user = loggedUser;
+                fetchOnlineUsers();
+                subscribeToAuthChanges();
+            } else {
+                // Redireciona se não estiver logado
+                contactsList.innerHTML = '<div class="empty-state" style="color:red; font-weight:bold;">Sessão não encontrada. Redirecionando para login...</div>';
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+            }
+        }
+
+        function subscribeToAuthChanges() {
+            // Escuta mudanças de autenticação (ex: logoff em outra aba/dispositivo)
+            sb.auth.onAuthStateChange((event, session) => {
+                if (!session) {
+                    // Usuário deslogou, redireciona
+                    window.location.href = 'index.html';
+                }
+            });
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /* FUNÇÕES DE CONTATOS E RENDERIZAÇÃO */
+        /* -------------------------------------------------------------------------- */
+
+        async function fetchOnlineUsers() {
+            if (!user) return; 
+
+            // Consulta a tabela 'profiles' excluindo o próprio usuário
+            const { data: profiles, error } = await sb.from('profiles')
+                .select('id, email')
+                .neq('id', user.id); 
+
+            contactsList.innerHTML = '';
+
+            if (error) {
+                console.error('Erro ao buscar perfis:', error.message);
+                const errorMessage = error.message.includes('permission denied')
+                    ? 'Erro: As Políticas RLS de SELECT na tabela `profiles` não estão ativas para "autenticados".'
+                    : `Erro ao buscar contatos: ${error.message}`;
+                contactsList.innerHTML = `<div class="empty-state" style="color:red; font-weight:bold;">${errorMessage}</div>`;
+                return;
+            }
+
+            if (!profiles || profiles.length === 0) {
+                contactsList.innerHTML = '<div class="empty-state">Nenhum outro usuário registrado para ligar.</div>';
+            } else {
+                profiles.forEach(renderContact);
+            }
+        }
+
+        function renderContact(contact) {
+            const item = document.createElement('div');
+            item.className = 'contact-item';
+
+            const info = document.createElement('div');
+            info.className = 'contact-info';
+            
+            const name = document.createElement('div');
+            name.className = 'contact-name';
+            name.textContent = contact.email.split('@')[0]; // Usa o prefixo do email
+            
+            const id = document.createElement('div');
+            id.className = 'contact-id';
+            id.textContent = `ID: ${contact.id}`;
+            
+            info.appendChild(name);
+            info.appendChild(id);
+            item.appendChild(info);
+
+            const callBtn = document.createElement('button');
+            callBtn.className = 'call-btn';
+            callBtn.innerHTML = ' 📹'; 
+            callBtn.onclick = (e) => startCall(e, contact.id);
+            item.appendChild(callBtn);
+
+            contactsList.appendChild(item);
+        }
+
+        function startCall(e, targetId) {
+            e.stopPropagation(); 
+            // Redireciona para a página principal com o ID do alvo na URL
+            window.location.href = `index.html?target=${targetId}`;
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /* INICIALIZAÇÃO */
+        /* -------------------------------------------------------------------------- */
+
+        // Torna a função de chamada global para uso nos event listeners (embora não necessário aqui, é boa prática)
+        window.startCall = startCall; 
+        
+        // Inicia o processo de verificação de autenticação
+        checkAuthenticationAndInitialize();
+    </script>
 </body>
-
 </html>
-
-
-
