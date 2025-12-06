@@ -214,7 +214,7 @@ body{
 
 <script>
 
-/* ---------- CONFIGURAÇÃO SUPABASE (CHAVE CORRETA: ANON PÚBLICA) ---------- */
+/* ---------- CONFIGURAÇÃO SUPABASE (CHAVE UNIFICADA) ---------- */
 const SUPABASE_URL = "https://dktkzsmfhhjxkbhvnwnw.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrdGt6c21maGhqeGtiaHZud253Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5NDQ0MTQsImV4cCI6MjA4MDUyMDQxNH0.QpLkvWSaVPdjszXx0_epadmmfMRjwe_8C7WjcQzNbAs";
 
@@ -236,15 +236,15 @@ const fileInput = document.getElementById('fileInput');
 const wallpaperInput = document.getElementById('wallpaperInput'); 
 const videoCallArea = document.getElementById('videoCallArea');
 const localVideo = document.getElementById('localVideo');
-const micBtn = document.getElementById('micBtn'); // Novo
-const inputArea = document.getElementById('inputArea'); // Novo
+const micBtn = document.getElementById('micBtn'); 
+const inputArea = document.getElementById('inputArea'); 
 
 let peerConnection = null; 
 let remoteVideo = null; 
 let callChannel = null; 
 let autoCallTargetId = null; 
-let mediaRecorder = null; // Variável para a gravação de áudio
-let audioChunks = []; // Array para armazenar partes do áudio
+let mediaRecorder = null; 
+let audioChunks = []; 
 
 
 const iceServers = {
@@ -275,7 +275,8 @@ remoteVideo = document.getElementById('remoteVideo');
 
 // Adiciona funcionalidade aos botões
 document.getElementById('fileBtn').onclick = () => { if(!user){ alert('Faça login primeiro'); return; } fileInput.click(); };
-// 🚨 NOVO: Lógica de INICIAR/PARAR gravação no clique do MIC
+
+// 🚨 Lógica de INICIAR/PARAR gravação no clique do MIC
 micBtn.onclick = () => { 
     if(!user){ alert('Faça login primeiro'); return; } 
     if(mediaRecorder && mediaRecorder.state === 'recording') {
@@ -308,8 +309,7 @@ document.getElementById('kebabBtn').onclick = () => { const m = document.getElem
 document.addEventListener('click', (e)=>{ const m=document.getElementById('kebabMenu'); if(e.target.id!=='kebabBtn' && !m.contains(e.target)) m.style.display='none'; });
 
 
-
-/* ---------- FUNÇÕES AUXILIARES DE VIDEOCHAMADA (INALTERADAS) ---------- */
+/* ---------- FUNÇÕES AUXILIARES DE VIDEOCHAMADA ---------- */
 
 function handleTrackEvent(event) {
     if (remoteVideo && event.streams && event.streams[0]) {
@@ -411,6 +411,7 @@ async function initializePeerConnection(targetPeerId) {
     };
 }
 
+// 🚨 FUNÇÃO CORRIGIDA PARA LIMPAR O ESTADO EM CASO DE ERRO DE SDP
 async function startVideoCall(targetPeerId){
     if(!user || !targetPeerId){ 
         console.error('Usuário ou alvo não definido.');
@@ -423,13 +424,18 @@ async function startVideoCall(targetPeerId){
     }
 
     try{
+        // 1. Inicializa a conexão (só executa se peerConnection for null)
         await initializePeerConnection(targetPeerId); 
         
         if(!peerConnection) return; 
 
+        // 2. Cria a Offer (Proposta de conexão)
         const offer = await peerConnection.createOffer();
+        
+        // 3. Define a Offer localmente
         await peerConnection.setLocalDescription(offer);
         
+        // 4. Envia o sinal para o alvo via Supabase
         await sb.channel('call_room_' + targetPeerId).send({
             type: 'broadcast',
             event: 'signal',
@@ -445,8 +451,12 @@ async function startVideoCall(targetPeerId){
 
     }catch(err){
         console.error('Erro ao iniciar WebRTC:', err);
+        
+        // 🚨 CORREÇÃO CRÍTICA: Força a limpeza do objeto RTCPeerConnection em caso de erro 
+        // de negociação (como o erro de SDP) para garantir que a próxima tentativa comece do zero.
+        hangUpCall(); 
+        
         alert('Erro ao iniciar chamada: ' + (err.message || err.name));
-        hangUpCall();
     }
 }
 
@@ -528,7 +538,7 @@ function stopRecording() {
 }
 
 
-/* ---------- OUTRAS FUNÇÕES (Não relacionadas a WebRTC) ---------- */
+/* ---------- OUTRAS FUNÇÕES ---------- */
 
 function chooseWallpaper() {
     if(!user){ alert('Faça login primeiro'); return; }
@@ -555,7 +565,7 @@ function isSecureContext() {
 }
 
 
-/* ---------- AUTENTICAÇÃO (INALTERADA) ---------- */
+/* ---------- AUTENTICAÇÃO ---------- */
 
 async function login(){
     const email = emailInput.value.trim();
@@ -602,7 +612,7 @@ async function logout(){
 window.logout = logout; 
 
 
-/* ---------- EXCLUSÃO DE MENSAGENS INDIVIDUAL (INALTERADA) ---------- */
+/* ---------- EXCLUSÃO DE MENSAGENS INDIVIDUAL ---------- */
 
 window.openMessageMenu = function(e, msg) {
     if(!user || msg.user_id !== user.id) return; 
@@ -636,7 +646,7 @@ async function deleteMessage(messageId){
 window.deleteMessage = deleteMessage;
 
 
-/* ---------- EXCLUSÃO EM MASSA DE MENSAGENS (INALTERADA) ---------- */
+/* ---------- EXCLUSÃO EM MASSA DE MENSAGENS ---------- */
 
 async function deleteAllMessages(){
     if(!user){
@@ -690,7 +700,7 @@ function renderMessage(msg){
             const type = prefixes[p];
             const path = content.substring(p.length).trim();
             
-            // 🚨 CORREÇÃO AQUI: Obter URL público do Bucket 'messages'
+            // Obter URL público do Bucket 'messages'
             const { data: urlData } = sb.storage.from('messages').getPublicUrl(path); 
             const fileUrl = urlData.publicUrl;
             
@@ -699,7 +709,7 @@ function renderMessage(msg){
             } else if(type === 'video') {
                 content = `<div class="file-content">📹<video controls style="max-width:240px;border-radius:6px"><source src="${fileUrl}">Seu navegador não suporta.</video></div>`;
             } else if(type === 'audio') {
-                // 🚨 CORREÇÃO AQUI: Renderiza o reprodutor de áudio
+                // Renderiza o reprodutor de áudio
                 content = `<div class="file-content">🎤<audio controls src="${fileUrl}" style="max-width:240px"></audio></div>`;
             } else {
                 const fileName = path.split('/').pop();
@@ -717,7 +727,7 @@ function renderMessage(msg){
 }
 
 
-/* ---------- INSERIR E CARREGAR HISTÓRICO (INALTERADA) ---------- */
+/* ---------- INSERIR E CARREGAR HISTÓRICO ---------- */
 
 async function sendMessage(){
     const text = textInput.value.trim();
@@ -736,7 +746,7 @@ async function loadHistory(){
 }
 
 
-/* ---------- SUBSCRIBE (Realtime Otimizado) - INALTERADA ---------- */
+/* ---------- SUBSCRIBE (Realtime Otimizado) ---------- */
 
 function subscribeToMessages(){
     if(window.chatChannel) {
@@ -762,10 +772,10 @@ async function uploadFile(file, isAudio = false){
     if(!file || !user) return;
     
     let mimeType = file.type || '';
-    if(isAudio) mimeType = 'audio/webm'; // Garante o tipo correto para áudio gravado
+    if(isAudio) mimeType = 'audio/webm'; 
 
     let prefix = '[Arquivo]: ';
-    if(isAudio) prefix = '[Áudio]: '; // Prioriza prefixo de áudio
+    if(isAudio) prefix = '[Áudio]: '; 
     else if(mimeType.startsWith('video/')) prefix = '[Vídeo]: ';
     else if(mimeType.startsWith('image/')) prefix = '[Imagem]: ';
     
@@ -774,7 +784,7 @@ async function uploadFile(file, isAudio = false){
     const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase() || 'audio';
     const path = `${user.id}/${Date.now()}_${safeName}.${fileExtension}`;
     
-    // 🚨 CORREÇÃO MAIS IMPORTANTE: Usa o Bucket CORRETO 'messages'
+    // Usa o Bucket CORRETO 'messages'
     const { data: uploadData, error: uploadError } = await sb.storage
         .from('messages') 
         .upload(path, file, { 
@@ -797,7 +807,7 @@ async function uploadFile(file, isAudio = false){
 }
 
 
-// Função para obter parâmetros da URL (INALTERADA)
+// Função para obter parâmetros da URL 
 function getUrlParameter(name) {
     name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
     const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
@@ -806,7 +816,7 @@ function getUrlParameter(name) {
 };
 
 
-/* ---------- FUNÇÃO DE NOTIFICAÇÃO PUSH (INALTERADA) ---------- */
+/* ---------- FUNÇÃO DE NOTIFICAÇÃO PUSH ---------- */
 
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -882,7 +892,7 @@ async function subscribeUserToPush() {
 }
 
 
-/* ---------- Lógica de subscrição e início de chamada automática (INALTERADA) ---------- */
+/* ---------- Lógica de subscrição e início de chamada automática ---------- */
 
 function setupCallChannelAndStartAutoCall() {
     if (!user) return; 
@@ -905,7 +915,7 @@ function setupCallChannelAndStartAutoCall() {
 }
 
 
-/* ---------- INICIALIZAÇÃO (INALTERADA) ---------- */
+/* ---------- INICIALIZAÇÃO ---------- */
 
 function initializeChat(event_type = 'SESSION_RECOVERED'){
     
