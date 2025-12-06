@@ -91,10 +91,10 @@ body{
 </div>
 
 <script>
-/* ---------- CONFIGURAÇÃO SUPABASE (SUAS CHAVES) ---------- */
-// ⚠️ ATENÇÃO: Use APENAS sua chave pública (anon) aqui.
-const SUPABASE_URL = "https://rtbfafyckvjexabywztu.supabase.co"; 
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0YmZhZnlja3ZqZXhhYnl3enR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4MTg4MDYsImV4cCI6MjA4MDM5NDgwNn0.pemzzt-0MNF1wxVVtM13n5rgWCu8mSmdF_GQU4TrMM4";
+/* ---------- CONFIGURAÇÃO SUPABASE (CHAVES UNIFICADAS) ---------- */
+// 🚨 CORREÇÃO: Usando a chave do projeto principal para manter a sessão
+const SUPABASE_URL = "https://dktkzsmfhhjxkbhvnwnw.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrdGt6c21maGhqeGtiaHZud253Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5NDQ0MTQsImV4cCI6MjA4MDUyMDQxNH0.QpLkvWSaVPdjszXx0_epadmmfMRjwe_8C7WjcQzNbAs";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true }
